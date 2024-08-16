@@ -40,9 +40,11 @@ if model_name:
             "PayGO cost": calculate_paygo_cost(input_token, output_token, rpm, model_name),
             "PTU cost": calculate_ptu_cost(ptu_num, min_ptu_deployment_unit, ptu_price_per_unit),
         }
-        # Convert result to table format
-        st.write(" | ".join(result.keys()))
-        st.write(" | ".join(map(str, result.values())))
+        # Convert result to markdown table format
+        table_header = " | ".join(result.keys())
+        table_separator = " | ".join(["---"] * len(result))
+        table_values = " | ".join(map(str, result.values()))
+        st.markdown(f"| {table_header} |\n| {table_separator} |\n| {table_values} |")
 
 # Command line interface
 if __name__ == "__main__":
@@ -71,6 +73,8 @@ if __name__ == "__main__":
         "PTU cost": calculate_ptu_cost(args.ptu_num, args.ptu_price_per_unit, args.ptu_subscription_type),
     }
 
-    # Convert result to table format
-    print(" | ".join(result.keys()))
-    print(" | ".join(map(str, result.values())))
+    # Convert result to markdown table format
+    table_header = " | ".join(result.keys())
+    table_separator = " | ".join(["---"] * len(result))
+    table_values = " | ".join(map(str, result.values()))
+    print(f"| {table_header} |\n| {table_separator} |\n| {table_values} |")
