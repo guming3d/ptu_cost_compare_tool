@@ -11,8 +11,9 @@ with open(config_path, 'r') as f:
 # Extract model names for dropdown
 model_list = [model["model name"] for model in model_config]
 
-# Initialize an empty list to store results
-results_list = []
+# Initialize an empty list to store results in session state if not already present
+if 'results_list' not in st.session_state:
+    st.session_state.results_list = []
 
 # Streamlit UI
 st.title("Model PTU Cost Calculator")
@@ -44,11 +45,11 @@ if model_name:
             "PTU cost": calculate_ptu_cost(ptu_num, min_ptu_deployment_unit, ptu_price_per_unit),
         }
         # Append new result to the results list
-        results_list.append(new_result)
+        st.session_state.results_list.append(new_result)
 
         # Convert results list to a DataFrame and display using st.table
         import pandas as pd
-        results_df = pd.DataFrame(results_list)
+        results_df = pd.DataFrame(st.session_state.results_list)
         st.table(results_df)
 
 # Command line interface
