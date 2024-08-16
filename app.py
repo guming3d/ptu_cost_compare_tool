@@ -40,7 +40,9 @@ if model_name:
             "PayGO cost": calculate_paygo_cost(input_token, output_token, rpm, model_name),
             "PTU cost": calculate_ptu_cost(ptu_num, min_ptu_deployment_unit, ptu_price_per_unit),
         }
-        st.json(result)
+        # Convert result to table format
+        st.write(" | ".join(result.keys()))
+        st.write(" | ".join(map(str, result.values())))
 
 # Command line interface
 if __name__ == "__main__":
@@ -69,4 +71,6 @@ if __name__ == "__main__":
         "PTU cost": calculate_ptu_cost(args.ptu_num, args.ptu_price_per_unit, args.ptu_subscription_type),
     }
 
-    print(json.dumps(result, indent=4))
+    # Convert result to table format
+    print(" | ".join(result.keys()))
+    print(" | ".join(map(str, result.values())))
