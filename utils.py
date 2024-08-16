@@ -30,7 +30,13 @@ def calculate_paygo_cost(input_token, output_token, rpm, model_name):
 
     return input_cost + output_cost
 
-def calculate_ptu_cost(ptu_num, min_ptu_deployment_unit, ptu_price_per_unit):
+def calculate_cost_saving_percentage(ptu_cost, paygo_cost):
+    """
+    Calculate the percentage of cost saving by PTU cost compared to PayGO cost.
+    """
+    if paygo_cost == 0:
+        return 0
+    return ((paygo_cost - ptu_cost) / paygo_cost) * 100
     import math
     result = (math.ceil(ptu_num / min_ptu_deployment_unit) * min_ptu_deployment_unit) * ptu_price_per_unit 
     return result

@@ -1,7 +1,7 @@
 import streamlit as st
 import json
 import os
-from utils import calculate_ptu_num, calculate_ptu_utilization, calculate_paygo_cost, calculate_ptu_cost
+from utils import calculate_ptu_num, calculate_ptu_utilization, calculate_paygo_cost, calculate_ptu_cost, calculate_cost_saving_percentage
 
 # Load model configuration
 config_path = os.path.join(os.path.dirname(__file__), 'model_config.json')
@@ -55,7 +55,23 @@ st.markdown("""
 col1, col2 = st.sidebar.columns(2)
 with col1:
     if st.button("Add Compare"):
+        ptu_num_calculated = calculate_ptu_num(input_token, output_token, rpm, ptu_num)
+        ptu_utilization = calculate_ptu_utilization(ptu_num_calculated, min_ptu_deployment_unit)
+        paygo_cost = calculate_paygo_cost(input_token, output_token, rpm, model_name)
+        ptu_cost = calculate_ptu_cost(ptu_num_calculated, min_ptu_deployment_unit, ptu_price_per_unit)
+        cost_saving_percentage = calculate_cost_saving_percentage(ptu_cost, paygo_cost)
+
         new_result = {
+            "Model Name": model_name,
+            "Input Token Number": input_token,
+            "Output Token Number": output_token,
+            "RPM": rpm,
+            "Reservation Type": ptu_subscription_type,
+            "PTU Num": ptu_num_calculated,
+            "PTU Utilization": ptu_utilization,
+            "PayGO cost": paygo_cost,
+            "PTU cost": ptu_cost,
+            "Cost Saving (%)": cost_saving_percentage
             "Model Name": model_name,
             "Input Token Number": input_token,
             "Output Token Number": output_token,
