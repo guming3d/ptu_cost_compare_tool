@@ -40,32 +40,10 @@ if model_name:
             "PayGO cost": calculate_paygo_cost(input_token, output_token, rpm, model_name),
             "PTU cost": calculate_ptu_cost(ptu_num, min_ptu_deployment_unit, ptu_price_per_unit),
         }
-        # Convert result to HTML table format
-        table_header = "".join([f"<th>{key}</th>" for key in result.keys()])
-        table_values = "".join([f"<td>{value}</td>" for value in result.values()])
-        st.markdown(
-            f"""
-            <style>
-            .full-width-table {{
-                width: 100%;
-                table-layout: auto;
-            }}
-            </style>
-            <table class="full-width-table">
-                <thead>
-                    <tr>
-                        {table_header}
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        {table_values}
-                    </tr>
-                </tbody>
-            </table>
-            """,
-            unsafe_allow_html=True
-        )
+        # Convert result to a DataFrame and display using st.table
+        import pandas as pd
+        result_df = pd.DataFrame([result])
+        st.table(result_df)
 
 # Command line interface
 if __name__ == "__main__":
@@ -94,28 +72,7 @@ if __name__ == "__main__":
         "PTU cost": calculate_ptu_cost(args.ptu_num, args.ptu_price_per_unit, args.ptu_subscription_type),
     }
 
-    # Convert result to HTML table format
-    table_header = "".join([f"<th>{key}</th>" for key in result.keys()])
-    table_values = "".join([f"<td>{value}</td>" for value in result.values()])
-    print(
-        f"""
-        <style>
-        .full-width-table {{
-            width: 100%;
-            table-layout: fixed;
-        }}
-        </style>
-        <table class="full-width-table">
-            <thead>
-                <tr>
-                    {table_header}
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    {table_values}
-                </tr>
-            </tbody>
-        </table>
-        """
-    )
+    # Convert result to a DataFrame and display using st.table
+    import pandas as pd
+    result_df = pd.DataFrame([result])
+    print(result_df.to_string(index=False))
