@@ -49,7 +49,7 @@ if model_name:
             <style>
             .full-width-table {{
                 width: 100%;
-                table-layout: fixed;
+                table-layout: auto;
             }}
             </style>
             <table class="full-width-table">
