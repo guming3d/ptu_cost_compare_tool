@@ -18,7 +18,7 @@ input_token = st.number_input("Input Token Number", min_value=0, value=3500)
 output_token = st.number_input("Output Token Number", min_value=0, value=300)
 rpm = st.number_input("RPM (Request per minute)", min_value=0, value=60)
 model_name = st.selectbox("Model Name", model_list)
-ptu_num = st.number_input("PTU Number", min_value=0.0, format="%.2f")
+ptu_num = st.number_input("PTU Number", min_value=1.0, format="%.2f")
 ptu_subscription_type = st.selectbox("PTU Subscription Type", ["Monthly", "Yearly"])
 
 if model_name:
