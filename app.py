@@ -109,6 +109,30 @@ if not results_df.empty:
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
+# If results are not empty, display "Export to Excel" button
+if not results_df.empty:
+    if st.button("Export to Excel"):
+        import io
+        from pandas import ExcelWriter
+
+        # Create a BytesIO buffer to hold the Excel file
+        buffer = io.BytesIO()
+
+        # Write the DataFrame to the buffer
+        with ExcelWriter(buffer, engine='xlsxwriter') as writer:
+            results_df.to_excel(writer, index=False, sheet_name='Results')
+
+        # Set the buffer's position to the beginning
+        buffer.seek(0)
+
+        # Provide a download link for the Excel file
+        st.download_button(
+            label="Download Excel file",
+            data=buffer,
+            file_name="results.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
 # Command line interface
 if __name__ == "__main__":
     import argparse
