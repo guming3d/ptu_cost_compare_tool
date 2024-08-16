@@ -47,6 +47,10 @@ if st.sidebar.button("Add Compare"):
     # Append new result to the results list
     st.session_state.results_list.append(new_result)
 
+# Add a button to clear the results list
+if st.sidebar.button("Clear Result"):
+    st.session_state.results_list = []
+
 # Convert results list to a DataFrame and display using st.table
 import pandas as pd
 results_df = pd.DataFrame(st.session_state.results_list)
