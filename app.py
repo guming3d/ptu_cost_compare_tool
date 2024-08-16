@@ -19,29 +19,28 @@ output_token = st.number_input("Output Token Number", min_value=0)
 rpm = st.number_input("RPM (Request per minute)", min_value=0)
 model_name = st.selectbox("Model Name", model_list)
 ptu_num = st.number_input("PTU Number", min_value=0)
-min_ptu_deployment_unit = st.number_input("Minimum PTU Deployment Unit", min_value=0)
 ptu_subscription_type = st.selectbox("PTU Subscription Type", ["Monthly", "Yearly"])
-ptu_price_per_unit = st.number_input("PTU Price for Each Unit (USD)", min_value=0.0, format="%.2f")
 
-# Get model-specific configuration
-selected_model_config = next((model for model in model_config if model["model name"] == model_name), None)
-if selected_model_config:
-    min_ptu_deployment_unit = selected_model_config["PTU minumum deployment unit"]
-    ptu_price_per_unit = selected_model_config[f"PTU price of {ptu_subscription_type.lower()} reservation"]
+if model_name:
+    # Get model-specific configuration
+    selected_model_config = next((model for model in model_config if model["model name"] == model_name), None)
+    if selected_model_config:
+        min_ptu_deployment_unit = selected_model_config["PTU minumum deployment unit"]
+        ptu_price_per_unit = selected_model_config[f"PTU price of {ptu_subscription_type.lower()} reservation"]
 
-if st.button("Add Compare"):
-    result = {
-        "Model Name": model_name,
-        "Input Token Number": input_token,
-        "Output Token Number": output_token,
-        "RPM": rpm,
-        "Reservation Type": ptu_subscription_type,
-        "PTU Num": calculate_ptu_num(input_token, output_token, rpm, ptu_num),
-        "PTU Utilization": calculate_ptu_utilization(ptu_num, min_ptu_deployment_unit),
-        "PayGO cost": calculate_paygo_cost(input_token, output_token, rpm),
-        "PTU cost": calculate_ptu_cost(ptu_num, ptu_price_per_unit, ptu_subscription_type),
-    }
-    st.json(result)
+    if st.button("Add Compare"):
+        result = {
+            "Model Name": model_name,
+            "Input Token Number": input_token,
+            "Output Token Number": output_token,
+            "RPM": rpm,
+            "Reservation Type": ptu_subscription_type,
+            "PTU Num": calculate_ptu_num(input_token, output_token, rpm, ptu_num),
+            "PTU Utilization": calculate_ptu_utilization(ptu_num, min_ptu_deployment_unit),
+            "PayGO cost": calculate_paygo_cost(input_token, output_token, rpm),
+            "PTU cost": calculate_ptu_cost(ptu_num, ptu_price_per_unit, ptu_subscription_type),
+        }
+        st.json(result)
 
 # Command line interface
 if __name__ == "__main__":
