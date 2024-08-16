@@ -47,10 +47,10 @@ if model_name:
         # Append new result to the results list
         st.session_state.results_list.append(new_result)
 
-        # Convert results list to a DataFrame and display using st.table
-        import pandas as pd
-        results_df = pd.DataFrame(st.session_state.results_list)
-        st.table(results_df)
+# Convert results list to a DataFrame and display using st.table
+import pandas as pd
+results_df = pd.DataFrame(st.session_state.results_list)
+st.table(results_df)
 
 # Command line interface
 if __name__ == "__main__":
