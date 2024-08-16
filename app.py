@@ -32,24 +32,46 @@ if model_name:
         min_ptu_deployment_unit = selected_model_config["PTU minumum deployment unit"]
         ptu_price_per_unit = selected_model_config[f"PTU price of {ptu_subscription_type.lower()} reservation"]
 
-if st.sidebar.button("Add Compare"):
-    new_result = {
-        "Model Name": model_name,
-        "Input Token Number": input_token,
-        "Output Token Number": output_token,
-        "RPM": rpm,
-        "Reservation Type": ptu_subscription_type,
-        "PTU Num": calculate_ptu_num(input_token, output_token, rpm, ptu_num),
-        "PTU Utilization": calculate_ptu_utilization(ptu_num, min_ptu_deployment_unit),
-        "PayGO cost": calculate_paygo_cost(input_token, output_token, rpm, model_name),
-        "PTU cost": calculate_ptu_cost(ptu_num, min_ptu_deployment_unit, ptu_price_per_unit),
+# Add custom CSS for button styling
+st.markdown("""
+    <style>
+    .stButton button {
+        background-color: #4CAF50; /* Green */
+        border: none;
+        color: white;
+        padding: 10px 24px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        margin: 4px 2px;
+        cursor: pointer;
+        border-radius: 12px;
     }
-    # Append new result to the results list
-    st.session_state.results_list.append(new_result)
+    </style>
+    """, unsafe_allow_html=True)
 
-# Add a button to clear the results list
-if st.sidebar.button("Clear Result"):
-    st.session_state.results_list = []
+# Place buttons side by side
+col1, col2 = st.sidebar.columns(2)
+with col1:
+    if st.button("Add Compare"):
+        new_result = {
+            "Model Name": model_name,
+            "Input Token Number": input_token,
+            "Output Token Number": output_token,
+            "RPM": rpm,
+            "Reservation Type": ptu_subscription_type,
+            "PTU Num": calculate_ptu_num(input_token, output_token, rpm, ptu_num),
+            "PTU Utilization": calculate_ptu_utilization(ptu_num, min_ptu_deployment_unit),
+            "PayGO cost": calculate_paygo_cost(input_token, output_token, rpm, model_name),
+            "PTU cost": calculate_ptu_cost(ptu_num, min_ptu_deployment_unit, ptu_price_per_unit),
+        }
+        # Append new result to the results list
+        st.session_state.results_list.append(new_result)
+
+with col2:
+    if st.button("Clear Result"):
+        st.session_state.results_list = []
 
 # Convert results list to a DataFrame and display using st.table
 import pandas as pd
