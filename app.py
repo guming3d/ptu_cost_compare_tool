@@ -71,16 +71,7 @@ with col1:
             "PTU Utilization": ptu_utilization,
             "PayGO cost": paygo_cost,
             "PTU cost": ptu_cost,
-            "Cost Saving (%)": cost_saving_percentage
-            "Model Name": model_name,
-            "Input Token Number": input_token,
-            "Output Token Number": output_token,
-            "RPM": rpm,
-            "Reservation Type": ptu_subscription_type,
-            "PTU Num": calculate_ptu_num(input_token, output_token, rpm, ptu_num),
-            "PTU Utilization": calculate_ptu_utilization(ptu_num, min_ptu_deployment_unit),
-            "PayGO cost": calculate_paygo_cost(input_token, output_token, rpm, model_name),
-            "PTU cost": calculate_ptu_cost(ptu_num, min_ptu_deployment_unit, ptu_price_per_unit),
+            "Cost Saving (%)": cost_saving_percentage,
         }
         # Append new result to the results list
         st.session_state.results_list.append(new_result)
