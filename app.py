@@ -14,12 +14,12 @@ model_list = [model["model name"] for model in model_config]
 # Streamlit UI
 st.title("Model PTU Cost Calculator")
 
-input_token = st.number_input("Input Token Number", min_value=0, value=3500)
-output_token = st.number_input("Output Token Number", min_value=0, value=300)
-rpm = st.number_input("RPM (Request per minute)", min_value=0, value=60)
-model_name = st.selectbox("Model Name", model_list)
-ptu_num = st.number_input("PTU Number", min_value=1.0, format="%.2f")
-ptu_subscription_type = st.selectbox("PTU Subscription Type", ["Monthly", "Yearly"])
+input_token = st.sidebar.number_input("Input Token Number", min_value=0, value=3500)
+output_token = st.sidebar.number_input("Output Token Number", min_value=0, value=300)
+rpm = st.sidebar.number_input("RPM (Request per minute)", min_value=0, value=60)
+model_name = st.sidebar.selectbox("Model Name", model_list)
+ptu_num = st.sidebar.number_input("PTU Number", min_value=1.0, format="%.2f")
+ptu_subscription_type = st.sidebar.selectbox("PTU Subscription Type", ["Monthly", "Yearly"])
 
 if model_name:
     # Get model-specific configuration
@@ -28,7 +28,7 @@ if model_name:
         min_ptu_deployment_unit = selected_model_config["PTU minumum deployment unit"]
         ptu_price_per_unit = selected_model_config[f"PTU price of {ptu_subscription_type.lower()} reservation"]
 
-    if st.button("Add Compare"):
+    if st.sidebar.button("Add Compare"):
         result = {
             "Model Name": model_name,
             "Input Token Number": input_token,
