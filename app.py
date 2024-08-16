@@ -87,7 +87,7 @@ st.table(results_df)
 
 # If results are not empty, display "Export to Excel" button
 if not results_df.empty:
-    if st.button("Export to Excel"):
+    if st.button("Export to Excel", key="export_to_excel"):
         import io
         from pandas import ExcelWriter
 
@@ -111,7 +111,7 @@ if not results_df.empty:
 
 # If results are not empty, display "Export to Excel" button
 if not results_df.empty:
-    if st.button("Export to Excel"):
+    if st.button("Export to Excel", key="export_to_excel_2"):
         import io
         from pandas import ExcelWriter
 
