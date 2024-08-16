@@ -5,7 +5,7 @@ def calculate_ptu_num(input_token, output_token, rpm, ptu_num):
 def calculate_ptu_utilization(ptu_num, min_ptu_deployment_unit):
     # Dummy function to calculate PTU utilization
     import math
-    return ptu_num / math.ceil(ptu_num / min_ptu_deployment_unit) * min_ptu_deployment_unit
+    return ptu_num / (math.ceil(ptu_num / min_ptu_deployment_unit) * min_ptu_deployment_unit)
 
 def calculate_paygo_cost(input_token, output_token, rpm, model_name):
     import json
