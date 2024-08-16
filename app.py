@@ -32,20 +32,20 @@ if model_name:
         min_ptu_deployment_unit = selected_model_config["PTU minumum deployment unit"]
         ptu_price_per_unit = selected_model_config[f"PTU price of {ptu_subscription_type.lower()} reservation"]
 
-    if st.sidebar.button("Add Compare"):
-        new_result = {
-            "Model Name": model_name,
-            "Input Token Number": input_token,
-            "Output Token Number": output_token,
-            "RPM": rpm,
-            "Reservation Type": ptu_subscription_type,
-            "PTU Num": calculate_ptu_num(input_token, output_token, rpm, ptu_num),
-            "PTU Utilization": calculate_ptu_utilization(ptu_num, min_ptu_deployment_unit),
-            "PayGO cost": calculate_paygo_cost(input_token, output_token, rpm, model_name),
-            "PTU cost": calculate_ptu_cost(ptu_num, min_ptu_deployment_unit, ptu_price_per_unit),
-        }
-        # Append new result to the results list
-        st.session_state.results_list.append(new_result)
+if st.sidebar.button("Add Compare"):
+    new_result = {
+        "Model Name": model_name,
+        "Input Token Number": input_token,
+        "Output Token Number": output_token,
+        "RPM": rpm,
+        "Reservation Type": ptu_subscription_type,
+        "PTU Num": calculate_ptu_num(input_token, output_token, rpm, ptu_num),
+        "PTU Utilization": calculate_ptu_utilization(ptu_num, min_ptu_deployment_unit),
+        "PayGO cost": calculate_paygo_cost(input_token, output_token, rpm, model_name),
+        "PTU cost": calculate_ptu_cost(ptu_num, min_ptu_deployment_unit, ptu_price_per_unit),
+    }
+    # Append new result to the results list
+    st.session_state.results_list.append(new_result)
 
 # Convert results list to a DataFrame and display using st.table
 import pandas as pd
