@@ -37,7 +37,7 @@ if model_name:
             "Reservation Type": ptu_subscription_type,
             "PTU Num": calculate_ptu_num(input_token, output_token, rpm, ptu_num),
             "PTU Utilization": calculate_ptu_utilization(ptu_num, min_ptu_deployment_unit),
-            "PayGO cost": calculate_paygo_cost(input_token, output_token, rpm),
+            "PayGO cost": calculate_paygo_cost(input_token, output_token, rpm, model_name),
             "PTU cost": calculate_ptu_cost(ptu_num, ptu_price_per_unit, ptu_subscription_type),
         }
         st.json(result)
@@ -52,7 +52,6 @@ if __name__ == "__main__":
     parser.add_argument("--rpm", type=int, required=True, help="RPM (Request per minute)")
     parser.add_argument("--model_name", type=str, required=True, choices=model_list, help="Model Name")
     parser.add_argument("--ptu_num", type=int, required=True, help="PTU Number")
-    parser.add_argument("--min_ptu_deployment_unit", type=int, required=True, help="Minimum PTU Deployment Unit")
     parser.add_argument("--ptu_subscription_type", type=str, required=True, choices=["Monthly", "Yearly"], help="PTU Subscription Type")
     parser.add_argument("--ptu_price_per_unit", type=float, required=True, help="PTU Price for Each Unit (USD)")
 
@@ -66,7 +65,7 @@ if __name__ == "__main__":
         "Reservation Type": args.ptu_subscription_type,
         "PTU Num": calculate_ptu_num(args.input_token, args.output_token, args.rpm, args.ptu_num),
         "PTU Utilization": calculate_ptu_utilization(args.ptu_num, args.min_ptu_deployment_unit),
-        "PayGO cost": calculate_paygo_cost(args.input_token, args.output_token, args.rpm),
+        "PayGO cost": calculate_paygo_cost(args.input_token, args.output_token, args.rpm, args.model_name),
         "PTU cost": calculate_ptu_cost(args.ptu_num, args.ptu_price_per_unit, args.ptu_subscription_type),
     }
 
