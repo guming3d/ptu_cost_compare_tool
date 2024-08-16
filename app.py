@@ -13,7 +13,7 @@ output_token = st.number_input("Output Token Number", min_value=0)
 rpm = st.number_input("RPM (Request per minute)", min_value=0)
 model_name = st.selectbox("Model Name", model_list)
 ptu_num = st.number_input("PTU Number", min_value=0)
-min_ptu_deployment_unit = st.number_input("Minimum PTU Deployment Unit", min_value=0)
+min_ptu_deployment_unit = st.number_input("Minimum PTU Deployment Unit", min_value=5)
 ptu_subscription_type = st.selectbox("PTU Subscription Type", ["Monthly", "Yearly"])
 ptu_price_per_unit = st.number_input("PTU Price for Each Unit (USD)", min_value=0.0, format="%.2f")
 
