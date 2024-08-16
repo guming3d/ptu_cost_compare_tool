@@ -11,6 +11,9 @@ with open(config_path, 'r') as f:
 # Extract model names for dropdown
 model_list = [model["model name"] for model in model_config]
 
+# Initialize an empty list to store results
+results_list = []
+
 # Streamlit UI
 st.title("Model PTU Cost Calculator")
 
@@ -29,7 +32,7 @@ if model_name:
         ptu_price_per_unit = selected_model_config[f"PTU price of {ptu_subscription_type.lower()} reservation"]
 
     if st.sidebar.button("Add Compare"):
-        result = {
+        new_result = {
             "Model Name": model_name,
             "Input Token Number": input_token,
             "Output Token Number": output_token,
@@ -40,10 +43,13 @@ if model_name:
             "PayGO cost": calculate_paygo_cost(input_token, output_token, rpm, model_name),
             "PTU cost": calculate_ptu_cost(ptu_num, min_ptu_deployment_unit, ptu_price_per_unit),
         }
-        # Convert result to a DataFrame and display using st.table
+        # Append new result to the results list
+        results_list.append(new_result)
+
+        # Convert results list to a DataFrame and display using st.table
         import pandas as pd
-        result_df = pd.DataFrame([result])
-        st.table(result_df)
+        results_df = pd.DataFrame(results_list)
+        st.table(results_df)
 
 # Command line interface
 if __name__ == "__main__":
