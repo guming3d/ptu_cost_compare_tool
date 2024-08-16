@@ -7,9 +7,28 @@ def calculate_ptu_utilization(ptu_num, min_ptu_deployment_unit):
     import math
     return ptu_num / math.ceil(ptu_num / min_ptu_deployment_unit) * min_ptu_deployment_unit
 
-def calculate_paygo_cost(input_token, output_token, rpm):
-    # Dummy function to calculate PayGO cost
-    return 0.0
+def calculate_paygo_cost(input_token, output_token, rpm, model_name):
+    import json
+    import os
+
+    # Load model configuration
+    config_path = os.path.join(os.path.dirname(__file__), 'model_config.json')
+    with open(config_path, 'r') as f:
+        model_config = json.load(f)
+
+    # Get model-specific configuration
+    selected_model_config = next((model for model in model_config if model["model name"] == model_name), None)
+    if not selected_model_config:
+        raise ValueError(f"Model {model_name} not found in configuration")
+
+    input_token_price = selected_model_config["input token price per 1k"]
+    output_token_price = selected_model_config["output token price per 1k"]
+
+    # Calculate PayGO cost
+    input_cost = ((input_token * (rpm / 60) * 3600 * 24 * 30) / 1000) * input_token_price
+    output_cost = ((output_token * (rpm / 60) * 3600 * 24 * 30) / 1000) * output_token_price
+
+    return input_cost + output_cost
 
 def calculate_ptu_cost(ptu_num, ptu_price_per_unit, ptu_subscription_type):
     # Dummy function to calculate PTU cost
