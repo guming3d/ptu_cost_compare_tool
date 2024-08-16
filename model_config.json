@@ -1,0 +1,20 @@
+[
+    {
+        "model name": "azure openai gpt-4o",
+        "output token multiple ratio": 1,
+        "input token price per 1k": 0.0023,
+        "output token price per 1k": 0.0045,
+        "PTU minumum deployment unit": 50,
+        "PTU price of monthly reservation": 10000,
+        "PTU price of yearly reservation": 8000
+    },
+    {
+        "model name": "google gemini-1.5 pro",
+        "output token multiple ratio": 1,
+        "input token price per 1k": 0.0023,
+        "output token price per 1k": 0.0045,
+        "PTU minumum deployment unit": 5,
+        "PTU price of monthly reservation": 10000,
+        "PTU price of yearly reservation": 8000
+    }
+]

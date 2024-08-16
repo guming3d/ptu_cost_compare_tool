@@ -1,9 +1,15 @@
 import streamlit as st
 import json
+import os
 from utils import calculate_ptu_num, calculate_ptu_utilization, calculate_paygo_cost, calculate_ptu_cost
 
-# Predefined model list
-model_list = ["azure openai gpt-4o", "google gemini-1.5 pro"]
+# Load model configuration
+config_path = os.path.join(os.path.dirname(__file__), 'model_config.json')
+with open(config_path, 'r') as f:
+    model_config = json.load(f)
+
+# Extract model names for dropdown
+model_list = [model["model name"] for model in model_config]
 
 # Streamlit UI
 st.title("Model PTU Cost Calculator")
@@ -13,9 +19,15 @@ output_token = st.number_input("Output Token Number", min_value=0)
 rpm = st.number_input("RPM (Request per minute)", min_value=0)
 model_name = st.selectbox("Model Name", model_list)
 ptu_num = st.number_input("PTU Number", min_value=0)
-min_ptu_deployment_unit = st.number_input("Minimum PTU Deployment Unit", min_value=5)
+min_ptu_deployment_unit = st.number_input("Minimum PTU Deployment Unit", min_value=0)
 ptu_subscription_type = st.selectbox("PTU Subscription Type", ["Monthly", "Yearly"])
 ptu_price_per_unit = st.number_input("PTU Price for Each Unit (USD)", min_value=0.0, format="%.2f")
+
+# Get model-specific configuration
+selected_model_config = next((model for model in model_config if model["model name"] == model_name), None)
+if selected_model_config:
+    min_ptu_deployment_unit = selected_model_config["PTU minumum deployment unit"]
+    ptu_price_per_unit = selected_model_config[f"PTU price of {ptu_subscription_type.lower()} reservation"]
 
 if st.button("Add Compare"):
     result = {
