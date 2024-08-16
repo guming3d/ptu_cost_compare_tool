@@ -44,7 +44,29 @@ if model_name:
         table_header = " | ".join(result.keys())
         table_separator = " | ".join(["---"] * len(result))
         table_values = " | ".join(map(str, result.values()))
-        st.markdown(f"| {table_header} |\n| {table_separator} |\n| {table_values} |")
+        st.markdown(
+            f"""
+            <style>
+            .full-width-table {{
+                width: 100%;
+                table-layout: fixed;
+            }}
+            </style>
+            <table class="full-width-table">
+                <thead>
+                    <tr>
+                        <th>{table_header.replace(' | ', '</th><th>')}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>{table_values.replace(' | ', '</td><td>')}</td>
+                    </tr>
+                </tbody>
+            </table>
+            """,
+            unsafe_allow_html=True
+        )
 
 # Command line interface
 if __name__ == "__main__":
@@ -77,4 +99,25 @@ if __name__ == "__main__":
     table_header = " | ".join(result.keys())
     table_separator = " | ".join(["---"] * len(result))
     table_values = " | ".join(map(str, result.values()))
-    print(f"| {table_header} |\n| {table_separator} |\n| {table_values} |")
+    print(
+        f"""
+        <style>
+        .full-width-table {{
+            width: 100%;
+            table-layout: fixed;
+        }}
+        </style>
+        <table class="full-width-table">
+            <thead>
+                <tr>
+                    <th>{table_header.replace(' | ', '</th><th>')}</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>{table_values.replace(' | ', '</td><td>')}</td>
+                </tr>
+            </tbody>
+        </table>
+        """
+    )
