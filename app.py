@@ -40,10 +40,9 @@ if model_name:
             "PayGO cost": calculate_paygo_cost(input_token, output_token, rpm, model_name),
             "PTU cost": calculate_ptu_cost(ptu_num, min_ptu_deployment_unit, ptu_price_per_unit),
         }
-        # Convert result to markdown table format
-        table_header = " | ".join(result.keys())
-        table_separator = " | ".join(["-------"] * len(result))
-        table_values = " | ".join(map(str, result.values()))
+        # Convert result to HTML table format
+        table_header = "".join([f"<th>{key}</th>" for key in result.keys()])
+        table_values = "".join([f"<td>{value}</td>" for value in result.values()])
         st.markdown(
             f"""
             <style>
@@ -55,12 +54,12 @@ if model_name:
             <table class="full-width-table">
                 <thead>
                     <tr>
-                        <th>{table_header.replace(' | ', '</th><th>')}</th>
+                        {table_header}
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td>{table_values.replace(' | ', '</td><td>')}</td>
+                        {table_values}
                     </tr>
                 </tbody>
             </table>
@@ -95,10 +94,9 @@ if __name__ == "__main__":
         "PTU cost": calculate_ptu_cost(args.ptu_num, args.ptu_price_per_unit, args.ptu_subscription_type),
     }
 
-    # Convert result to markdown table format
-    table_header = " | ".join(result.keys())
-    table_separator = " | ".join(["---"] * len(result))
-    table_values = " | ".join(map(str, result.values()))
+    # Convert result to HTML table format
+    table_header = "".join([f"<th>{key}</th>" for key in result.keys()])
+    table_values = "".join([f"<td>{value}</td>" for value in result.values()])
     print(
         f"""
         <style>
@@ -110,12 +108,12 @@ if __name__ == "__main__":
         <table class="full-width-table">
             <thead>
                 <tr>
-                    <th>{table_header.replace(' | ', '</th><th>')}</th>
+                    {table_header}
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td>{table_values.replace(' | ', '</td><td>')}</td>
+                    {table_values}
                 </tr>
             </tbody>
         </table>
