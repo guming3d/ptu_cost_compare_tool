@@ -1,0 +1,62 @@
+import streamlit as st
+import json
+from utils import calculate_ptu_num, calculate_ptu_utilization, calculate_paygo_cost, calculate_ptu_cost
+
+# Predefined model list
+model_list = ["azure openai gpt-4o", "google gemini-1.5 pro"]
+
+# Streamlit UI
+st.title("Model PTU Cost Calculator")
+
+input_token = st.number_input("Input Token Number", min_value=0)
+output_token = st.number_input("Output Token Number", min_value=0)
+rpm = st.number_input("RPM (Request per minute)", min_value=0)
+model_name = st.selectbox("Model Name", model_list)
+ptu_num = st.number_input("PTU Number", min_value=0)
+min_ptu_deployment_unit = st.number_input("Minimum PTU Deployment Unit", min_value=0)
+ptu_subscription_type = st.selectbox("PTU Subscription Type", ["Monthly", "Yearly"])
+ptu_price_per_unit = st.number_input("PTU Price for Each Unit (USD)", min_value=0.0, format="%.2f")
+
+if st.button("Add Compare"):
+    result = {
+        "Model Name": model_name,
+        "Input Token Number": input_token,
+        "Output Token Number": output_token,
+        "RPM": rpm,
+        "Reservation Type": ptu_subscription_type,
+        "PTU Num": calculate_ptu_num(input_token, output_token, rpm, ptu_num),
+        "PTU Utilization": calculate_ptu_utilization(ptu_num, min_ptu_deployment_unit),
+        "PayGO cost": calculate_paygo_cost(input_token, output_token, rpm),
+        "PTU cost": calculate_ptu_cost(ptu_num, ptu_price_per_unit, ptu_subscription_type),
+    }
+    st.json(result)
+
+# Command line interface
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Model PTU Cost Calculator")
+    parser.add_argument("--input_token", type=int, required=True, help="Input Token Number")
+    parser.add_argument("--output_token", type=int, required=True, help="Output Token Number")
+    parser.add_argument("--rpm", type=int, required=True, help="RPM (Request per minute)")
+    parser.add_argument("--model_name", type=str, required=True, choices=model_list, help="Model Name")
+    parser.add_argument("--ptu_num", type=int, required=True, help="PTU Number")
+    parser.add_argument("--min_ptu_deployment_unit", type=int, required=True, help="Minimum PTU Deployment Unit")
+    parser.add_argument("--ptu_subscription_type", type=str, required=True, choices=["Monthly", "Yearly"], help="PTU Subscription Type")
+    parser.add_argument("--ptu_price_per_unit", type=float, required=True, help="PTU Price for Each Unit (USD)")
+
+    args = parser.parse_args()
+
+    result = {
+        "Model Name": args.model_name,
+        "Input Token Number": args.input_token,
+        "Output Token Number": args.output_token,
+        "RPM": args.rpm,
+        "Reservation Type": args.ptu_subscription_type,
+        "PTU Num": calculate_ptu_num(args.input_token, args.output_token, args.rpm, args.ptu_num),
+        "PTU Utilization": calculate_ptu_utilization(args.ptu_num, args.min_ptu_deployment_unit),
+        "PayGO cost": calculate_paygo_cost(args.input_token, args.output_token, args.rpm),
+        "PTU cost": calculate_ptu_cost(args.ptu_num, args.ptu_price_per_unit, args.ptu_subscription_type),
+    }
+
+    print(json.dumps(result, indent=4))
