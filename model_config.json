@@ -9,11 +9,38 @@
         "PTU price of yearly reservation": 221
     },
     {
+        "model name": "azure openai GPT-4o-mini",
+        "output token multiple ratio": 1,
+        "input token price per 1k": 0.000165,
+        "output token price per 1k": 0.00066,
+        "PTU minumum deployment unit": 25,
+        "PTU price of monthly reservation": 260,
+        "PTU price of yearly reservation": 221
+    },
+    {
         "model name": "azure openai GPT-4-Turbo",
         "output token multiple ratio": 1,
         "input token price per 1k": 0.001,
         "output token price per 1k": 0.003,
         "PTU minumum deployment unit": 100,
+        "PTU price of monthly reservation": 260,
+        "PTU price of yearly reservation": 221
+    },
+    {
+        "model name": "azure openai GPT-4 8k",
+        "output token multiple ratio": 1,
+        "input token price per 1k": 0.03,
+        "output token price per 1k": 0.06,
+        "PTU minumum deployment unit": 50,
+        "PTU price of monthly reservation": 260,
+        "PTU price of yearly reservation": 221
+    },
+    {
+        "model name": "azure openai GPT-4 32k",
+        "output token multiple ratio": 1,
+        "input token price per 1k": 0.06,
+        "output token price per 1k": 0.12,
+        "PTU minumum deployment unit": 200,
         "PTU price of monthly reservation": 260,
         "PTU price of yearly reservation": 221
     },
