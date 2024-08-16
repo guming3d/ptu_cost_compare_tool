@@ -30,9 +30,7 @@ def calculate_paygo_cost(input_token, output_token, rpm, model_name):
 
     return input_cost + output_cost
 
-def calculate_ptu_cost(ptu_num, ptu_price_per_unit, ptu_subscription_type):
-    # Dummy function to calculate PTU cost
-    if ptu_subscription_type == "Monthly":
-        return ptu_num * ptu_price_per_unit
-    else:
-        return ptu_num * ptu_price_per_unit * 12
+def calculate_ptu_cost(ptu_num, min_ptu_deployment_unit, ptu_price_per_unit):
+    import math
+    result = (math.ceil(ptu_num / min_ptu_deployment_unit) * min_ptu_deployment_unit) * ptu_price_per_unit * 12
+    return result

@@ -14,9 +14,9 @@ model_list = [model["model name"] for model in model_config]
 # Streamlit UI
 st.title("Model PTU Cost Calculator")
 
-input_token = st.number_input("Input Token Number", min_value=0)
-output_token = st.number_input("Output Token Number", min_value=0)
-rpm = st.number_input("RPM (Request per minute)", min_value=0)
+input_token = st.number_input("Input Token Number", min_value=0, value=3500)
+output_token = st.number_input("Output Token Number", min_value=0, value=300)
+rpm = st.number_input("RPM (Request per minute)", min_value=0, value=60)
 model_name = st.selectbox("Model Name", model_list)
 ptu_num = st.number_input("PTU Number", min_value=0.0, format="%.2f")
 ptu_subscription_type = st.selectbox("PTU Subscription Type", ["Monthly", "Yearly"])
@@ -38,7 +38,7 @@ if model_name:
             "PTU Num": calculate_ptu_num(input_token, output_token, rpm, ptu_num),
             "PTU Utilization": calculate_ptu_utilization(ptu_num, min_ptu_deployment_unit),
             "PayGO cost": calculate_paygo_cost(input_token, output_token, rpm, model_name),
-            "PTU cost": calculate_ptu_cost(ptu_num, ptu_price_per_unit, ptu_subscription_type),
+            "PTU cost": calculate_ptu_cost(ptu_num, min_ptu_deployment_unit, ptu_price_per_unit),
         }
         st.json(result)
 
