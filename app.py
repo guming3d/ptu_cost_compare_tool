@@ -42,7 +42,7 @@ if model_name:
         }
         # Convert result to markdown table format
         table_header = " | ".join(result.keys())
-        table_separator = " | ".join(["---"] * len(result))
+        table_separator = " | ".join(["-------"] * len(result))
         table_values = " | ".join(map(str, result.values()))
         st.markdown(
             f"""
