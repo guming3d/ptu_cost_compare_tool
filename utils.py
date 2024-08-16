@@ -32,5 +32,5 @@ def calculate_paygo_cost(input_token, output_token, rpm, model_name):
 
 def calculate_ptu_cost(ptu_num, min_ptu_deployment_unit, ptu_price_per_unit):
     import math
-    result = (math.ceil(ptu_num / min_ptu_deployment_unit) * min_ptu_deployment_unit) * ptu_price_per_unit * 12
+    result = (math.ceil(ptu_num / min_ptu_deployment_unit) * min_ptu_deployment_unit) * ptu_price_per_unit 
     return result
