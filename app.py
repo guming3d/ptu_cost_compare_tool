@@ -81,10 +81,26 @@ with col2:
     if st.button("Clear Result"):
         st.session_state.results_list = []
 
-# Convert results list to a DataFrame and display using st.table
+# Convert results list to a DataFrame and display using st.dataframe with custom styling
 import pandas as pd
 results_df = pd.DataFrame(st.session_state.results_list)
-st.table(results_df)
+
+# Apply custom styling to the DataFrame
+styled_df = results_df.style.set_properties(**{
+    'background-color': '#f4f4f4',
+    'color': '#333',
+    'border-color': '#ddd',
+    'border-style': 'solid',
+    'border-width': '1px',
+    'padding': '10px',
+    'font-family': 'Arial, sans-serif',
+    'font-size': '14px',
+}).set_table_styles([{
+    'selector': 'thead th',
+    'props': [('background-color', '#4CAF50'), ('color', 'white'), ('font-weight', 'bold')]
+}])
+
+st.dataframe(styled_df)
 
 # If results are not empty, display "Export to Excel" button
 if not results_df.empty:
