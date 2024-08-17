@@ -32,7 +32,7 @@ if "google" in model_name.lower():
     selected_model_config = next((model for model in model_config if model["model name"] == model_name), None)
     output_token_multiple_ratio = selected_model_config["output token multiple ratio"]
     chars_per_gsu = selected_model_config["chars per GSU"]
-    ptu_num = calculate_ptu_num(input_token, output_token, rpm, ptu_num, chars_per_gsu)
+    ptu_num = calculate_ptu_num(input_token, output_token, rpm, 0, chars_per_gsu)
     st.sidebar.write(f"PTU Number: {ptu_num:.2f}")
 else:
     ptu_num = st.sidebar.number_input("PTU Number", min_value=1.0, format="%.2f")
