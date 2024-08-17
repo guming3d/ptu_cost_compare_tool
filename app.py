@@ -19,10 +19,10 @@ if 'results_list' not in st.session_state:
 # Streamlit UI
 st.title("Model PTU Cost Calculator")
 
+model_name = st.sidebar.selectbox("Model Name", model_list)
 input_token = st.sidebar.number_input("Input Token Number", min_value=0, value=3500)
 output_token = st.sidebar.number_input("Output Token Number", min_value=0, value=300)
 rpm = st.sidebar.number_input("RPM (Request per minute)", min_value=0, value=60)
-model_name = st.sidebar.selectbox("Model Name", model_list)
 ptu_num = st.sidebar.number_input("PTU Number", min_value=1.0, format="%.2f")
 ptu_subscription_type = st.sidebar.selectbox("PTU Subscription Type", ["Monthly", "Yearly"])
 
