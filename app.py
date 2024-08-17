@@ -71,7 +71,7 @@ with col1:
         if "google" in model_name.lower():
             ptu_num_calculated = ptu_num  # Use the pre-calculated PTU number for Google models
         else:
-            ptu_num_calculated = calculate_ptu_num(input_token, output_token, rpm, ptu_num, chars_per_gsu)
+            ptu_num_calculated = calculate_ptu_num(input_token, output_token, rpm, 0, chars_per_gsu)
         ptu_utilization = calculate_ptu_utilization(ptu_num_calculated, min_ptu_deployment_unit)
         paygo_cost = calculate_paygo_cost(input_token, output_token, rpm, model_name)
         ptu_cost = calculate_ptu_cost(ptu_num_calculated, min_ptu_deployment_unit, ptu_price_per_unit)
