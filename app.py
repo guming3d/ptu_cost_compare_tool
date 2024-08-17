@@ -95,10 +95,16 @@ styled_df = results_df.style.set_properties(**{
     'padding': '10px',
     'font-family': 'Arial, sans-serif',
     'font-size': '14px',
-}).set_table_styles([{
-    'selector': 'thead th',
-    'props': [('background-color', '#4CAF50'), ('color', 'white'), ('font-weight', 'bold')]
-}])
+}).set_table_styles([
+    {
+        'selector': 'thead th',
+        'props': [('background-color', '#4CAF50'), ('color', 'white'), ('font-weight', 'bold')]
+    },
+    {
+        'selector': 'thead tr th',
+        'props': [('font-size', '18px'), ('color', 'black'), ('font-weight', 'bold')]
+    }
+])
 
 st.dataframe(styled_df)
 
