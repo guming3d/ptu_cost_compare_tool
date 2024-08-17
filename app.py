@@ -9,6 +9,11 @@ config_path = os.path.join(os.path.dirname(__file__), 'model_config.json')
 with open(config_path, 'r') as f:
     model_config = json.load(f)
 
+# Load model configuration
+config_path = os.path.join(os.path.dirname(__file__), 'model_config.json')
+with open(config_path, 'r') as f:
+    model_config = json.load(f)
+
 # Extract model names for dropdown
 model_list = [model["model name"] for model in model_config]
 
@@ -26,7 +31,8 @@ rpm = st.sidebar.number_input("RPM (Request per minute)", min_value=0, value=60)
 if "google" in model_name.lower():
     selected_model_config = next((model for model in model_config if model["model name"] == model_name), None)
     output_token_multiple_ratio = selected_model_config["output token multiple ratio"]
-    ptu_num = ((input_token + (output_token * (rpm / 60) * output_token_multiple_ratio)) / 800)
+    chars_per_gsu = selected_model_config["chars per GSU"]
+    ptu_num = calculate_ptu_num(input_token, output_token, rpm, ptu_num, chars_per_gsu)
     st.sidebar.write(f"PTU Number: {ptu_num:.2f}")
 else:
     ptu_num = st.sidebar.number_input("PTU Number", min_value=1.0, format="%.2f")
@@ -65,7 +71,7 @@ with col1:
         if "google" in model_name.lower():
             ptu_num_calculated = ptu_num  # Use the pre-calculated PTU number for Google models
         else:
-            ptu_num_calculated = calculate_ptu_num(input_token, output_token, rpm, ptu_num)
+            ptu_num_calculated = calculate_ptu_num(input_token, output_token, rpm, ptu_num, chars_per_gsu)
         ptu_utilization = calculate_ptu_utilization(ptu_num_calculated, min_ptu_deployment_unit)
         paygo_cost = calculate_paygo_cost(input_token, output_token, rpm, model_name)
         ptu_cost = calculate_ptu_cost(ptu_num_calculated, min_ptu_deployment_unit, ptu_price_per_unit)
