@@ -23,7 +23,13 @@ model_name = st.sidebar.selectbox("Model Name", model_list)
 input_token = st.sidebar.number_input("Input Token Number", min_value=0, value=3500)
 output_token = st.sidebar.number_input("Output Token Number", min_value=0, value=300)
 rpm = st.sidebar.number_input("RPM (Request per minute)", min_value=0, value=60)
-ptu_num = st.sidebar.number_input("PTU Number", min_value=1.0, format="%.2f")
+if "google" in model_name.lower():
+    selected_model_config = next((model for model in model_config if model["model name"] == model_name), None)
+    output_token_multiple_ratio = selected_model_config["output token multiple ratio"]
+    ptu_num = ((input_token + (output_token * (rpm / 60) * output_token_multiple_ratio)) / 800)
+    st.sidebar.write(f"PTU Number: {ptu_num:.2f}")
+else:
+    ptu_num = st.sidebar.number_input("PTU Number", min_value=1.0, format="%.2f")
 ptu_subscription_type = st.sidebar.selectbox("PTU Subscription Type", ["Monthly", "Yearly"])
 
 if model_name:
@@ -56,7 +62,10 @@ st.markdown("""
 col1, col2 = st.sidebar.columns(2)
 with col1:
     if st.button("Add Compare"):
-        ptu_num_calculated = calculate_ptu_num(input_token, output_token, rpm, ptu_num)
+        if "google" in model_name.lower():
+            ptu_num_calculated = ptu_num  # Use the pre-calculated PTU number for Google models
+        else:
+            ptu_num_calculated = calculate_ptu_num(input_token, output_token, rpm, ptu_num)
         ptu_utilization = calculate_ptu_utilization(ptu_num_calculated, min_ptu_deployment_unit)
         paygo_cost = calculate_paygo_cost(input_token, output_token, rpm, model_name)
         ptu_cost = calculate_ptu_cost(ptu_num_calculated, min_ptu_deployment_unit, ptu_price_per_unit)
