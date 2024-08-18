@@ -32,7 +32,7 @@ if "google" in model_name.lower():
     selected_model_config = next((model for model in model_config if model["model name"] == model_name), None)
     output_token_multiple_ratio = selected_model_config["output token multiple ratio"]
     chars_per_gsu = selected_model_config["chars per GSU"]
-    ptu_num = calculate_ptu_num(input_token, output_token, rpm, 0, chars_per_gsu)
+    ptu_num = calculate_ptu_num(input_token, output_token, rpm, output_token_multiple_ratio, chars_per_gsu)
     st.sidebar.write(f"PTU Number: {ptu_num:.2f}")
 else:
     ptu_num = st.sidebar.number_input("PTU Number", min_value=1.0, format="%.2f")
@@ -68,10 +68,7 @@ st.markdown("""
 col1, col2 = st.sidebar.columns(2)
 with col1:
     if st.button("Add Compare"):
-        if "google" in model_name.lower():
-            ptu_num_calculated = ptu_num  # Use the pre-calculated PTU number for Google models
-        else:
-            ptu_num_calculated = calculate_ptu_num(input_token, output_token, rpm, 0, chars_per_gsu)
+        ptu_num_calculated = ptu_num
         ptu_utilization = calculate_ptu_utilization(ptu_num_calculated, min_ptu_deployment_unit)
         paygo_cost = calculate_paygo_cost(input_token, output_token, rpm, model_name)
         ptu_cost = calculate_ptu_cost(ptu_num_calculated, min_ptu_deployment_unit, ptu_price_per_unit)

@@ -1,6 +1,5 @@
-def calculate_ptu_num(input_token, output_token, rpm, ptu_num, chars_per_gsu):
-    # Dummy function to calculate PTU number
-    return ((input_token + (output_token * (rpm / 60) * chars_per_gsu)) / chars_per_gsu)
+def calculate_ptu_num(input_token, output_token, rpm, output_token_multiplier, chars_per_gsu):
+    return ((input_token + (output_token * output_token_multiplier)) * (rpm / 60) * 4 ) / chars_per_gsu
 
 def calculate_ptu_utilization(ptu_num, min_ptu_deployment_unit):
     # Dummy function to calculate PTU utilization
