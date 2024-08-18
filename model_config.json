@@ -3,7 +3,7 @@
         "model name": "azure openai GPT-4o",
         "output token multiple ratio": 1,
         "input token price per 1k": 0.005,
-        "output token price per 1k": 0.0015,
+        "output token price per 1k": 0.015,
         "PTU minumum deployment unit": 50,
         "PTU price of monthly reservation": 260,
         "PTU price of yearly reservation": 221
@@ -56,8 +56,8 @@
     {
         "model name": "google gemini-1.5 pro",
         "output token multiple ratio": 3,
-        "input token price per 1k": 0.00125,
-        "output token price per 1k": 0.00375,
+        "input token price per 1k": 0.005,
+        "output token price per 1k": 0.015,
         "PTU minumum deployment unit": 5,
         "PTU price of monthly reservation": 2700,
         "PTU price of yearly reservation": 2000,
@@ -66,11 +66,11 @@
     {
         "model name": "google gemini-1.5 flash",
         "output token multiple ratio": 4,
-        "input token price per 1k": 0.00001875,
-        "output token price per 1k": 0.000075,
+        "input token price per 1k": 0.000075,
+        "output token price per 1k": 0.0003,
         "PTU minumum deployment unit": 5,
         "PTU price of monthly reservation": 2700,
         "PTU price of yearly reservation": 2000,
-        "chars per GSU": 5400
+        "chars per GSU": 54000
     }
 ]
