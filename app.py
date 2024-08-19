@@ -156,6 +156,11 @@ with st.container(border=True):
 \end{aligned}
 """)
 
+    st.latex(r"""
+\begin{aligned}
+\text{Total PayGO Cost} &= \text{Input Cost} + \text{Output Cost}
+\end{aligned}
+""")
 
 
 # Display instructions for calculating PTU number
@@ -163,11 +168,6 @@ with st.container(border=True):
     st.latex(r"""
 \begin{aligned}
 \text{PTU Number} &= \left( \frac{(\text{Input Tokens} + (\text{Output Tokens} \times \text{Output Token Multiple Ratio})) \times 4 \times \left( \frac{\text{RPM}}{60} \right)}{\text{Chars per GSU}} \right)
-\end{aligned}
-""")
-    st.latex(r"""
-\begin{aligned}
-\text{Total PayGO Cost} &= \text{Input Cost} + \text{Output Cost}
 \end{aligned}
 """)
 
@@ -180,7 +180,7 @@ with st.container(border=True):
 """)
 
 with st.container(border=True):
-    st.subheader("Model Configuration")
+    st.subheader("Model price Configuration list")
     st.json(model_config)
 
 
