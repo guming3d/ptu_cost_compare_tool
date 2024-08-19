@@ -10,8 +10,8 @@ To set up the project, follow these steps:
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/yourusername/your-repo-name.git
-   cd your-repo-name
+   git clone https://github.com/guming3d/ptu_cost_compare_tool.git
+   cd ptu_cost_compare_tool
    ```
 
 2. **Create a virtual environment:**
@@ -49,12 +49,3 @@ Replace `yourusername` and `your-repo-name` with your actual GitHub username and
 4. Click on "Clear Result" to clear the comparison table.
 5. If the comparison table is not empty, click on "Export to Excel" to download the results as an Excel file.
 
-### Command Line Interface
-
-You can also use the command line interface to calculate the costs. Run the following command:
-
-```bash
-python app.py --input_token <input_token> --output_token <output_token> --rpm <rpm> --model_name <model_name> --ptu_num <ptu_num> --ptu_subscription_type <ptu_subscription_type> --ptu_price_per_unit <ptu_price_per_unit>
-```
-
-Replace the placeholders with your actual values.
