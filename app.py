@@ -41,7 +41,7 @@ if model_name:
     selected_model_config = next((model for model in model_config if model["model name"] == model_name), None)
     if selected_model_config:
         min_ptu_deployment_unit = selected_model_config["PTU minumum deployment unit"]
-        ptu_price_per_unit = selected_model_config[f"PTU price of {ptu_subscription_type.lower()} reservation"]
+        ptu_price_per_unit = selected_model_config[f"PTU price of {ptu_subscription_type.lower()} commitment"]
 
 # Add custom CSS for button styling
 st.markdown("""
@@ -80,7 +80,7 @@ with col1:
             "Input Token Number": input_token,
             "Output Token Number": output_token,
             "RPM": rpm,
-            "Reservation Type": ptu_subscription_type,
+            "Commitment Type": ptu_subscription_type,
             "PTU Num": ptu_num_calculated,
             "PTU Utilization": ptu_utilization,
             "PayGO cost": paygo_cost,
