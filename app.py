@@ -20,7 +20,7 @@ st.set_page_config(
     page_title="AI GBB PTU price comparation",
     layout="wide",  # You can also choose 'wide'
 )
-st.title("Model PTU Cost Calculator")
+st.title("Model PTU Cost Calculator(Monthly)")
 
 model_name = st.sidebar.selectbox("Model Name", model_list)
 input_token = st.sidebar.number_input("Input Token Number", min_value=0, value=3500)
