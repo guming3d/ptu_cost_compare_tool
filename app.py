@@ -151,4 +151,13 @@ st.markdown("""
 - Total PayGO Cost = Input Cost + Output Cost
 """)
 
+# Display instructions for calculating PTU number
+st.markdown("### PTU Number Calculation Instructions")
+st.markdown("""
+- **PTU Number**: This is calculated based on the number of input tokens, output tokens, the request rate (RPM), and the output token multiple ratio.
+
+**Formula:**
+- PTU Number = ((Input Tokens + (Output Tokens * Output Token Multiple Ratio)) * 4 * (RPM / 60)) / Chars per GSU
+""")
+
 
