@@ -176,4 +176,8 @@ with st.container(border=True):
 \end{aligned}
 """)
 
+with st.container():
+    st.subheader("Model Configuration")
+    st.json(model_config)
+
 
