@@ -151,6 +151,14 @@ with st.container(border=True):
 \text{Output Cost} &= \left( \frac{\text{Output Tokens} \times \left( \frac{\text{RPM}}{60} \right) \times 3600 \times 24 \times 30}{1000} \right) \times \text{Output Token Price per 1k}
 \end{aligned}
 """)
+
+# Display instructions for calculating PTU utilization
+st.subheader("PTU Utilization Calculation Instructions")
+st.latex(r"""
+\begin{aligned}
+\text{PTU Utilization} &= \frac{\text{PTU Number}}{\left( \left\lceil \frac{\text{PTU Number}}{\text{PTU Minimum Deployment Unit}} \right\rceil \times \text{PTU Minimum Deployment Unit} \right)}
+\end{aligned}
+""")
     st.latex(r"""
 \begin{aligned}
 \text{Total PayGO Cost} &= \text{Input Cost} + \text{Output Cost}
