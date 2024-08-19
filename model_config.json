@@ -39,7 +39,7 @@
         "output token multiple ratio": 1,
         "input token price per 1k": 0.03,
         "output token price per 1k": 0.06,
-        "PTU minumum deployment unit": 50,
+        "PTU minumum deployment unit": 100,
         "PTU price of monthly commitment": 312,
         "PTU price of yearly commitment": 312,
         "PTU monthly discount": 0.2,
