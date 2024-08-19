@@ -140,19 +140,21 @@ if not results_df.empty:
 
 st.divider()        
 
+
 # Display instructions for calculating PayGO cost
-st.subheader("PayGO Monthly Cost Calculation Instructions")
-st.latex(r"""
+with st.container(border=True):
+    st.subheader("PayGO Monthly Cost Calculation Instructions")
+    st.latex(r"""
 \begin{aligned}
 \text{Input Cost} &= \left( \frac{\text{Input Tokens} \times \left( \frac{\text{RPM}}{60} \right) \times 3600 \times 24 \times 30}{1000} \right) \times \text{Input Token Price per 1k}
 \end{aligned}
 """)
-st.latex(r"""
+    st.latex(r"""
 \begin{aligned}
 \text{Output Cost} &= \left( \frac{\text{Output Tokens} \times \left( \frac{\text{RPM}}{60} \right) \times 3600 \times 24 \times 30}{1000} \right) \times \text{Output Token Price per 1k}
 \end{aligned}
 """)
-st.latex(r"""
+    st.latex(r"""
 \begin{aligned}
 \text{Total PayGO Cost} &= \text{Input Cost} + \text{Output Cost}
 \end{aligned}
@@ -160,8 +162,8 @@ st.latex(r"""
 
 
 # Display instructions for calculating PTU number
-st.subheader("Google PTU Number Calculation Instructions")
-st.latex(r"""
+    st.subheader("Google PTU Number Calculation Instructions")
+    st.latex(r"""
 \begin{aligned}
 \text{PTU Number} &= \left( \frac{(\text{Input Tokens} + (\text{Output Tokens} \times \text{Output Token Multiple Ratio})) \times 4 \times \left( \frac{\text{RPM}}{60} \right)}{\text{Chars per GSU}} \right)
 \end{aligned}
