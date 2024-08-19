@@ -159,7 +159,8 @@ st.latex(r"""
 \text{PTU Utilization} &= \frac{\text{PTU Number}}{\left( \left\lceil \frac{\text{PTU Number}}{\text{PTU Minimum Deployment Unit}} \right\rceil \times \text{PTU Minimum Deployment Unit} \right)}
 \end{aligned}
 """)
-    st.latex(r"""
+
+st.latex(r"""
 \begin{aligned}
 \text{Total PayGO Cost} &= \text{Input Cost} + \text{Output Cost}
 \end{aligned}
