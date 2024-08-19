@@ -114,29 +114,35 @@ styled_df = results_df.style.apply(style_rows, axis=1).set_table_styles(
 # Display the styled DataFrame
 st.dataframe(styled_df)
 
-# If results are not empty, display "Export to Excel" button
-if not results_df.empty:
-    if st.button("Export to Excel", key="export_to_excel"):
-        import io
-        from pandas import ExcelWriter
+# Create a container for the explanations
+with st.container():
+    st.divider()        
 
-        # Create a BytesIO buffer to hold the Excel file
-        buffer = io.BytesIO()
+    # Display instructions for calculating PayGO cost
+    st.subheader("PayGO Monthly Cost Calculation Instructions")
+    st.latex(r"""
+    \begin{aligned}
+    \text{Input Cost} &= \left( \frac{\text{Input Tokens} \times \left( \frac{\text{RPM}}{60} \right) \times 3600 \times 24 \times 30}{1000} \right) \times \text{Input Token Price per 1k}
+    \end{aligned}
+    """)
+    st.latex(r"""
+    \begin{aligned}
+    \text{Output Cost} &= \left( \frac{\text{Output Tokens} \times \left( \frac{\text{RPM}}{60} \right) \times 3600 \times 24 \times 30}{1000} \right) \times \text{Output Token Price per 1k}
+    \end{aligned}
+    """)
+    st.latex(r"""
+    \begin{aligned}
+    \text{Total PayGO Cost} &= \text{Input Cost} + \text{Output Cost}
+    \end{aligned}
+    """)
 
-        # Write the DataFrame to the buffer
-        with ExcelWriter(buffer, engine='xlsxwriter') as writer:
-            results_df.to_excel(writer, index=False, sheet_name='Results')
-
-        # Set the buffer's position to the beginning
-        buffer.seek(0)
-
-        # Provide a download link for the Excel file
-        st.download_button(
-            label="Download Excel file",
-            data=buffer,
-            file_name="results.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+    # Display instructions for calculating PTU number
+    st.subheader("Google PTU Number Calculation Instructions")
+    st.latex(r"""
+    \begin{aligned}
+    \text{PTU Number} &= \left( \frac{(\text{Input Tokens} + (\text{Output Tokens} \times \text{Output Token Multiple Ratio})) \times 4 \times \left( \frac{\text{RPM}}{60} \right)}{\text{Chars per GSU}} \right)
+    \end{aligned}
+    """)
 
 st.divider()        
 
