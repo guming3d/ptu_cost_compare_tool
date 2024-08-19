@@ -98,9 +98,9 @@ results_df = pd.DataFrame(st.session_state.results_list)
 # Function to apply row styles based on model name
 def style_rows(row):
     if "azure" in row["Model Name"].lower():
-        return ['background-color: lightblue'] * len(row)
-    elif "google" in row["Model Name"].lower():
         return ['background-color: lightgreen'] * len(row)
+    elif "google" in row["Model Name"].lower():
+        return ['background-color: lightyellow'] * len(row)
     else:
         return [''] * len(row)
 
