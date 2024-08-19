@@ -152,34 +152,26 @@ with st.container(border=True):
 \end{aligned}
 """)
 
-# Display instructions for calculating PTU utilization
-st.subheader("PTU Utilization Calculation Instructions")
-st.latex(r"""
+
+
+# Display instructions for calculating PTU number
+    st.subheader("Google PTU Number Calculation Instructions")
+    st.latex(r"""
 \begin{aligned}
-\text{PTU Utilization} &= \frac{\text{PTU Number}}{\left( \left\lceil \frac{\text{PTU Number}}{\text{PTU Minimum Deployment Unit}} \right\rceil \times \text{PTU Minimum Deployment Unit} \right)}
+\text{PTU Number} &= \left( \frac{(\text{Input Tokens} + (\text{Output Tokens} \times \text{Output Token Multiple Ratio})) \times 4 \times \left( \frac{\text{RPM}}{60} \right)}{\text{Chars per GSU}} \right)
 \end{aligned}
 """)
-
-st.latex(r"""
+    st.latex(r"""
 \begin{aligned}
 \text{Total PayGO Cost} &= \text{Input Cost} + \text{Output Cost}
 \end{aligned}
 """)
 
-# Display instructions for calculating PTU number
-st.subheader("Google PTU Number Calculation Instructions")
-st.latex(r"""
+# Display instructions for calculating PTU utilization
+    st.subheader("PTU Utilization Calculation Instructions")
+    st.latex(r"""
 \begin{aligned}
-\text{PTU Number} &= \left( \frac{(\text{Input Tokens} + (\text{Output Tokens} \times \text{Output Token Multiple Ratio})) \times 4 \times \left( \frac{\text{RPM}}{60} \right)}{\text{Chars per GSU}} \right)
-\end{aligned}
-""")
-
-
-# Display instructions for calculating PTU number
-st.subheader("Google PTU Number Calculation Instructions")
-st.latex(r"""
-\begin{aligned}
-\text{PTU Number} &= \left( \frac{(\text{Input Tokens} + (\text{Output Tokens} \times \text{Output Token Multiple Ratio})) \times 4 \times \left( \frac{\text{RPM}}{60} \right)}{\text{Chars per GSU}} \right)
+\text{PTU Utilization} &= \frac{\text{PTU Number}}{\left( \left\lceil \frac{\text{PTU Number}}{\text{PTU Minimum Deployment Unit}} \right\rceil \times \text{PTU Minimum Deployment Unit} \right)}
 \end{aligned}
 """)
 
