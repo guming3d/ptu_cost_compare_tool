@@ -157,10 +157,15 @@ with st.container(border=True):
 """)
 
     st.subheader("How to calculate PayGO Monthly Cost:")
+    st.latex(r"""
+\begin{aligned}
+\text{Input Cost} &= \left( \frac{\text{Input Tokens} \times \left( \frac{\text{RPM}}{60} \right) \times 3600 \times 24 \times 30.42}{1000} \right) \times \text{Input Token Price per 1k}
+\end{aligned}
+""")
 
     st.latex(r"""
 \begin{aligned}
-\text{Output Cost} &= \left( \frac{\text{Output Tokens} \times \left( \frac{\text{RPM}}{60} \right) \times 3600 \times 24 \times 30}{1000} \right) \times \text{Output Token Price per 1k}
+\text{Output Cost} &= \left( \frac{\text{Output Tokens} \times \left( \frac{\text{RPM}}{60} \right) \times 3600 \times 24 \times 30.42}{1000} \right) \times \text{Output Token Price per 1k}
 \end{aligned}
 """)
 

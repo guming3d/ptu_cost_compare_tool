@@ -27,8 +27,8 @@ def calculate_paygo_cost(input_token, output_token, rpm, model_name):
     output_token_price = selected_model_config["output token price per 1k"]
 
     # Calculate PayGO cost
-    input_cost  = ((input_token  * (rpm / 60) * 3600 * 24 * 30) / 1000) * input_token_price
-    output_cost = ((output_token * (rpm / 60) * 3600 * 24 * 30) / 1000) * output_token_price
+    input_cost  = ((input_token  * (rpm / 60) * 3600 * 24 * 30.42) / 1000) * input_token_price
+    output_cost = ((output_token * (rpm / 60) * 3600 * 24 * 30.42) / 1000) * output_token_price
 
     return input_cost + output_cost
 

@@ -25,8 +25,8 @@
     {
         "model name": "azure openai GPT-4-Turbo",
         "output token multiple ratio": 1,
-        "input token price per 1k": 0.001,
-        "output token price per 1k": 0.003,
+        "input token price per 1k": 0.01,
+        "output token price per 1k": 0.03,
         "PTU minumum deployment unit": 100,
         "PTU price of monthly commitment": 312,
         "PTU price of yearly commitment": 312,
