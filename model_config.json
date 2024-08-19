@@ -5,8 +5,10 @@
         "input token price per 1k": 0.005,
         "output token price per 1k": 0.015,
         "PTU minumum deployment unit": 50,
-        "PTU price of monthly reservation": 260,
-        "PTU price of yearly reservation": 221
+        "PTU price of monthly reservation": 312,
+        "PTU price of yearly reservation": 312,
+        "PTU monthly discount": 0.2,
+        "PTU yearly discount": 0.25
     },
     {
         "model name": "azure openai GPT-4o-mini",
@@ -14,8 +16,11 @@
         "input token price per 1k": 0.000165,
         "output token price per 1k": 0.00066,
         "PTU minumum deployment unit": 25,
-        "PTU price of monthly reservation": 260,
-        "PTU price of yearly reservation": 221
+        "PTU price of monthly reservation": 312,
+        "PTU price of yearly reservation": 312,
+        "PTU monthly discount": 0.2,
+        "PTU yearly discount": 0.25
+
     },
     {
         "model name": "azure openai GPT-4-Turbo",
@@ -23,8 +28,11 @@
         "input token price per 1k": 0.001,
         "output token price per 1k": 0.003,
         "PTU minumum deployment unit": 100,
-        "PTU price of monthly reservation": 260,
-        "PTU price of yearly reservation": 221
+        "PTU price of monthly reservation": 312,
+        "PTU price of yearly reservation": 312,
+        "PTU monthly discount": 0.2,
+        "PTU yearly discount": 0.25
+
     },
     {
         "model name": "azure openai GPT-4 8k",
@@ -32,8 +40,11 @@
         "input token price per 1k": 0.03,
         "output token price per 1k": 0.06,
         "PTU minumum deployment unit": 50,
-        "PTU price of monthly reservation": 260,
-        "PTU price of yearly reservation": 221
+        "PTU price of monthly reservation": 312,
+        "PTU price of yearly reservation": 312,
+        "PTU monthly discount": 0.2,
+        "PTU yearly discount": 0.25
+
     },
     {
         "model name": "azure openai GPT-4 32k",
@@ -41,8 +52,11 @@
         "input token price per 1k": 0.06,
         "output token price per 1k": 0.12,
         "PTU minumum deployment unit": 200,
-        "PTU price of monthly reservation": 260,
-        "PTU price of yearly reservation": 221
+        "PTU price of monthly reservation": 312,
+        "PTU price of yearly reservation": 312,
+        "PTU monthly discount": 0.2,
+        "PTU yearly discount": 0.25
+
     },
     {
         "model name": "azure openai GPT-3.5-Turbo-0125",
@@ -50,8 +64,11 @@
         "input token price per 1k": 0.0005,
         "output token price per 1k": 0.0015,
         "PTU minumum deployment unit": 100,
-        "PTU price of monthly reservation": 260,
-        "PTU price of yearly reservation": 221
+        "PTU price of monthly reservation": 312,
+        "PTU price of yearly reservation": 312,
+        "PTU monthly discount": 0.2,
+        "PTU yearly discount": 0.25
+
     },
     {
         "model name": "google gemini-1.5 pro",
@@ -61,7 +78,10 @@
         "PTU minumum deployment unit": 5,
         "PTU price of monthly reservation": 2700,
         "PTU price of yearly reservation": 2000,
-        "chars per GSU": 800
+        "chars per GSU": 800,
+        "PTU monthly discount": 0,
+        "PTU yearly discount": 0
+
     },
     {
         "model name": "google gemini-1.5 flash",
@@ -71,6 +91,9 @@
         "PTU minumum deployment unit": 5,
         "PTU price of monthly reservation": 2700,
         "PTU price of yearly reservation": 2000,
-        "chars per GSU": 54000
+        "chars per GSU": 54000,
+        "PTU monthly discount": 0,
+        "PTU yearly discount": 0
+
     }
 ]
