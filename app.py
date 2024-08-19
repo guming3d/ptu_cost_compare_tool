@@ -141,13 +141,19 @@ if not results_df.empty:
 # Display instructions for calculating PayGO cost
 st.markdown("### PayGO Cost Calculation Instructions")
 st.latex(r"""
-\text{Input Cost} = \left( \frac{\text{Input Tokens} \times \left( \frac{\text{RPM}}{60} \right) \times 3600 \times 24 \times 30}{1000} \right) \times \text{Input Token Price per 1k}
+\begin{aligned}
+\text{Input Cost} &= \left( \frac{\text{Input Tokens} \times \left( \frac{\text{RPM}}{60} \right) \times 3600 \times 24 \times 30}{1000} \right) \times \text{Input Token Price per 1k}
+\end{aligned}
 """)
 st.latex(r"""
-\text{Output Cost} = \left( \frac{\text{Output Tokens} \times \left( \frac{\text{RPM}}{60} \right) \times 3600 \times 24 \times 30}{1000} \right) \times \text{Output Token Price per 1k}
+\begin{aligned}
+\text{Output Cost} &= \left( \frac{\text{Output Tokens} \times \left( \frac{\text{RPM}}{60} \right) \times 3600 \times 24 \times 30}{1000} \right) \times \text{Output Token Price per 1k}
+\end{aligned}
 """)
 st.latex(r"""
-\text{Total PayGO Cost} = \text{Input Cost} + \text{Output Cost}
+\begin{aligned}
+\text{Total PayGO Cost} &= \text{Input Cost} + \text{Output Cost}
+\end{aligned}
 """)
 
 
@@ -155,7 +161,9 @@ st.latex(r"""
 # Display instructions for calculating PTU number
 st.markdown("### PTU Number Calculation Instructions")
 st.latex(r"""
-\text{PTU Number} = \left( \frac{(\text{Input Tokens} + (\text{Output Tokens} \times \text{Output Token Multiple Ratio})) \times 4 \times \left( \frac{\text{RPM}}{60} \right)}{\text{Chars per GSU}} \right)
+\begin{aligned}
+\text{PTU Number} &= \left( \frac{(\text{Input Tokens} + (\text{Output Tokens} \times \text{Output Token Multiple Ratio})) \times 4 \times \left( \frac{\text{RPM}}{60} \right)}{\text{Chars per GSU}} \right)
+\end{aligned}
 """)
 
 
