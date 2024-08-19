@@ -16,6 +16,10 @@ if 'results_list' not in st.session_state:
     st.session_state.results_list = []
 
 # Streamlit UI
+st.set_page_config(
+    page_title="AI GBB PTU price comparation",
+    layout="wide",  # You can also choose 'wide'
+)
 st.title("Model PTU Cost Calculator")
 
 model_name = st.sidebar.selectbox("Model Name", model_list)
