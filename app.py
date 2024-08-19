@@ -62,6 +62,23 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
+# Display instructions for calculating PayGO cost
+st.sidebar.markdown("### PayGO Cost Calculation Instructions")
+st.sidebar.markdown(r"""
+- **Input Cost**: 
+  \[
+  \text{Input Cost} = \left( \frac{\text{Input Tokens} \times \left( \frac{\text{RPM}}{60} \right) \times 3600 \times 24 \times 30}{1000} \right) \times \text{Input Token Price per 1k}
+  \]
+- **Output Cost**: 
+  \[
+  \text{Output Cost} = \left( \frac{\text{Output Tokens} \times \left( \frac{\text{RPM}}{60} \right) \times 3600 \times 24 \times 30}{1000} \right) \times \text{Output Token Price per 1k}
+  \]
+- **Total PayGO Cost**: 
+  \[
+  \text{Total PayGO Cost} = \text{Input Cost} + \text{Output Cost}
+  \]
+""")
+
 # Place buttons side by side
 col1, col2 = st.sidebar.columns(2)
 with col1:
