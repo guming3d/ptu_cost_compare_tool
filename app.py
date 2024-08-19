@@ -31,9 +31,9 @@ if "google" in model_name.lower():
     output_token_multiple_ratio = selected_model_config["output token multiple ratio"]
     chars_per_gsu = selected_model_config["chars per GSU"]
     ptu_num = calculate_ptu_num(input_token, output_token, rpm, output_token_multiple_ratio, chars_per_gsu)
-    st.sidebar.write(f"PTU Number: {ptu_num:.2f}")
+    st.sidebar.write(f"Required PTU Number: {ptu_num:.2f}")
 else:
-    ptu_num = st.sidebar.number_input("PTU Number", min_value=1.0, format="%.2f")
+    ptu_num = st.sidebar.number_input("Required PTU Number", min_value=1.0, format="%.2f")
 ptu_subscription_type = st.sidebar.selectbox("PTU Subscription Type", ["Monthly", "Yearly"])
 
 if model_name:
@@ -81,7 +81,7 @@ with col1:
             "Output Token Number": output_token,
             "RPM": rpm,
             "Commitment Type": ptu_subscription_type,
-            "PTU Num": ptu_num_calculated,
+            "Required PTU Num": ptu_num_calculated,
             "PTU Utilization": ptu_utilization,
             "PayGO cost": paygo_cost,
             "PTU cost": ptu_cost,
@@ -148,7 +148,15 @@ st.divider()
 
 # Display instructions for calculating PayGO cost
 with st.container(border=True):
-    st.subheader("PayGO Monthly Cost Calculation Instructions")
+    # Display instructions for calculating PTU utilization
+    st.subheader("How to calculate PTU Utilization :")
+    st.latex(r"""
+\begin{aligned}
+\text{PTU Utilization} &= \frac{\text{Required PTU Number}}{\left( \left\lceil \frac{\text{Required PTU Number}}{\text{PTU Minimum Deployment Unit}} \right\rceil \times \text{PTU Minimum Deployment Unit} \right)}
+\end{aligned}
+""")
+
+    st.subheader("How to calculate PayGO Monthly Cost:")
 
     st.latex(r"""
 \begin{aligned}
@@ -164,20 +172,13 @@ with st.container(border=True):
 
 
 # Display instructions for calculating PTU number
-    st.subheader("Google PTU Number Calculation Instructions")
+    st.subheader("How to estimate Google PTU Number:")
     st.latex(r"""
 \begin{aligned}
 \text{PTU Number} &= \left( \frac{(\text{Input Tokens} + (\text{Output Tokens} \times \text{Output Token Multiple Ratio})) \times 4 \times \left( \frac{\text{RPM}}{60} \right)}{\text{Chars per GSU}} \right)
 \end{aligned}
 """)
 
-# Display instructions for calculating PTU utilization
-    st.subheader("PTU Utilization Calculation Instructions")
-    st.latex(r"""
-\begin{aligned}
-\text{PTU Utilization} &= \frac{\text{PTU Number}}{\left( \left\lceil \frac{\text{PTU Number}}{\text{PTU Minimum Deployment Unit}} \right\rceil \times \text{PTU Minimum Deployment Unit} \right)}
-\end{aligned}
-""")
 
 with st.container(border=True):
     st.subheader("Model price Configuration list")
