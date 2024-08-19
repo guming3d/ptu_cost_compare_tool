@@ -121,34 +121,3 @@ if not results_df.empty:
         )
 
 
-# Command line interface
-if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser(description="Model PTU Cost Calculator")
-    parser.add_argument("--input_token", type=int, required=True, help="Input Token Number")
-    parser.add_argument("--output_token", type=int, required=True, help="Output Token Number")
-    parser.add_argument("--rpm", type=int, required=True, help="RPM (Request per minute)")
-    parser.add_argument("--model_name", type=str, required=True, choices=model_list, help="Model Name")
-    parser.add_argument("--ptu_num", type=int, required=True, help="PTU Number")
-    parser.add_argument("--ptu_subscription_type", type=str, required=True, choices=["Monthly", "Yearly"], help="PTU Subscription Type")
-    parser.add_argument("--ptu_price_per_unit", type=float, required=True, help="PTU Price for Each Unit (USD)")
-
-    args = parser.parse_args()
-
-    result = {
-        "Model Name": args.model_name,
-        "Input Token Number": args.input_token,
-        "Output Token Number": args.output_token,
-        "RPM": args.rpm,
-        "Reservation Type": args.ptu_subscription_type,
-        "PTU Num": calculate_ptu_num(args.input_token, args.output_token, args.rpm, args.ptu_num),
-        "PTU Utilization": calculate_ptu_utilization(args.ptu_num, args.min_ptu_deployment_unit),
-        "PayGO cost": calculate_paygo_cost(args.input_token, args.output_token, args.rpm, args.model_name),
-        "PTU cost": calculate_ptu_cost(args.ptu_num, args.ptu_price_per_unit, args.ptu_subscription_type),
-    }
-
-    # Convert result to a DataFrame and display using st.table
-    import pandas as pd
-    result_df = pd.DataFrame([result])
-    print(result_df.to_string(index=False))
