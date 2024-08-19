@@ -140,26 +140,22 @@ if not results_df.empty:
 
 # Display instructions for calculating PayGO cost
 st.markdown("### PayGO Cost Calculation Instructions")
-st.markdown("""
-- **Input Cost**: This is calculated based on the number of input tokens, the request rate (RPM), and the price per 1,000 input tokens.
-- **Output Cost**: This is calculated based on the number of output tokens, the request rate (RPM), and the price per 1,000 output tokens.
-- **Total PayGO Cost**: This is the sum of the Input Cost and the Output Cost.
-
-**Formulas:**
-- Input Cost = (Input Tokens * (RPM / 60) * 3600 * 24 * 30 / 1000) * Input Token Price per 1k
-- Output Cost = (Output Tokens * (RPM / 60) * 3600 * 24 * 30 / 1000) * Output Token Price per 1k
-- Total PayGO Cost = Input Cost + Output Cost
+st.latex(r"""
+\text{Input Cost} = \left( \frac{\text{Input Tokens} \times \left( \frac{\text{RPM}}{60} \right) \times 3600 \times 24 \times 30}{1000} \right) \times \text{Input Token Price per 1k}
+""")
+st.latex(r"""
+\text{Output Cost} = \left( \frac{\text{Output Tokens} \times \left( \frac{\text{RPM}}{60} \right) \times 3600 \times 24 \times 30}{1000} \right) \times \text{Output Token Price per 1k}
+""")
+st.latex(r"""
+\text{Total PayGO Cost} = \text{Input Cost} + \text{Output Cost}
 """)
 
 
 
 # Display instructions for calculating PTU number
 st.markdown("### PTU Number Calculation Instructions")
-st.markdown("""
-- **PTU Number**: This is calculated based on the number of input tokens, output tokens, the request rate (RPM), and the output token multiple ratio.
-
-**Formula:**
-- PTU Number = ((Input Tokens + (Output Tokens * Output Token Multiple Ratio)) * 4 * (RPM / 60)) / Chars per GSU
+st.latex(r"""
+\text{PTU Number} = \left( \frac{(\text{Input Tokens} + (\text{Output Tokens} \times \text{Output Token Multiple Ratio})) \times 4 \times \left( \frac{\text{RPM}}{60} \right)}{\text{Chars per GSU}} \right)
 """)
 
 
