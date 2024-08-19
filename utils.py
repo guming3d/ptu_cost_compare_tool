@@ -44,4 +44,5 @@ def calculate_cost_saving_percentage(ptu_cost, paygo_cost):
     """
     if paygo_cost == 0:
         return 0
-    return ((paygo_cost - ptu_cost) / paygo_cost) * 100
+    saving_percentage = ((paygo_cost - ptu_cost) / paygo_cost) * 100
+    return f"{saving_percentage:.2f}%"
