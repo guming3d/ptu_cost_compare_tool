@@ -108,10 +108,10 @@ def style_rows(row):
         return [''] * len(row)
 
 if not results_df.empty:
-    # Apply the row styles and header styles
+    # Apply the row styles, header styles, and format to two decimal places
     styled_df = results_df.style.apply(style_rows, axis=1).set_table_styles(
         [{'selector': 'th', 'props': [('font-weight', 'bold'), ('color', 'black')]}]
-    )
+    ).format(precision=2)
 
     # Display the styled DataFrame
     st.dataframe(styled_df)
