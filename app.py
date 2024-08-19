@@ -138,8 +138,10 @@ if not results_df.empty:
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
+st.divider()        
+
 # Display instructions for calculating PayGO cost
-st.markdown("### PayGO Cost Calculation Instructions")
+st.subheader("PayGO Monthly Cost Calculation Instructions")
 st.latex(r"""
 \begin{aligned}
 \text{Input Cost} &= \left( \frac{\text{Input Tokens} \times \left( \frac{\text{RPM}}{60} \right) \times 3600 \times 24 \times 30}{1000} \right) \times \text{Input Token Price per 1k}
@@ -157,9 +159,8 @@ st.latex(r"""
 """)
 
 
-
 # Display instructions for calculating PTU number
-st.markdown("### PTU Number Calculation Instructions")
+st.subheader("Google PTU Number Calculation Instructions")
 st.latex(r"""
 \begin{aligned}
 \text{PTU Number} &= \left( \frac{(\text{Input Tokens} + (\text{Output Tokens} \times \text{Output Token Multiple Ratio})) \times 4 \times \left( \frac{\text{RPM}}{60} \right)}{\text{Chars per GSU}} \right)
