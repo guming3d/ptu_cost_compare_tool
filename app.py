@@ -140,19 +140,15 @@ if not results_df.empty:
 
 # Display instructions for calculating PayGO cost
 st.markdown("### PayGO Cost Calculation Instructions")
-st.markdown(r"""
-- **Input Cost**: 
-  \[
-  \text{Input Cost} = \left( \frac{\text{Input Tokens} \times \left( \frac{\text{RPM}}{60} \right) \times 3600 \times 24 \times 30}{1000} \right) \times \text{Input Token Price per 1k}
-  \]
-- **Output Cost**: 
-  \[
-  \text{Output Cost} = \left( \frac{\text{Output Tokens} \times \left( \frac{\text{RPM}}{60} \right) \times 3600 \times 24 \times 30}{1000} \right) \times \text{Output Token Price per 1k}
-  \]
-- **Total PayGO Cost**: 
-  \[
-  \text{Total PayGO Cost} = \text{Input Cost} + \text{Output Cost}
-  \]
+st.markdown("""
+- **Input Cost**: This is calculated based on the number of input tokens, the request rate (RPM), and the price per 1,000 input tokens.
+- **Output Cost**: This is calculated based on the number of output tokens, the request rate (RPM), and the price per 1,000 output tokens.
+- **Total PayGO Cost**: This is the sum of the Input Cost and the Output Cost.
+
+**Formulas:**
+- Input Cost = (Input Tokens * (RPM / 60) * 3600 * 24 * 30 / 1000) * Input Token Price per 1k
+- Output Cost = (Output Tokens * (RPM / 60) * 3600 * 24 * 30 / 1000) * Output Token Price per 1k
+- Total PayGO Cost = Input Cost + Output Cost
 """)
 
 
