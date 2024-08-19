@@ -91,10 +91,24 @@ with col2:
     if st.button("Clear Result"):
         st.session_state.results_list = []
 
-# Convert results list to a DataFrame and display using st.table
+# Convert results list to a DataFrame
 import pandas as pd
 results_df = pd.DataFrame(st.session_state.results_list)
-st.table(results_df)
+
+# Function to apply row styles based on model name
+def style_rows(row):
+    if "azure" in row["Model Name"].lower():
+        return ['background-color: lightblue'] * len(row)
+    elif "google" in row["Model Name"].lower():
+        return ['background-color: lightgreen'] * len(row)
+    else:
+        return [''] * len(row)
+
+# Apply the row styles
+styled_df = results_df.style.apply(style_rows, axis=1)
+
+# Display the styled DataFrame
+st.dataframe(styled_df)
 
 # If results are not empty, display "Export to Excel" button
 if not results_df.empty:
