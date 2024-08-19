@@ -71,7 +71,8 @@ with col1:
         ptu_num_calculated = ptu_num
         ptu_utilization = calculate_ptu_utilization(ptu_num_calculated, min_ptu_deployment_unit)
         paygo_cost = calculate_paygo_cost(input_token, output_token, rpm, model_name)
-        ptu_cost = calculate_ptu_cost(ptu_num_calculated, min_ptu_deployment_unit, ptu_price_per_unit)
+        ptu_discount = selected_model_config[f"PTU {ptu_subscription_type.lower()} discount"]
+        ptu_cost = calculate_ptu_cost(ptu_num_calculated, min_ptu_deployment_unit, ptu_price_per_unit, ptu_discount)
         cost_saving_percentage = calculate_cost_saving_percentage(ptu_cost, paygo_cost)
 
         new_result = {

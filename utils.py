@@ -31,10 +31,11 @@ def calculate_paygo_cost(input_token, output_token, rpm, model_name):
 
     return input_cost + output_cost
 
-def calculate_ptu_cost(ptu_num, min_ptu_deployment_unit, ptu_price_per_unit):
+def calculate_ptu_cost(ptu_num, min_ptu_deployment_unit, ptu_price_per_unit, ptu_discount):
     import math
-    result = (math.ceil(ptu_num / min_ptu_deployment_unit) * min_ptu_deployment_unit) * ptu_price_per_unit 
-    return result
+    result = (math.ceil(ptu_num / min_ptu_deployment_unit) * min_ptu_deployment_unit) * ptu_price_per_unit
+    discounted_result = result * (1 - ptu_discount)
+    return discounted_result
 
 def calculate_cost_saving_percentage(ptu_cost, paygo_cost):
     """
