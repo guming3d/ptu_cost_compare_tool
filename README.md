@@ -30,8 +30,6 @@ To set up the project, follow these steps:
    streamlit run app.py
    ```
 
-Replace `yourusername` and `your-repo-name` with your actual GitHub username and repository name.
-
 ## Usage
 
 ### Streamlit Web Application
