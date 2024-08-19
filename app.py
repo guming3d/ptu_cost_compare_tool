@@ -176,7 +176,7 @@ with st.container(border=True):
 \end{aligned}
 """)
 
-with st.container():
+with st.container(border=True):
     st.subheader("Model Configuration")
     st.json(model_config)
 
