@@ -106,13 +106,14 @@ def style_rows(row):
     else:
         return [''] * len(row)
 
-# Apply the row styles and header styles
-styled_df = results_df.style.apply(style_rows, axis=1).set_table_styles(
-    [{'selector': 'th', 'props': [('font-weight', 'bold'), ('color', 'black')]}]
-)
+if not results_df.empty:
+    # Apply the row styles and header styles
+    styled_df = results_df.style.apply(style_rows, axis=1).set_table_styles(
+        [{'selector': 'th', 'props': [('font-weight', 'bold'), ('color', 'black')]}]
+    )
 
-# Display the styled DataFrame
-st.dataframe(styled_df)
+    # Display the styled DataFrame
+    st.dataframe(styled_df)
 
 # If results are not empty, display "Export to Excel" button
 if not results_df.empty:
