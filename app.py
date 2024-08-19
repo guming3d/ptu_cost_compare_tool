@@ -166,6 +166,14 @@ st.latex(r"""
 \end{aligned}
 """)
 
+# Display instructions for calculating PTU number
+st.subheader("Google PTU Number Calculation Instructions")
+st.latex(r"""
+\begin{aligned}
+\text{PTU Number} &= \left( \frac{(\text{Input Tokens} + (\text{Output Tokens} \times \text{Output Token Multiple Ratio})) \times 4 \times \left( \frac{\text{RPM}}{60} \right)}{\text{Chars per GSU}} \right)
+\end{aligned}
+""")
+
 
 # Display instructions for calculating PTU number
     st.subheader("Google PTU Number Calculation Instructions")
