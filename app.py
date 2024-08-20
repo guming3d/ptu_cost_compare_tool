@@ -185,12 +185,13 @@ with st.container(border=True):
 
 # Display instructions for calculating PTU number
     st.subheader("How to estimate Google PTU Number:")
-    st.markdown("[Reference](https://cloud.google.com/vertex-ai/generative-ai/docs/provisioned-throughput)")
     st.latex(r"""
 \begin{aligned}
 \text{PTU Number} &= \left( \frac{(\text{Input Tokens} + (\text{Output Tokens} \times \text{Output Token Multiple Ratio})) \times 4 \times \left( \frac{\text{RPM}}{60} \right)}{\text{Chars per GSU}} \right)
 \end{aligned}
 """)
+    st.markdown("[Google Cloud Model Price doc](https://cloud.google.com/vertex-ai/generative-ai/pricing#gemini-models)")
+    st.markdown("[Google Cloud Provisioned Throughput doc](https://cloud.google.com/vertex-ai/generative-ai/docs/provisioned-throughput)")
 
 
 with st.container(border=True):
