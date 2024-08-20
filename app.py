@@ -155,16 +155,19 @@ st.divider()
 
 # Display instructions for calculating PayGO cost
 with st.container(border=True):
-    st.subheader("Reference Info")
+    st.title("Reference Info")
     # Display instructions for calculating PTU utilization
-    st.subheader("How to calculate PTU Utilization :")
+    st.divider()
+    st.subheader("1. How to calculate PTU Utilization :")
+    
     st.latex(r"""
 \begin{aligned}
 \text{PTU Utilization} &= \frac{\text{Required PTU Number}}{\left( \left\lceil \frac{\text{Required PTU Number}}{\text{PTU Minimum Deployment Unit}} \right\rceil \times \text{PTU Minimum Deployment Unit} \right)}
 \end{aligned}
 """)
+    st.divider()
 
-    st.subheader("How to calculate PayGO Monthly Cost:")
+    st.subheader("2. How to calculate PayGO Monthly Cost:")
     st.latex(r"""
 \begin{aligned}
 \text{Input Cost} &= \left( \frac{\text{Input Tokens} \times \left( \frac{\text{RPM}}{60} \right) \times 3600 \times 24 \times 30.42}{1000} \right) \times \text{Input Token Price per 1k}
@@ -183,9 +186,11 @@ with st.container(border=True):
 \end{aligned}
 """)
 
+    st.divider()
+
 
 # Display instructions for calculating PTU number
-    st.subheader("How to estimate Google PTU Number:")
+    st.subheader("3. How to estimate Google PTU Number:")
     st.latex(r"""
 \begin{aligned}
 \text{PTU Number} &= \left( \frac{(\text{Input Tokens} + (\text{Output Tokens} \times \text{Output Token Multiple Ratio})) \times 4 \times \left( \frac{\text{RPM}}{60} \right)}{\text{Chars per GSU}} \right)
