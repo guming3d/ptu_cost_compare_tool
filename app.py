@@ -98,8 +98,6 @@ with col2:
 import pandas as pd
 results_df = pd.DataFrame(st.session_state.results_list)
 
-# Add version info at the bottom of the sidebar
-st.sidebar.markdown("**version 0.8, 2024.08**")
 
 # Function to apply styles based on model name and cost saving percentage
 def style_rows(row):
