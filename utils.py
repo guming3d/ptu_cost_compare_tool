@@ -41,8 +41,8 @@ def calculate_ptu_cost(ptu_num, min_ptu_deployment_unit, ptu_price_per_unit, ptu
     result = (math.ceil(ptu_num / min_ptu_deployment_unit) * min_ptu_deployment_unit) * ptu_price_per_unit
     discounted_result = result * (1 - ptu_discount)
     if detailed:
+        discounted_result = f"({result})* (1 - {ptu_discount:.2f}) = {discounted_result}"
         result = f"({math.ceil(ptu_num / min_ptu_deployment_unit)} * {min_ptu_deployment_unit}) * {ptu_price_per_unit:.2f} = {result}"
-        discounted_result = f"{result} * (1 - {ptu_discount:.2f}) = {discounted_result}"
         return result, discounted_result
     else:
         return discounted_result
