@@ -29,8 +29,8 @@ def calculate_paygo_cost(input_token, output_token, rpm, model_name, detailed=Fa
     output_cost = ((output_token * (rpm / 60) * 3600 * 24 * 30.42) / 1000) * output_token_price
 
     if detailed:
-        input_cost = f"(({input_token}  * ({rpm} / 60) * 3600 * 24 * 30.42) / 1000) * {input_token_price} = {input_cost}"
-        output_cost = f"(({output_token} * ({rpm} / 60) * 3600 * 24 * 30.42) / 1000) * {output_token_price} = {output_cost}"
+        input_cost = f"(({input_token}  * ({rpm} / 60) * 3600 * 24 * 30.42) / 1000) * {input_token_price:.6f} = {input_cost}"
+        output_cost = f"(({output_token} * ({rpm} / 60) * 3600 * 24 * 30.42) / 1000) * {output_token_price:.6f} = {output_cost}"
         total_cost = f"{input_cost} + {output_cost} = {input_cost + output_cost}"
         return input_cost, output_cost, total_cost
     else:
