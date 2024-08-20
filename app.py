@@ -87,6 +87,7 @@ with col1:
             st.sidebar.markdown(f"<p style='color:darkgreen;'>Input Cost:<br>{input_cost}</p>", unsafe_allow_html=True)
             st.sidebar.markdown(f"<p style='color:darkgreen;'>Output Cost:<br>{output_cost}</p>", unsafe_allow_html=True)
             st.sidebar.markdown(f"<p style='color:darkgreen;'>Total PayGO Cost:<br>{total_cost}</p>", unsafe_allow_html=True)
+            st.sidebar.divider()
             st.sidebar.markdown(f"<p style='color:darkgreen;'>PTU Cost Breakdown:</p>", unsafe_allow_html=True)
             st.sidebar.markdown(f"<p style='color:darkgreen;'>Cost before discount:<br>{origial_cost}<br>After Discount:<br>{cost_after_discount}</p>", unsafe_allow_html=True)
 
