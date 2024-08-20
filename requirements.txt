@@ -2,3 +2,4 @@ streamlit==1.37.0
 pandas
 numpy
 openpyxl==3.0.9
+xlsxwriter==3.0.1
