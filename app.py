@@ -76,7 +76,13 @@ with col1:
         ptu_cost = calculate_ptu_cost(ptu_num_calculated, min_ptu_deployment_unit, ptu_price_per_unit, ptu_discount)
         cost_saving_percentage = calculate_cost_saving_percentage(ptu_cost, paygo_cost)
 
-        new_result = {
+        # Calculate detailed PayGO cost breakdown
+        input_cost, output_cost = calculate_paygo_cost(input_token, output_token, rpm, model_name, detailed=True)
+
+        # Display detailed PayGO cost breakdown
+        st.sidebar.write(f"Input Cost: ${input_cost:.2f}")
+        st.sidebar.write(f"Output Cost: ${output_cost:.2f}")
+        st.sidebar.write(f"Total PayGO Cost: ${paygo_cost:.2f}")
             "Model Name": model_name,
             "Input Token Number": input_token,
             "Output Token Number": output_token,
