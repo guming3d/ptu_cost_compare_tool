@@ -33,7 +33,7 @@ if "google" in model_name.lower():
     ptu_num = calculate_ptu_num(input_token, output_token, rpm, output_token_multiple_ratio, chars_per_gsu)
     st.sidebar.write(f"Required PTU Number: {ptu_num:.2f}")
 else:
-    ptu_num = st.sidebar.number_input("Required PTU Number", min_value=1.0, format="%.2f")
+    ptu_num = st.sidebar.number_input("Required PTU Number", min_value=1.0, value=100.0, format="%.2f")
 ptu_subscription_type = st.sidebar.selectbox("PTU Subscription Type", ["Monthly", "Yearly"])
 
 if model_name:
@@ -158,7 +158,7 @@ with st.container(border=True):
     st.title("Reference Info")
     # Display instructions for calculating PTU utilization
     st.divider()
-    st.subheader("1. How to calculate PTU Utilization :")
+    st.subheader("1. How to calculate PTU Utilization(All Models):")
     
     st.latex(r"""
 \begin{aligned}
@@ -167,7 +167,7 @@ with st.container(border=True):
 """)
     st.divider()
 
-    st.subheader("2. How to calculate PayGO Monthly Cost:")
+    st.subheader("2. How to calculate PayGO Monthly Cost(All Models):")
     st.latex(r"""
 \begin{aligned}
 \text{Input Cost} &= \left( \frac{\text{Input Tokens} \times \left( \frac{\text{RPM}}{60} \right) \times 3600 \times 24 \times 30.42}{1000} \right) \times \text{Input Token Price per 1k}
@@ -190,7 +190,7 @@ with st.container(border=True):
 
 
 # Display instructions for calculating PTU number
-    st.subheader("3. How to estimate Google PTU Number:")
+    st.subheader("3. How to estimate PTU Number(Only Google Gemini Models):")
     st.latex(r"""
 \begin{aligned}
 \text{PTU Number} &= \left( \frac{(\text{Input Tokens} + (\text{Output Tokens} \times \text{Output Token Multiple Ratio})) \times 4 \times \left( \frac{\text{RPM}}{60} \right)}{\text{Chars per GSU}} \right)
