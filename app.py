@@ -142,11 +142,16 @@ if not results_df.empty:
         # Set the buffer's position to the beginning
         buffer.seek(0)
 
-        # Provide a download link for the Excel file
+        # Generate the filename with the current timestamp
+        from datetime import datetime
+        current_time = datetime.now().strftime("%Y-%m-%d-%H:%M")
+        filename = f"ptu-cost-compare-{current_time}.xlsx"
+
+        # Provide a download link for the Excel file with the generated filename
         st.download_button(
             label="Download Excel file",
             data=buffer,
-            file_name="results.xlsx",
+            file_name=filename,
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
