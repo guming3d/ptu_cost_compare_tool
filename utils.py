@@ -1,10 +1,8 @@
 def calculate_google_ptu_num(input_token, output_token, rpm, output_token_multiplier, chars_per_gsu):
-    # adding debug print statement to print all input values
     print(f"debugging>>input_token: {input_token}, output_token: {output_token}, rpm: {rpm}, output_token_multiplier: {output_token_multiplier}, chars_per_gsu: {chars_per_gsu}")
     return ((input_token + (output_token * output_token_multiplier)) * 4 * (rpm / 60) ) / chars_per_gsu
 
 def calculate_ptu_utilization(ptu_num, min_ptu_deployment_unit):
-    # Dummy function to calculate PTU utilization
     import math
     utilization = ptu_num / (math.ceil(ptu_num / min_ptu_deployment_unit) * min_ptu_deployment_unit)
     return f"{utilization * 100:.2f}% ({ptu_num}/{(math.ceil(ptu_num / min_ptu_deployment_unit) * min_ptu_deployment_unit)})"
