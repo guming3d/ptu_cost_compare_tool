@@ -105,7 +105,7 @@ st.sidebar.markdown("**version 0.8, 2024.08**")
 def style_rows(row):
     styles = [''] * len(row)
     if "azure" in row["Model Name"].lower():
-        styles = ['background-color: lightgreen'] * len(row)
+        styles = ['background-color: white'] * len(row)
     elif "google" in row["Model Name"].lower():
         styles = ['background-color: lightyellow'] * len(row)
     
@@ -114,14 +114,15 @@ def style_rows(row):
     if cost_saving_percentage > 0:
         styles[-1] = 'background-color: lightgreen'
     else:
-        styles[-1] = 'background-color: lightyellow'
+        # change the text color to white if the cost saving percentage is negative
+        styles[-1] = 'background-color: red ; color: white'
     
     return styles
 
 if not results_df.empty:
     # Apply the row styles, header styles, and format to two decimal places
     styled_df = results_df.style.apply(style_rows, axis=1).set_table_styles(
-        [{'selector': 'th', 'props': [('font-weight', 'bold'), ('color', 'black')]}]
+        [{'selector': 'th', 'props': [('font-weight', 'bold'), ('color', 'Blue')]}]
     ).format(precision=2)
 
     # Display the styled DataFrame
