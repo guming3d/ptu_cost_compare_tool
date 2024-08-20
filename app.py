@@ -22,7 +22,7 @@ st.set_page_config(
 )
 st.title("Model PTU Cost Calculator(Monthly)")
 
-st.sidebar.title("Please select model and workload scenario")
+st.sidebar.title("Select model and workload scenario")
 model_name = st.sidebar.selectbox("Model Name", model_list)
 input_token = st.sidebar.number_input("Input Token Number", min_value=0, value=3500)
 output_token = st.sidebar.number_input("Output Token Number", min_value=0, value=300)
