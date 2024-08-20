@@ -83,6 +83,8 @@ with col1:
         st.sidebar.write(f"Input Cost: ${input_cost:.2f}")
         st.sidebar.write(f"Output Cost: ${output_cost:.2f}")
         st.sidebar.write(f"Total PayGO Cost: ${paygo_cost:.2f}")
+
+        new_result = {
             "Model Name": model_name,
             "Input Token Number": input_token,
             "Output Token Number": output_token,
