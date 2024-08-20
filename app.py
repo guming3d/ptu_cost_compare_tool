@@ -85,7 +85,7 @@ with col1:
             "PTU Utilization": ptu_utilization,
             "PayGO cost": paygo_cost,
             "PTU cost": ptu_cost,
-            "Cost Saving (%)": cost_saving_percentage,
+            "PTU Cost Saving (%)": cost_saving_percentage,
         }
         # Append new result to the results list
         st.session_state.results_list.append(new_result)
@@ -108,7 +108,7 @@ def style_rows(row):
         styles = ['background-color: lightyellow'] * len(row)
     
     # Apply color to the "Cost Saving (%)" column based on its value
-    cost_saving_percentage = float(row["Cost Saving (%)"].strip('%'))
+    cost_saving_percentage = float(row["PTU Cost Saving (%)"].strip('%'))
     if cost_saving_percentage > 0:
         styles[-1] = 'background-color: lightgreen'
     else:
