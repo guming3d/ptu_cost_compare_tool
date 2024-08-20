@@ -113,7 +113,7 @@ def style_rows(row):
         styles[-1] = 'background-color: lightgreen'
     else:
         # change the text color to white if the cost saving percentage is negative
-        styles[-1] = 'background-color: red ; color: white'
+        styles[-1] = 'background-color: orange ; color: white'
     
     return styles
 
