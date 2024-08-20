@@ -101,14 +101,22 @@ results_df = pd.DataFrame(st.session_state.results_list)
 # Add version info at the bottom of the sidebar
 st.sidebar.markdown("**version 0.8, 2024.08**")
 
-# Function to apply row styles based on model name
+# Function to apply styles based on model name and cost saving percentage
 def style_rows(row):
+    styles = [''] * len(row)
     if "azure" in row["Model Name"].lower():
-        return ['background-color: lightgreen'] * len(row)
+        styles = ['background-color: lightgreen'] * len(row)
     elif "google" in row["Model Name"].lower():
-        return ['background-color: lightyellow'] * len(row)
+        styles = ['background-color: lightyellow'] * len(row)
+    
+    # Apply color to the "Cost Saving (%)" column based on its value
+    cost_saving_percentage = float(row["Cost Saving (%)"].strip('%'))
+    if cost_saving_percentage > 0:
+        styles[-1] = 'background-color: lightgreen'
     else:
-        return [''] * len(row)
+        styles[-1] = 'background-color: lightyellow'
+    
+    return styles
 
 if not results_df.empty:
     # Apply the row styles, header styles, and format to two decimal places
