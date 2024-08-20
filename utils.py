@@ -7,7 +7,7 @@ def calculate_ptu_utilization(ptu_num, min_ptu_deployment_unit):
     utilization = ptu_num / (math.ceil(ptu_num / min_ptu_deployment_unit) * min_ptu_deployment_unit)
     return f"{utilization * 100:.2f}% ({ptu_num}/{(math.ceil(ptu_num / min_ptu_deployment_unit) * min_ptu_deployment_unit)})"
 
-def calculate_paygo_cost(input_token, output_token, rpm, model_name):
+def calculate_paygo_cost(input_token, output_token, rpm, model_name, detailed=False):
     import json
     import os
 
@@ -28,7 +28,10 @@ def calculate_paygo_cost(input_token, output_token, rpm, model_name):
     input_cost  = ((input_token  * (rpm / 60) * 3600 * 24 * 30.42) / 1000) * input_token_price
     output_cost = ((output_token * (rpm / 60) * 3600 * 24 * 30.42) / 1000) * output_token_price
 
-    return input_cost + output_cost
+    if detailed:
+        return input_cost, output_cost
+    else:
+        return input_cost + output_cost
 
 def calculate_ptu_cost(ptu_num, min_ptu_deployment_unit, ptu_price_per_unit, ptu_discount):
     import math
