@@ -77,11 +77,11 @@ with col1:
         cost_saving_percentage = calculate_cost_saving_percentage(ptu_cost, paygo_cost)
 
         # Calculate detailed PayGO cost breakdown
-        input_cost, output_cost = calculate_paygo_cost(input_token, output_token, rpm, model_name, detailed=True)
+        input_cost, output_cost, total_cost = calculate_paygo_cost(input_token, output_token, rpm, model_name, detailed=True)
 
         # Display detailed PayGO cost breakdown
-        st.sidebar.write(f"Input Cost: ${input_cost:.2f}")
-        st.sidebar.write(f"Output Cost: ${output_cost:.2f}")
+        st.sidebar.write(f"Input Cost: ${input_cost}")
+        st.sidebar.write(f"Output Cost: ${output_cost}")
         st.sidebar.write(f"Total PayGO Cost: ${paygo_cost:.2f}")
 
         new_result = {
