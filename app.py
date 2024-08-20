@@ -80,9 +80,9 @@ with col1:
         input_cost, output_cost, total_cost = calculate_paygo_cost(input_token, output_token, rpm, model_name, detailed=True)
 
         # Display detailed PayGO cost breakdown
-        st.sidebar.write(f"Input Cost: ${input_cost}")
-        st.sidebar.write(f"Output Cost: ${output_cost}")
-        st.sidebar.write(f"Total PayGO Cost: ${paygo_cost:.2f}")
+        st.sidebar.markdown(f"<p style='color:darkgreen;'>Input Cost: ${input_cost}</p>", unsafe_allow_html=True)
+        st.sidebar.markdown(f"<p style='color:darkgreen;'>Output Cost: ${output_cost}</p>", unsafe_allow_html=True)
+        st.sidebar.markdown(f"<p style='color:darkgreen;'>Total PayGO Cost: ${paygo_cost:.2f}</p>", unsafe_allow_html=True)
 
         new_result = {
             "Model Name": model_name,
