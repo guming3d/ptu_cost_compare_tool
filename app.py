@@ -155,6 +155,7 @@ st.divider()
 
 # Display instructions for calculating PayGO cost
 with st.container(border=True):
+    st.subheader("Reference Info")
     # Display instructions for calculating PTU utilization
     st.subheader("How to calculate PTU Utilization :")
     st.latex(r"""
