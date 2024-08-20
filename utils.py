@@ -29,18 +29,23 @@ def calculate_paygo_cost(input_token, output_token, rpm, model_name, detailed=Fa
     output_cost = ((output_token * (rpm / 60) * 3600 * 24 * 30.42) / 1000) * output_token_price
 
     if detailed:
+        total_cost = f"{input_cost} + {output_cost} = {input_cost + output_cost}"
         input_cost = f"(({input_token}  * ({rpm} / 60) * 3600 * 24 * 30.42) / 1000) * {input_token_price:.6f} = {input_cost}"
         output_cost = f"(({output_token} * ({rpm} / 60) * 3600 * 24 * 30.42) / 1000) * {output_token_price:.6f} = {output_cost}"
-        total_cost = f"{input_cost} + {output_cost} = {input_cost + output_cost}"
         return input_cost, output_cost, total_cost
     else:
         return input_cost + output_cost
 
-def calculate_ptu_cost(ptu_num, min_ptu_deployment_unit, ptu_price_per_unit, ptu_discount):
+def calculate_ptu_cost(ptu_num, min_ptu_deployment_unit, ptu_price_per_unit, ptu_discount, detailed=False):
     import math
     result = (math.ceil(ptu_num / min_ptu_deployment_unit) * min_ptu_deployment_unit) * ptu_price_per_unit
     discounted_result = result * (1 - ptu_discount)
-    return discounted_result
+    if detailed:
+        result = f"({math.ceil(ptu_num / min_ptu_deployment_unit)} * {min_ptu_deployment_unit}) * {ptu_price_per_unit:.2f} = {result}"
+        discounted_result = f"{result} * (1 - {ptu_discount:.2f}) = {discounted_result}"
+        return result, discounted_result
+    else:
+        return discounted_result
 
 def calculate_cost_saving_percentage(ptu_cost, paygo_cost):
     """
