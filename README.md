@@ -8,6 +8,8 @@ This project is designed to calculate the cost of using different AI models base
 
 ## Installation Guide
 
+If you don't want to deploy this tool locally, you can access it [here](https://gbb-ptu-cost-compare.streamlit.app).
+
 To set up the project, follow these steps:
 
 1. **Clone the repository:**
