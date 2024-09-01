@@ -4,6 +4,8 @@
 
 This project is designed to calculate the cost of using different AI models based on their token usage and PTU (Provision Throughput Unit) costs. It utilizes various libraries such as `streamlit`, `pandas`, `openpyxl`, and `xlsxwriter` to achieve its functionality.
 
+![Screenshot](images/screenshot.jpg)
+
 ## Installation Guide
 
 To set up the project, follow these steps:
