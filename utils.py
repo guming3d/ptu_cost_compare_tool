@@ -1,6 +1,40 @@
-def calculate_google_ptu_num(input_token, output_token, rpm, output_token_multiplier, chars_per_gsu):
-    print(f"debugging>>input_token: {input_token}, output_token: {output_token}, rpm: {rpm}, output_token_multiplier: {output_token_multiplier}, chars_per_gsu: {chars_per_gsu}")
-    return ((input_token + (output_token * output_token_multiplier)) * 4 * (rpm / 60) ) / chars_per_gsu
+import math
+
+def calculate_google_ptu_num(input_text_token, input_image_token, output_token, rpm, output_token_multiplier, chars_per_gsu):
+    print(f"debugging>>input_token: {input_text_token}, output_token: {output_token}, rpm: {rpm}, output_token_multiplier: {output_token_multiplier}, chars_per_gsu: {chars_per_gsu}")
+    return ((input_text_token + input_image_token + (output_token * output_token_multiplier)) * 4 * (rpm / 60) ) / chars_per_gsu
+
+def calculate_azure_openai_ptu_num(model_name, input_token, image_input_token,output_token, peak_calls_per_min):
+    # Model configurations
+    if model_name == 'azure openai GPT-4o':
+        DEPLOYABLE_INCREMENT = 50
+        INPUT_TPM_PER_PTU = 2500
+        OUTPUT_TPM_PER_PTU = 833
+    elif model_name == 'azure openai GPT-4o-mini':
+        DEPLOYABLE_INCREMENT = 25
+        INPUT_TPM_PER_PTU = 37000
+        OUTPUT_TPM_PER_PTU = 12_333
+    else:
+        raise ValueError("Unsupported model. Choose 'azure openai GPT-4o' or 'azure openai GPT-4o-mini'")
+
+    
+    # Calculate total input tokens per call
+    total_input_tokens_per_call = input_token + image_input_token
+
+    # Calculate tokens per minute
+    total_input_tpm = peak_calls_per_min * total_input_tokens_per_call
+    total_output_tpm = peak_calls_per_min * output_token
+    total_tokens_per_minute = total_input_tpm + total_output_tpm
+
+    # Calculate required PTUs
+    required_input_ptus = total_input_tpm / INPUT_TPM_PER_PTU
+    required_output_ptus = total_output_tpm / OUTPUT_TPM_PER_PTU
+    total_required_ptus = required_input_ptus + required_output_ptus
+
+    # Calculate deployable PTUs
+    deployable_ptus = math.ceil(total_required_ptus / DEPLOYABLE_INCREMENT) * DEPLOYABLE_INCREMENT
+    return deployable_ptus, total_required_ptus, total_input_tpm, total_output_tpm, total_tokens_per_minute
+    
 
 def calculate_ptu_utilization(ptu_num, min_ptu_deployment_unit):
     import math

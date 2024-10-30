@@ -1,7 +1,7 @@
 import streamlit as st
 import json
 import os
-from utils import calculate_google_ptu_num, calculate_ptu_utilization, calculate_paygo_cost, calculate_ptu_cost, calculate_cost_saving_percentage
+from utils import calculate_google_ptu_num, calculate_ptu_utilization, calculate_paygo_cost, calculate_ptu_cost, calculate_cost_saving_percentage, calculate_azure_openai_ptu_num
 
 # Load model configuration
 config_path = os.path.join(os.path.dirname(__file__), 'model_config.json')
@@ -24,17 +24,24 @@ st.title("Model PTU Cost Calculator(Monthly)")
 
 st.sidebar.title("Select model and workload scenario")
 model_name = st.sidebar.selectbox("Model Name", model_list)
-input_token = st.sidebar.number_input("Input Token Number", min_value=0, value=3500)
+input_text_token = st.sidebar.number_input("Input Token Number", min_value=0, value=3500)
+input_image_token = st.sidebar.number_input("Input Image Token Number", min_value=0, value=0)
 output_token = st.sidebar.number_input("Output Token Number", min_value=0, value=300)
 rpm = st.sidebar.number_input("RPM (Request per minute)", min_value=0, value=60)
 if "google" in model_name.lower():
     selected_model_config = next((model for model in model_config if model["model name"] == model_name), None)
     output_token_multiple_ratio = selected_model_config["output token multiple ratio"]
     chars_per_gsu = selected_model_config["chars per GSU"]
-    ptu_num = calculate_google_ptu_num(input_token, output_token, rpm, output_token_multiple_ratio, chars_per_gsu)
+    ptu_num = calculate_google_ptu_num(input_text_token,input_image_token,output_token, rpm, output_token_multiple_ratio, chars_per_gsu)
     st.sidebar.write(f"Required PTU Number: {ptu_num:.2f}")
+elif "gpt-4o" in model_name.lower():
+    deploy_ptu_num, require_ptu_num, total_input_tpm, total_output_tpm, total_tokens_per_minute = calculate_azure_openai_ptu_num(model_name, input_text_token,input_image_token,output_token, rpm)
+    st.sidebar.write(f"Required PTU Number: {deploy_ptu_num:.2f} ({require_ptu_num:.3f})")
+    st.sidebar.write(f"Tokens per minute : {total_tokens_per_minute} ({total_input_tpm} prompt, {total_output_tpm} generated)")
+    ptu_num = deploy_ptu_num
 else:
     ptu_num = st.sidebar.number_input("Required PTU Number", min_value=1.0, value=100.0, format="%.2f")
+
 ptu_subscription_type = st.sidebar.selectbox("PTU Subscription Type", ["Monthly", "Yearly"])
 
 if model_name:
@@ -71,13 +78,13 @@ with col1:
     if st.button("Add Compare"):
         ptu_num_calculated = ptu_num
         ptu_utilization = calculate_ptu_utilization(ptu_num_calculated, min_ptu_deployment_unit)
-        paygo_cost = calculate_paygo_cost(input_token, output_token, rpm, model_name)
+        paygo_cost = calculate_paygo_cost(input_text_token, output_token, rpm, model_name)
         ptu_discount = selected_model_config[f"PTU {ptu_subscription_type.lower()} discount"]
         ptu_cost = calculate_ptu_cost(ptu_num_calculated, min_ptu_deployment_unit, ptu_price_per_unit, ptu_discount)
         cost_saving_percentage = calculate_cost_saving_percentage(ptu_cost, paygo_cost)
 
         # Calculate detailed PayGO cost breakdown
-        input_cost, output_cost, total_cost = calculate_paygo_cost(input_token, output_token, rpm, model_name, detailed=True)
+        input_cost, output_cost, total_cost = calculate_paygo_cost(input_text_token, output_token, rpm, model_name, detailed=True)
         origial_cost, cost_after_discount = calculate_ptu_cost(ptu_num_calculated, min_ptu_deployment_unit, ptu_price_per_unit, ptu_discount, detailed=True)
 
         with st.container(border=True):
@@ -93,7 +100,7 @@ with col1:
 
         new_result = {
             "Model Name": model_name,
-            "Input Token Number": input_token,
+            "Input Token Number": input_text_token,
             "Output Token Number": output_token,
             "RPM": rpm,
             "Commitment Type": ptu_subscription_type,
