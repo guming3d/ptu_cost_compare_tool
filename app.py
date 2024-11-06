@@ -26,7 +26,7 @@ st.title("Model PTU Cost Calculator(Monthly)")
 st.sidebar.title("Select model and workload scenario")
 model_name = st.sidebar.selectbox("Model Name", model_list)
 input_text_token = st.sidebar.number_input("Input Token Number", min_value=0, value=3500)
-num_images = st.sidebar.number_input("Number of Images", min_value=0, value=1)
+num_images = st.sidebar.number_input("Number of Images", min_value=0, value=0)
 
 image_params = []
 for i in range(num_images):
