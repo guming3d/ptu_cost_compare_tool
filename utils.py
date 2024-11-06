@@ -4,6 +4,66 @@ def calculate_google_ptu_num(input_text_token, input_image_token, output_token, 
     print(f"debugging>>input_token: {input_text_token}, output_token: {output_token}, rpm: {rpm}, output_token_multiplier: {output_token_multiplier}, chars_per_gsu: {chars_per_gsu}")
     return ((input_text_token + input_image_token + (output_token * output_token_multiplier)) * 4 * (rpm / 60) ) / chars_per_gsu
 
+def calculate_gpt4o_image_token_number(width, height, detail_level, model):
+    """
+    Calculate the token cost for processing an image based on the model, image dimensions,
+    and level of detail.
+
+    Parameters:
+    - width (int): The width of the image in pixels.
+    - height (int): The height of the image in pixels.
+    - detail_level (str): 'low' or 'high', representing the level of image detail.
+    - model (str): The model name ('GPT-4o', 'GPT-4 Turbo with Vision', or 'GPT-4o mini').
+
+    Returns:
+    - int: The total token cost for processing the image.
+    """
+    if detail_level.lower() not in ['low', 'high']:
+        raise ValueError("Invalid detail level. Must be 'low' or 'high'.")
+    
+    detail_level = detail_level.lower()
+    model = model.strip()
+
+    if model in ['GPT-4o', 'GPT-4 Turbo with Vision']:
+        # Standard models
+        if detail_level == 'low':
+            return 85  # Flat rate for low detail
+        else:  # High detail
+            token_cost_per_tile = 170
+            base_token_cost = 85
+    elif model == 'GPT-4o mini':
+        # Mini model
+        if detail_level == 'low':
+            return 2833  # Flat rate for low detail
+        else:
+            token_cost_per_tile = 5667
+            base_token_cost = 2833
+    else:
+        raise ValueError("Invalid model name. Must be 'GPT-4o', 'GPT-4 Turbo with Vision', or 'GPT-4o mini'.")
+
+    # High detail mode calculations
+    # Step 1: Resize image to fit within a 2048 x 2048 pixel square
+    scaling_factor = min(2048 / width, 2048 / height, 1.0)
+    resized_width = width * scaling_factor
+    resized_height = height * scaling_factor
+
+    # Step 2: If the shortest side > 768 pixels, resize so the shortest side is 768 pixels
+    shortest_side = min(resized_width, resized_height)
+    if shortest_side > 768:
+        scaling_factor_2 = 768 / shortest_side
+        resized_width *= scaling_factor_2
+        resized_height *= scaling_factor_2
+
+    # Step 3: Calculate the number of 512 x 512 pixel tiles
+    tiles_w = math.ceil(resized_width / 512)
+    tiles_h = math.ceil(resized_height / 512)
+    total_tiles = tiles_w * tiles_h
+
+    # Step 4: Calculate the total token cost
+    token_cost = int(total_tiles * token_cost_per_tile + base_token_cost)
+
+    return token_cost
+
 def calculate_azure_openai_ptu_num(model_name, input_token, image_input_token,output_token, peak_calls_per_min):
     # Model configurations
     if model_name == 'azure openai GPT-4o':
@@ -89,6 +149,7 @@ def calculate_cost_saving_percentage(ptu_cost, paygo_cost):
         return 0
     saving_percentage = ((paygo_cost - ptu_cost) / paygo_cost) * 100
     return f"{saving_percentage:.2f}%"
+
 def calculate_gemini_image_token(width, height, quality, model):
     # Dummy function for calculating image tokens for Gemini models
     # Replace with actual implementation later
