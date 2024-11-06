@@ -1,7 +1,7 @@
 import streamlit as st
 import json
 import os
-from utils import calculate_google_ptu_num, calculate_ptu_utilization, calculate_paygo_cost, calculate_ptu_cost, calculate_cost_saving_percentage, calculate_azure_openai_ptu_num
+from utils import calculate_google_ptu_num, calculate_ptu_utilization, calculate_paygo_cost, calculate_ptu_cost, calculate_cost_saving_percentage, calculate_azure_openai_ptu_num, calculate_gemini_image_token, calculate_gpt4o_image_token_number
 from calculate_image_token import calculate_token_number
 
 # Load model configuration
@@ -42,7 +42,8 @@ if "google" in model_name.lower():
     ptu_num = calculate_google_ptu_num(input_text_token, image_token, output_token, rpm, output_token_multiple_ratio, chars_per_gsu)
     st.sidebar.write(f"Required PTU Number: {ptu_num:.2f}")
 elif "gpt-4o" in model_name.lower():
-    deploy_ptu_num, require_ptu_num, total_input_tpm, total_output_tpm, total_tokens_per_minute = calculate_azure_openai_ptu_num(model_name, input_text_token,input_image_token,output_token, rpm)
+    image_token = calculate_gpt4o_image_token_number(image_width, image_height, image_quality, model_name)
+    deploy_ptu_num, require_ptu_num, total_input_tpm, total_output_tpm, total_tokens_per_minute = calculate_azure_openai_ptu_num(model_name, input_text_token,image_token,output_token, rpm)
     st.sidebar.write(f"Required PTU Number: {deploy_ptu_num:.2f} ({require_ptu_num:.3f})")
     st.sidebar.write(f"Tokens per minute : {total_tokens_per_minute} ({total_input_tpm} prompt, {total_output_tpm} generated)")
     ptu_num = deploy_ptu_num
