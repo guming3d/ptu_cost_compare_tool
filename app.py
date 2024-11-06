@@ -50,8 +50,10 @@ if "google" in model_name.lower():
     ptu_num = calculate_google_ptu_num(input_text_token, total_image_token, output_token, rpm, output_token_multiple_ratio, chars_per_gsu)
     st.sidebar.write(f"Required PTU Number: {ptu_num:.2f}")
 elif "gpt-4o" in model_name.lower():
-    image_token = calculate_gpt4o_image_token_number(image_width, image_height, image_quality, model_name)
-    deploy_ptu_num, require_ptu_num, total_input_tpm, total_output_tpm, total_tokens_per_minute = calculate_azure_openai_ptu_num(model_name, input_text_token,image_token,output_token, rpm)
+    total_image_token = 0
+    for width, height, quality in image_params:
+        total_image_token += calculate_gpt4o_image_token_number(width, height, quality, model_name)
+    deploy_ptu_num, require_ptu_num, total_input_tpm, total_output_tpm, total_tokens_per_minute = calculate_azure_openai_ptu_num(model_name, input_text_token, total_image_token, output_token, rpm)
     st.sidebar.write(f"Required PTU Number: {deploy_ptu_num:.2f} ({require_ptu_num:.3f})")
     st.sidebar.write(f"Tokens per minute : {total_tokens_per_minute} ({total_input_tpm} prompt, {total_output_tpm} generated)")
     ptu_num = deploy_ptu_num
