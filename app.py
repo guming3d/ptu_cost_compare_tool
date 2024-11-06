@@ -26,20 +26,28 @@ st.title("Model PTU Cost Calculator(Monthly)")
 st.sidebar.title("Select model and workload scenario")
 model_name = st.sidebar.selectbox("Model Name", model_list)
 input_text_token = st.sidebar.number_input("Input Token Number", min_value=0, value=3500)
-image_width = st.sidebar.number_input("Image Width (px)", min_value=1, value=1024)
-image_height = st.sidebar.number_input("Image Height (px)", min_value=1, value=768)
-image_quality = st.sidebar.selectbox("Image Quality", ["low", "high"])
+num_images = st.sidebar.number_input("Number of Images", min_value=0, value=1)
+
+image_params = []
+for i in range(num_images):
+    st.sidebar.markdown(f"**Image {i + 1} Parameters**")
+    width = st.sidebar.number_input(f"Image {i + 1} Width (px)", min_value=1, value=1024)
+    height = st.sidebar.number_input(f"Image {i + 1} Height (px)", min_value=1, value=768)
+    quality = st.sidebar.selectbox(f"Image {i + 1} Quality", ["low", "high"])
+    image_params.append((width, height, quality))
 output_token = st.sidebar.number_input("Output Token Number", min_value=0, value=300)
 rpm = st.sidebar.number_input("RPM (Request per minute)", min_value=0, value=60)
 if "google" in model_name.lower():
     selected_model_config = next((model for model in model_config if model["model name"] == model_name), None)
     output_token_multiple_ratio = selected_model_config["output token multiple ratio"]
     chars_per_gsu = selected_model_config["chars per GSU"]
-    if "gpt-4o" in model_name.lower() or "gpt-4o mini" in model_name.lower():
-        image_token = calculate_token_number(image_width, image_height, image_quality, model_name)
-    else:
-        image_token = calculate_gemini_image_token(image_width, image_height, image_quality, model_name)
-    ptu_num = calculate_google_ptu_num(input_text_token, image_token, output_token, rpm, output_token_multiple_ratio, chars_per_gsu)
+    total_image_token = 0
+    for width, height, quality in image_params:
+        if "gpt-4o" in model_name.lower() or "gpt-4o mini" in model_name.lower():
+            total_image_token += calculate_token_number(width, height, quality, model_name)
+        else:
+            total_image_token += calculate_gemini_image_token(width, height, quality, model_name)
+    ptu_num = calculate_google_ptu_num(input_text_token, total_image_token, output_token, rpm, output_token_multiple_ratio, chars_per_gsu)
     st.sidebar.write(f"Required PTU Number: {ptu_num:.2f}")
 elif "gpt-4o" in model_name.lower():
     image_token = calculate_gpt4o_image_token_number(image_width, image_height, image_quality, model_name)
