@@ -89,3 +89,7 @@ def calculate_cost_saving_percentage(ptu_cost, paygo_cost):
         return 0
     saving_percentage = ((paygo_cost - ptu_cost) / paygo_cost) * 100
     return f"{saving_percentage:.2f}%"
+def calculate_gemini_image_token(width, height, quality, model):
+    # Dummy function for calculating image tokens for Gemini models
+    # Replace with actual implementation later
+    return 0
