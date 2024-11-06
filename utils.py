@@ -24,14 +24,14 @@ def calculate_gpt4o_image_token_number(width, height, detail_level, model):
     detail_level = detail_level.lower()
     model = model.strip()
 
-    if model in ['GPT-4o', 'GPT-4 Turbo with Vision']:
+    if 'gpt-4o' in model.lower() or 'gpt-4 turbo with vision' in model.lower():
         # Standard models
         if detail_level == 'low':
             return 85  # Flat rate for low detail
         else:  # High detail
             token_cost_per_tile = 170
             base_token_cost = 85
-    elif model == 'GPT-4o mini':
+    elif 'gpt-4o mini' in model.lower():
         # Mini model
         if detail_level == 'low':
             return 2833  # Flat rate for low detail
