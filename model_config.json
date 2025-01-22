@@ -80,8 +80,11 @@
         "PTU price of yearly commitment": 2000,
         "chars per GSU": 800,
         "PTU monthly discount": 0,
-        "PTU yearly discount": 0
-
+        "PTU yearly discount": 0,
+        "price per image(<=128k input tokens)": 0.00032875,
+        "price per image(>128k input tokens)": 0.0006575,
+        "chars per image(<=128k input tokens)": 1052, 
+        "chars per image(>128k input tokens)": 2104 
     },
     {
         "model name": "google gemini-1.5 flash",
@@ -93,7 +96,10 @@
         "PTU price of yearly commitment": 2000,
         "chars per GSU": 54000,
         "PTU monthly discount": 0,
-        "PTU yearly discount": 0
-
+        "PTU yearly discount": 0,
+        "price per image(<=128k input tokens)": 0.00002,
+        "price per image(>128k input tokens)": 0.00004,
+        "chars per image(<=128k input tokens)": 1067, 
+        "chars per image(>128k input tokens)": 2134 
     }
 ]
