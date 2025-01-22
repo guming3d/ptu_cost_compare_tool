@@ -7,13 +7,13 @@ def calculate_google_ptu_num(input_text_token, input_image_token, output_token, 
 def calculate_azure_openai_ptu_num(model_name, input_token, image_input_token,output_token, peak_calls_per_min):
     # Model configurations
     if model_name == 'azure openai GPT-4o':
-        DEPLOYABLE_INCREMENT = 50
+        DEPLOYABLE_INCREMENT = 15
         INPUT_TPM_PER_PTU = 2500
         OUTPUT_TPM_PER_PTU = 833
     elif model_name == 'azure openai GPT-4o-mini':
-        DEPLOYABLE_INCREMENT = 25
+        DEPLOYABLE_INCREMENT = 15
         INPUT_TPM_PER_PTU = 37000
-        OUTPUT_TPM_PER_PTU = 12_333
+        OUTPUT_TPM_PER_PTU = 12333
     else:
         raise ValueError("Unsupported model. Choose 'azure openai GPT-4o' or 'azure openai GPT-4o-mini'")
 
