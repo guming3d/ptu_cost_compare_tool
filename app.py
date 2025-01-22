@@ -234,4 +234,19 @@ with st.container(border=True):
     st.subheader("Model price Configuration list")
     st.json(model_config)
 
+    st.subheader("Update Model Configuration")
+    config_json_str = json.dumps(model_config, indent=4) # Convert current config to formatted JSON string
+    updated_config_str = st.text_area("Edit JSON Configuration here:", value=config_json_str, height=300)
+
+    if st.button("Update Configuration"):
+        try:
+            updated_config = json.loads(updated_config_str)
+            with open(config_path, 'w') as f:
+                json.dump(updated_config, f, indent=4)
+            st.success("Configuration updated successfully! Please refresh the app to see changes.")
+        except json.JSONDecodeError:
+            st.error("Invalid JSON format. Please check your input.")
+        except Exception as e:
+            st.error(f"An error occurred while updating configuration: {e}")
+
 
