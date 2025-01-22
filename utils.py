@@ -4,14 +4,14 @@ def calculate_google_ptu_num(input_text_token, input_image_token, output_token, 
     print(f"debugging>>input_token: {input_text_token}, output_token: {output_token}, rpm: {rpm}, output_token_multiplier: {output_token_multiplier}, chars_per_gsu: {chars_per_gsu}")
     return ((input_text_token + input_image_token + (output_token * output_token_multiplier)) * 4 * (rpm / 60) ) / chars_per_gsu
 
-def calculate_azure_openai_ptu_num(model_name, input_token, image_input_token,output_token, peak_calls_per_min):
+def calculate_azure_openai_ptu_num(model_name, input_token, image_input_token,output_token, peak_calls_per_min, minimal_ptu_deployment_number):
     # Model configurations
     if model_name == 'azure openai GPT-4o':
-        DEPLOYABLE_INCREMENT = 15
+        DEPLOYABLE_INCREMENT = minimal_ptu_deployment_number
         INPUT_TPM_PER_PTU = 2500
         OUTPUT_TPM_PER_PTU = 833
     elif model_name == 'azure openai GPT-4o-mini':
-        DEPLOYABLE_INCREMENT = 15
+        DEPLOYABLE_INCREMENT = minimal_ptu_deployment_number
         INPUT_TPM_PER_PTU = 37000
         OUTPUT_TPM_PER_PTU = 12333
     else:
