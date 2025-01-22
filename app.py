@@ -2,7 +2,7 @@ import streamlit as st
 import json
 import os
 from utils import calculate_google_ptu_num, calculate_ptu_utilization, calculate_paygo_cost, calculate_ptu_cost, calculate_cost_saving_percentage, calculate_azure_openai_ptu_num, calculate_gemini_image_token, calculate_gpt4o_image_token_number
-from calculate_image_token import calculate_token_number
+from calculate_image_token import calculate_image_token
 
 # Load model configuration
 config_path = os.path.join(os.path.dirname(__file__), 'model_config.json')
@@ -41,12 +41,14 @@ if "google" in model_name.lower():
     selected_model_config = next((model for model in model_config if model["model name"] == model_name), None)
     output_token_multiple_ratio = selected_model_config["output token multiple ratio"]
     chars_per_gsu = selected_model_config["chars per GSU"]
+    price_per_image_less_128k = selected_model_config["price per image(<=128k input tokens)"]
+    price_per_image_larger_128k = selected_model_config["price per image(>128k input tokens)"]
+    char_per_image_less_128k = selected_model_config["chars per image(<=128k input tokens)"]
+    char_per_image_larger_128k = selected_model_config["chars per image(>128k input tokens)"]
+    
     total_image_token = 0
-    for width, height, quality in image_params:
-        if "gpt-4o" in model_name.lower() or "gpt-4o mini" in model_name.lower():
-            total_image_token += calculate_token_number(width, height, quality, model_name)
-        else:
-            total_image_token += calculate_gemini_image_token(width, height, quality, model_name)
+    # for width, height, quality in image_params:
+    #     total_image_token += calculate_gemini_image_token(width, height, quality, model_name)
     ptu_num = calculate_google_ptu_num(input_text_token, total_image_token, output_token, rpm, output_token_multiple_ratio, chars_per_gsu)
     st.sidebar.write(f"Required PTU Number: {ptu_num:.2f}")
 elif "gpt-4o" in model_name.lower():

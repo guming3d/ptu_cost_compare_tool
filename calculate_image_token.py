@@ -1,6 +1,6 @@
 import math
 
-def calculate_token_number(width, height, detail_level, model):
+def calculate_image_token(width, height, detail_level, model):
     """
     Calculate the token cost for processing an image based on the model, image dimensions,
     and level of detail.
@@ -69,7 +69,7 @@ if __name__ == "__main__":
     model = 'GPT-4o'  # 'GPT-4o', 'GPT-4 Turbo with Vision', or 'GPT-4o mini'
 
     # Calculate the token cost
-    token_cost = calculate_token_number(width, height, detail_level, model)
+    token_cost = calculate_image_token(width, height, detail_level, model)
 
     # Display the results
     print(f"Image dimensions: {width} x {height} pixels")
