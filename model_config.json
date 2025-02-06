@@ -5,10 +5,10 @@
         "input token price per 1k": 0.005,
         "output token price per 1k": 0.015,
         "PTU minumum deployment unit": 15,
-        "PTU price of monthly commitment": 260,
-        "PTU price of yearly commitment": 260,
-        "PTU monthly discount": 0.2,
-        "PTU yearly discount": 0.25
+        "PTU price of monthly commitment": 312,
+        "PTU price of yearly commitment": 312,
+        "PTU monthly discount": 0,
+        "PTU yearly discount": 0
     },
     {
         "model name": "azure openai GPT-4o-mini",
@@ -16,11 +16,10 @@
         "input token price per 1k": 0.00015,
         "output token price per 1k": 0.0006,
         "PTU minumum deployment unit": 15,
-        "PTU price of monthly commitment": 260,
-        "PTU price of yearly commitment": 260,
-        "PTU monthly discount": 0.2,
-        "PTU yearly discount": 0.25
-
+        "PTU price of monthly commitment": 312,
+        "PTU price of yearly commitment": 312,
+        "PTU monthly discount": 0,
+        "PTU yearly discount": 0
     },
     {
         "model name": "azure openai GPT-4-Turbo",
@@ -32,7 +31,6 @@
         "PTU price of yearly commitment": 312,
         "PTU monthly discount": 0.2,
         "PTU yearly discount": 0.25
-
     },
     {
         "model name": "azure openai GPT-4 8k",
@@ -44,7 +42,6 @@
         "PTU price of yearly commitment": 312,
         "PTU monthly discount": 0.2,
         "PTU yearly discount": 0.25
-
     },
     {
         "model name": "azure openai GPT-4 32k",
@@ -56,7 +53,6 @@
         "PTU price of yearly commitment": 312,
         "PTU monthly discount": 0.2,
         "PTU yearly discount": 0.25
-
     },
     {
         "model name": "azure openai GPT-3.5-Turbo-0125",
@@ -68,20 +64,43 @@
         "PTU price of yearly commitment": 312,
         "PTU monthly discount": 0.2,
         "PTU yearly discount": 0.25
-
     },
     {
-        "model name": "google gemini-1.5 pro",
+        "model name": "google gemini-2.0 Flash",
         "output token multiple ratio": 3,
-        "input token price per 1k": 0.005,
-        "output token price per 1k": 0.015,
+        "input token price per 1k": 0.00015,
+        "output token price per 1k": 0.0006,
         "PTU minumum deployment unit": 5,
         "PTU price of monthly commitment": 2700,
         "PTU price of yearly commitment": 2000,
         "chars per GSU": 800,
         "PTU monthly discount": 0,
         "PTU yearly discount": 0
+    },
+    {
+        "model name": "google gemini-2.0 Flash Lite",
+        "output token multiple ratio": 3,
+        "input token price per 1k": 0.000075,
+        "output token price per 1k": 0.0003,
+        "PTU minumum deployment unit": 5,
+        "PTU price of monthly commitment": 2700,
+        "PTU price of yearly commitment": 2000,
+        "chars per GSU": 800,
+        "PTU monthly discount": 0,
+        "PTU yearly discount": 0
+    },
 
+    {
+        "model name": "google gemini-1.5 pro",
+        "output token multiple ratio": 3,
+        "input token price per 1k": 0.00125,
+        "output token price per 1k": 0.0025,
+        "PTU minumum deployment unit": 5,
+        "PTU price of monthly commitment": 2700,
+        "PTU price of yearly commitment": 2000,
+        "chars per GSU": 800,
+        "PTU monthly discount": 0,
+        "PTU yearly discount": 0
     },
     {
         "model name": "google gemini-1.5 flash",
@@ -94,6 +113,5 @@
         "chars per GSU": 54000,
         "PTU monthly discount": 0,
         "PTU yearly discount": 0
-
     }
 ]
