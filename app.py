@@ -144,7 +144,7 @@ def style_rows(row):
         styles[-1] = 'background-color: orange ; color: white'
     
     # Apply blue font to the "TPM per dollar" column
-    styles[results_df.columns.get_loc("TPM per dollar")] = 'color: blue'
+    styles[-2] = 'color: blue'
     return styles
 
 if not results_df.empty:
