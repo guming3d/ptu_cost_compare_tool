@@ -174,6 +174,7 @@ if not results_df.empty:
         ax1.bar(x_labels, results_df['PTU cost'], color=colors)
         ax1.tick_params(axis='y', labelcolor='tab:red')
             # Rotate x-axis labels for better readability
+        ax1.set_xticks(range(len(x_labels)))
         ax1.set_xticklabels(x_labels, rotation=45, ha='right')
         fig1.tight_layout()
         st.pyplot(fig1)
@@ -187,6 +188,7 @@ if not results_df.empty:
         colors = ['tab:blue' if 'azure' in model.lower() else 'tab:orange' for model in results_df['Model Name']]
         ax2.bar(x_labels, results_df['TPM per dollar (in millions)'], color=colors)
         ax2.tick_params(axis='y', labelcolor='tab:blue')
+        ax2.set_xticks(range(len(x_labels)))
         ax2.set_xticklabels(x_labels, rotation=45, ha='right')
         fig2.tight_layout()
         st.pyplot(fig2)
