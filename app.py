@@ -167,13 +167,13 @@ if not results_df.empty:
     color = 'tab:red'
     ax1.set_xlabel('Model Name')
     ax1.set_ylabel('PTU Cost', color=color)
-    ax1.plot(results_df['Model Name'], results_df['PTU cost'], color=color)
+    ax1.bar(results_df['Model Name'], results_df['PTU cost'], color=color)
     ax1.tick_params(axis='y', labelcolor=color)
 
     ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
     color = 'tab:blue'
     ax2.set_ylabel('TPM per dollar', color=color)  # we already handled the x-label with ax1
-    ax2.plot(results_df['Model Name'], results_df['TPM per dollar'], color=color)
+    ax2.bar(results_df['Model Name'], results_df['TPM per dollar'], color=color, alpha=0.6)
     ax2.tick_params(axis='y', labelcolor=color)
 
     fig.tight_layout()  # otherwise the right y-label is slightly clipped
