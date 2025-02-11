@@ -170,7 +170,8 @@ if not results_df.empty:
         ax1.set_xlabel('Model Name')
         ax1.set_ylabel('PTU Cost(USD)', color='tab:orange')
         x_labels = [f"{model}\n{commitment}" for model, commitment in zip(results_df["Model Name"], results_df["Commitment Type"])]
-        ax1.bar(x_labels, results_df['PTU cost'], color='tab:orange')
+        colors = ['tab:blue' if 'azure' in model.lower() else 'tab:orange' for model in results_df['Model Name']]
+        ax1.bar(x_labels, results_df['PTU cost'], color=colors)
         ax1.tick_params(axis='y', labelcolor='tab:red')
         fig1.tight_layout()
         st.pyplot(fig1)
@@ -181,7 +182,8 @@ if not results_df.empty:
         ax2.set_xlabel('Model Name')
         ax2.set_ylabel('TPM per dollar (in millions)', color='tab:blue')
         x_labels = [f"{model}\n{commitment}" for model, commitment in zip(results_df["Model Name"], results_df["Commitment Type"])]
-        ax2.bar(x_labels, results_df['TPM per dollar (in millions)'], color='tab:blue')
+        colors = ['tab:blue' if 'azure' in model.lower() else 'tab:orange' for model in results_df['Model Name']]
+        ax2.bar(x_labels, results_df['TPM per dollar (in millions)'], color=colors)
         ax2.tick_params(axis='y', labelcolor='tab:blue')
         fig2.tight_layout()
         st.pyplot(fig2)
