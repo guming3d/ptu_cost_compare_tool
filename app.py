@@ -168,8 +168,9 @@ if not results_df.empty:
         # Plot PTU cost
         fig1, ax1 = plt.subplots()
         ax1.set_xlabel('Model Name')
-        ax1.set_ylabel('PTU Cost', color='tab:orange')
-        ax1.bar(results_df.index, results_df['PTU cost'], color='tab:orange')
+        ax1.set_ylabel('PTU Cost(USD)', color='tab:orange')
+        x_labels = [f"{model}\n{commitment}" for model, commitment in zip(results_df["Model Name"], results_df["Commitment Type"])]
+        ax1.bar(x_labels, results_df['PTU cost'], color='tab:orange')
         ax1.tick_params(axis='y', labelcolor='tab:red')
         fig1.tight_layout()
         st.pyplot(fig1)
@@ -179,7 +180,8 @@ if not results_df.empty:
         fig2, ax2 = plt.subplots()
         ax2.set_xlabel('Model Name')
         ax2.set_ylabel('TPM per dollar (in millions)', color='tab:blue')
-        ax2.bar(results_df.index, results_df['TPM per dollar (in millions)'], color='tab:blue')
+        x_labels = [f"{model}\n{commitment}" for model, commitment in zip(results_df["Model Name"], results_df["Commitment Type"])]
+        ax2.bar(x_labels, results_df['TPM per dollar (in millions)'], color='tab:blue')
         ax2.tick_params(axis='y', labelcolor='tab:blue')
         fig2.tight_layout()
         st.pyplot(fig2)
