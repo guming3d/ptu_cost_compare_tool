@@ -143,6 +143,8 @@ def style_rows(row):
         # change the text color to white if the cost saving percentage is negative
         styles[-1] = 'background-color: orange ; color: white'
     
+    # Apply blue font to the "TPM per dollar" column
+    styles[results_df.columns.get_loc("TPM per dollar")] = 'color: blue'
     return styles
 
 if not results_df.empty:
