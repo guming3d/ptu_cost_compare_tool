@@ -2,6 +2,8 @@ import streamlit as st
 import json
 import os
 from utils import calculate_google_ptu_num, calculate_ptu_utilization, calculate_paygo_cost, calculate_ptu_cost, calculate_cost_saving_percentage, calculate_azure_openai_ptu_num, calculate_tpm_per_1_dollar
+import matplotlib.pyplot as plt
+import pandas as pd
 
 # Load model configuration
 config_path = os.path.join(os.path.dirname(__file__), 'model_config.json')
@@ -157,6 +159,25 @@ if not results_df.empty:
     st.dataframe(styled_df)
 
 # If results are not empty, display "Export to Excel" button
+
+# Plot PTU cost and TPM per dollar
+if not results_df.empty:
+    fig, ax1 = plt.subplots()
+
+    color = 'tab:red'
+    ax1.set_xlabel('Model Name')
+    ax1.set_ylabel('PTU Cost', color=color)
+    ax1.plot(results_df['Model Name'], results_df['PTU cost'], color=color)
+    ax1.tick_params(axis='y', labelcolor=color)
+
+    ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+    color = 'tab:blue'
+    ax2.set_ylabel('TPM per dollar', color=color)  # we already handled the x-label with ax1
+    ax2.plot(results_df['Model Name'], results_df['TPM per dollar'], color=color)
+    ax2.tick_params(axis='y', labelcolor=color)
+
+    fig.tight_layout()  # otherwise the right y-label is slightly clipped
+    st.pyplot(fig)
 if not results_df.empty:
     if st.button("Export to Excel", key="export_to_excel"):
         import io
