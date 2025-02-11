@@ -162,23 +162,27 @@ if not results_df.empty:
 
 # Plot PTU cost and TPM per dollar
 if not results_df.empty:
-    # Plot PTU cost
-    fig1, ax1 = plt.subplots()
-    ax1.set_xlabel('Model Name')
-    ax1.set_ylabel('PTU Cost', color='tab:red')
-    ax1.bar(results_df['Model Name'], results_df['PTU cost'], color='tab:red')
-    ax1.tick_params(axis='y', labelcolor='tab:red')
-    fig1.tight_layout()
-    st.pyplot(fig1)
+    col1, col2 = st.columns(2)
 
-    # Plot TPM per dollar
-    fig2, ax2 = plt.subplots()
-    ax2.set_xlabel('Model Name')
-    ax2.set_ylabel('TPM per dollar (in millions)', color='tab:blue')
-    ax2.bar(results_df['Model Name'], results_df['TPM per dollar (in millions)'], color='tab:blue')
-    ax2.tick_params(axis='y', labelcolor='tab:blue')
-    fig2.tight_layout()
-    st.pyplot(fig2)
+    with col1:
+        # Plot PTU cost
+        fig1, ax1 = plt.subplots()
+        ax1.set_xlabel('Model Name')
+        ax1.set_ylabel('PTU Cost', color='tab:red')
+        ax1.bar(results_df['Model Name'], results_df['PTU cost'], color='tab:red')
+        ax1.tick_params(axis='y', labelcolor='tab:red')
+        fig1.tight_layout()
+        st.pyplot(fig1)
+
+    with col2:
+        # Plot TPM per dollar
+        fig2, ax2 = plt.subplots()
+        ax2.set_xlabel('Model Name')
+        ax2.set_ylabel('TPM per dollar (in millions)', color='tab:blue')
+        ax2.bar(results_df['Model Name'], results_df['TPM per dollar (in millions)'], color='tab:blue')
+        ax2.tick_params(axis='y', labelcolor='tab:blue')
+        fig2.tight_layout()
+        st.pyplot(fig2)
 if not results_df.empty:
     if st.button("Export to Excel", key="export_to_excel"):
         import io
