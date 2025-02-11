@@ -5,7 +5,7 @@ def calculate_google_ptu_num(input_text_token, input_image_token, output_token, 
     return ((input_text_token + input_image_token + (output_token * output_token_multiplier)) * 4 * (rpm / 60) ) / chars_per_gsu
 
 def calculate_tpm_per_1_dollar(input_text_token, input_image_token, output_token, rpm, ptu_cost):
-    return ((input_text_token + input_image_token + output_token ) * rpm) / (ptu_cost / (30.42 * 24 * 60))
+    return ((input_text_token + input_image_token + output_token ) * rpm) / (ptu_cost / (30.42 * 24 * 60)) / 1_000_000
     
 
 def calculate_azure_openai_ptu_num(model_name, input_token, image_input_token,output_token, peak_calls_per_min, minimal_ptu_deployment_number):

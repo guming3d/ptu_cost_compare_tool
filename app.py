@@ -114,7 +114,7 @@ with col1:
             "PTU Utilization": ptu_utilization,
             "PayGO cost": paygo_cost,
             "PTU cost": ptu_cost,
-            "TPM per dollar" : TPM_per_1dollor,
+            "TPM per dollar (in millions)" : TPM_per_1dollor,
             "PTU Cost Saving (%)": cost_saving_percentage,
         }
         # Append new result to the results list
@@ -174,7 +174,7 @@ if not results_df.empty:
     # Plot TPM per dollar
     fig2, ax2 = plt.subplots()
     ax2.set_xlabel('Model Name')
-    ax2.set_ylabel('TPM per dollar', color='tab:blue')
+    ax2.set_ylabel('TPM per dollar (in millions)', color='tab:blue')
     ax2.bar(results_df['Model Name'], results_df['TPM per dollar'], color='tab:blue')
     ax2.tick_params(axis='y', labelcolor='tab:blue')
     fig2.tight_layout()
