@@ -5,8 +5,8 @@
         "input token price per 1k": 0.005,
         "output token price per 1k": 0.015,
         "PTU minumum deployment unit": 15,
-        "PTU price of monthly commitment": 312,
-        "PTU price of yearly commitment": 312,
+        "PTU price of monthly commitment": 260,
+        "PTU price of yearly commitment": 221,
         "PTU monthly discount": 0,
         "PTU yearly discount": 0
     },
@@ -16,8 +16,8 @@
         "input token price per 1k": 0.00015,
         "output token price per 1k": 0.0006,
         "PTU minumum deployment unit": 15,
-        "PTU price of monthly commitment": 312,
-        "PTU price of yearly commitment": 312,
+        "PTU price of monthly commitment": 260,
+        "PTU price of yearly commitment": 221,
         "PTU monthly discount": 0,
         "PTU yearly discount": 0
     },
@@ -66,36 +66,11 @@
         "PTU yearly discount": 0.25
     },
     {
-        "model name": "google gemini-2.0 Flash",
-        "output token multiple ratio": 3,
-        "input token price per 1k": 0.00015,
-        "output token price per 1k": 0.0006,
-        "PTU minumum deployment unit": 5,
-        "PTU price of monthly commitment": 2700,
-        "PTU price of yearly commitment": 2000,
-        "chars per GSU": 800,
-        "PTU monthly discount": 0,
-        "PTU yearly discount": 0
-    },
-    {
-        "model name": "google gemini-2.0 Flash Lite",
-        "output token multiple ratio": 3,
-        "input token price per 1k": 0.000075,
-        "output token price per 1k": 0.0003,
-        "PTU minumum deployment unit": 5,
-        "PTU price of monthly commitment": 2700,
-        "PTU price of yearly commitment": 2000,
-        "chars per GSU": 800,
-        "PTU monthly discount": 0,
-        "PTU yearly discount": 0
-    },
-
-    {
         "model name": "google gemini-1.5 pro",
         "output token multiple ratio": 3,
         "input token price per 1k": 0.00125,
         "output token price per 1k": 0.0025,
-        "PTU minumum deployment unit": 5,
+        "PTU minumum deployment unit": 1,
         "PTU price of monthly commitment": 2700,
         "PTU price of yearly commitment": 2000,
         "chars per GSU": 800,
@@ -107,7 +82,7 @@
         "output token multiple ratio": 4,
         "input token price per 1k": 0.000075,
         "output token price per 1k": 0.0003,
-        "PTU minumum deployment unit": 5,
+        "PTU minumum deployment unit": 1,
         "PTU price of monthly commitment": 2700,
         "PTU price of yearly commitment": 2000,
         "chars per GSU": 54000,
