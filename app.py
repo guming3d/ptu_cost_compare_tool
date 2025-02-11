@@ -168,8 +168,8 @@ if not results_df.empty:
         # Plot PTU cost
         fig1, ax1 = plt.subplots()
         ax1.set_xlabel('Model Name')
-        ax1.set_ylabel('PTU Cost', color='tab:red')
-        ax1.bar(results_df['Model Name'], results_df['PTU cost'], color='tab:red')
+        ax1.set_ylabel('PTU Cost', color='tab:orange')
+        ax1.bar(results_df['Model Name'], results_df['PTU cost'], color='tab:orange')
         ax1.tick_params(axis='y', labelcolor='tab:red')
         fig1.tight_layout()
         st.pyplot(fig1)
