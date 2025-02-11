@@ -1,7 +1,7 @@
 import streamlit as st
 import json
 import os
-from utils import calculate_google_ptu_num, calculate_ptu_utilization, calculate_paygo_cost, calculate_ptu_cost, calculate_cost_saving_percentage, calculate_azure_openai_ptu_num
+from utils import calculate_google_ptu_num, calculate_ptu_utilization, calculate_paygo_cost, calculate_ptu_cost, calculate_cost_saving_percentage, calculate_azure_openai_ptu_num, calculate_tpm_per_1_dollar
 
 # Load model configuration
 config_path = os.path.join(os.path.dirname(__file__), 'model_config.json')
@@ -84,6 +84,7 @@ with col1:
         ptu_discount = selected_model_config[f"PTU {ptu_subscription_type.lower()} discount"]
         ptu_cost = calculate_ptu_cost(ptu_num_calculated, min_ptu_deployment_unit, ptu_price_per_unit, ptu_discount)
         cost_saving_percentage = calculate_cost_saving_percentage(ptu_cost, paygo_cost)
+        TPM_per_1dollor = calculate_tpm_per_1_dollar(input_text_token, input_image_token, output_token, rpm, ptu_cost)
 
         # Calculate detailed PayGO cost breakdown
         input_cost, output_cost, total_cost = calculate_paygo_cost(input_text_token, output_token, rpm, model_name, detailed=True)
@@ -98,6 +99,7 @@ with col1:
             st.sidebar.markdown(f"<p style='color:darkgreen;'>Total PayGO Cost:<br>{total_cost}</p>", unsafe_allow_html=True)
             st.sidebar.divider()
             st.sidebar.markdown(f"<p style='color:darkgreen;'>PTU Cost Breakdown:</p>", unsafe_allow_html=True)
+            # st.sidebar.markdown(f"<p style='color:darkgreen;'>TPM per dollar:</p>", unsafe_allow_html=True)
             st.sidebar.markdown(f"<p style='color:darkgreen;'>Cost before discount:<br>{origial_cost}<br>After Discount:<br>{cost_after_discount}</p>", unsafe_allow_html=True)
 
         new_result = {
@@ -110,6 +112,7 @@ with col1:
             "PTU Utilization": ptu_utilization,
             "PayGO cost": paygo_cost,
             "PTU cost": ptu_cost,
+            "TPM per dollar" : TPM_per_1dollor,
             "PTU Cost Saving (%)": cost_saving_percentage,
         }
         # Append new result to the results list
@@ -229,6 +232,16 @@ with st.container(border=True):
     st.markdown("[Google Cloud Model Price doc](https://cloud.google.com/vertex-ai/generative-ai/pricing#gemini-models)")
     st.markdown("[Google Cloud Provisioned Throughput doc](https://cloud.google.com/vertex-ai/generative-ai/docs/provisioned-throughput)")
     st.markdown("[Google Cloud Provisioned Throughput Calculater](https://console.cloud.google.com/vertex-ai/provisioned-throughput/price-estimate;inputAudioSecondsPerQuery=0;inputCharsPerQuery=875;inputImagesPerQuery=0;inputVideoSecondsPerQuery=0;outputCharsPerQuery=75;outputImagesPerQuery=0;publisherModelName=publishers%2Fgoogle%2Fmodels%2Fgemini-1.5-flash-002;queriesPerSecond=2;tierDistribution=100,0?project=gen-lang-client-0791754762)")
+
+# Display instructions for calculating PTU number
+    st.subheader("4. How to calculate TPM per dollar:")
+    
+    st.latex(r"""
+\begin{aligned}
+\text{TPM per 1 Dollar} &= \frac{(\text{Input Text Tokens} + \text{Input Image Tokens} + \text{Output Tokens}) \times \text{RPM}}{\frac{\text{PTU Cost per month}}{30.42 \times 24 \times 60}}
+\end{aligned}
+""")
+
 
 
 with st.container(border=True):
