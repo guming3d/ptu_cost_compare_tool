@@ -175,7 +175,7 @@ if not results_df.empty:
     fig2, ax2 = plt.subplots()
     ax2.set_xlabel('Model Name')
     ax2.set_ylabel('TPM per dollar (in millions)', color='tab:blue')
-    ax2.bar(results_df['Model Name'], results_df['TPM per dollar'], color='tab:blue')
+    ax2.bar(results_df['Model Name'], results_df['TPM per dollar (in millions)'], color='tab:blue')
     ax2.tick_params(axis='y', labelcolor='tab:blue')
     fig2.tight_layout()
     st.pyplot(fig2)
