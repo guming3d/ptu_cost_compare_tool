@@ -162,22 +162,23 @@ if not results_df.empty:
 
 # Plot PTU cost and TPM per dollar
 if not results_df.empty:
-    fig, ax1 = plt.subplots()
-
-    color = 'tab:red'
+    # Plot PTU cost
+    fig1, ax1 = plt.subplots()
     ax1.set_xlabel('Model Name')
-    ax1.set_ylabel('PTU Cost', color=color)
-    ax1.bar(results_df['Model Name'], results_df['PTU cost'], color=color)
-    ax1.tick_params(axis='y', labelcolor=color)
+    ax1.set_ylabel('PTU Cost', color='tab:red')
+    ax1.bar(results_df['Model Name'], results_df['PTU cost'], color='tab:red')
+    ax1.tick_params(axis='y', labelcolor='tab:red')
+    fig1.tight_layout()
+    st.pyplot(fig1)
 
-    ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
-    color = 'tab:blue'
-    ax2.set_ylabel('TPM per dollar', color=color)  # we already handled the x-label with ax1
-    ax2.bar(results_df['Model Name'], results_df['TPM per dollar'], color=color, alpha=0.6)
-    ax2.tick_params(axis='y', labelcolor=color)
-
-    fig.tight_layout()  # otherwise the right y-label is slightly clipped
-    st.pyplot(fig)
+    # Plot TPM per dollar
+    fig2, ax2 = plt.subplots()
+    ax2.set_xlabel('Model Name')
+    ax2.set_ylabel('TPM per dollar', color='tab:blue')
+    ax2.bar(results_df['Model Name'], results_df['TPM per dollar'], color='tab:blue')
+    ax2.tick_params(axis='y', labelcolor='tab:blue')
+    fig2.tight_layout()
+    st.pyplot(fig2)
 if not results_df.empty:
     if st.button("Export to Excel", key="export_to_excel"):
         import io
