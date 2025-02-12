@@ -112,10 +112,10 @@ with col1:
             "Commitment Type": ptu_subscription_type,
             "Required PTU Num": ptu_num_calculated,
             "PTU Utilization": ptu_utilization,
-            "PayGO cost": paygo_cost,
+            # "PayGO cost": paygo_cost,
             "PTU cost": ptu_cost,
             "TPM per dollar (in millions)" : TPM_per_1dollor,
-            "PTU Cost Saving (%)": cost_saving_percentage,
+            # "PTU Cost Saving (%)": cost_saving_percentage,
         }
         # Append new result to the results list
         st.session_state.results_list.append(new_result)
@@ -138,15 +138,15 @@ def style_rows(row):
         styles = ['background-color: lightyellow'] * len(row)
     
     # Apply color to the "Cost Saving (%)" column based on its value
-    cost_saving_percentage = float(row["PTU Cost Saving (%)"].strip('%'))
-    if cost_saving_percentage > 0:
-        styles[-1] = 'background-color: lightgreen'
-    else:
-        # change the text color to white if the cost saving percentage is negative
-        styles[-1] = 'background-color: orange ; color: white'
+    # cost_saving_percentage = float(row["PTU Cost Saving (%)"].strip('%'))
+    # if cost_saving_percentage > 0:
+    #     styles[-1] = 'background-color: lightgreen'
+    # else:
+    #     # change the text color to white if the cost saving percentage is negative
+    #     styles[-1] = 'background-color: orange ; color: white'
     
     # Apply blue font to the "TPM per dollar" column
-    styles[-2] = 'color: blue'
+    styles[-1] = 'color: blue'
     return styles
 
 if not results_df.empty:
@@ -237,30 +237,30 @@ with st.container(border=True):
 """)
     st.divider()
 
-    st.subheader("2. How to calculate PayGO Monthly Cost(All Models):")
-    st.latex(r"""
-\begin{aligned}
-\text{Input Cost} &= \left( \frac{\text{Input Tokens} \times \left( \frac{\text{RPM}}{60} \right) \times 3600 \times 24 \times 30.42}{1000} \right) \times \text{Input Token Price per 1k}
-\end{aligned}
-""")
+#     st.subheader("2. How to calculate PayGO Monthly Cost(All Models):")
+#     st.latex(r"""
+# \begin{aligned}
+# \text{Input Cost} &= \left( \frac{\text{Input Tokens} \times \left( \frac{\text{RPM}}{60} \right) \times 3600 \times 24 \times 30.42}{1000} \right) \times \text{Input Token Price per 1k}
+# \end{aligned}
+# """)
 
-    st.latex(r"""
-\begin{aligned}
-\text{Output Cost} &= \left( \frac{\text{Output Tokens} \times \left( \frac{\text{RPM}}{60} \right) \times 3600 \times 24 \times 30.42}{1000} \right) \times \text{Output Token Price per 1k}
-\end{aligned}
-""")
+#     st.latex(r"""
+# \begin{aligned}
+# \text{Output Cost} &= \left( \frac{\text{Output Tokens} \times \left( \frac{\text{RPM}}{60} \right) \times 3600 \times 24 \times 30.42}{1000} \right) \times \text{Output Token Price per 1k}
+# \end{aligned}
+# """)
 
-    st.latex(r"""
-\begin{aligned}
-\text{Total PayGO Cost} &= \text{Input Cost} + \text{Output Cost}
-\end{aligned}
-""")
+#     st.latex(r"""
+# \begin{aligned}
+# \text{Total PayGO Cost} &= \text{Input Cost} + \text{Output Cost}
+# \end{aligned}
+# """)
 
-    st.divider()
+#     st.divider()
 
 
 # Display instructions for calculating PTU number
-    st.subheader("3. How to estimate PTU Number(Only Google Gemini Models):")
+    st.subheader("2. How to estimate PTU Number(Only Google Gemini Models):")
     st.latex(r"""
 \begin{aligned}
 \text{PTU Number} &= \left( \frac{(\text{Input Tokens} + (\text{Output Tokens} \times \text{Output Token Multiple Ratio})) \times 4 \times \left( \frac{\text{RPM}}{60} \right)}{\text{Chars per GSU}} \right)
@@ -271,7 +271,7 @@ with st.container(border=True):
     st.markdown("[Google Cloud Provisioned Throughput Calculater](https://console.cloud.google.com/vertex-ai/provisioned-throughput/price-estimate;inputAudioSecondsPerQuery=0;inputCharsPerQuery=875;inputImagesPerQuery=0;inputVideoSecondsPerQuery=0;outputCharsPerQuery=75;outputImagesPerQuery=0;publisherModelName=publishers%2Fgoogle%2Fmodels%2Fgemini-1.5-flash-002;queriesPerSecond=2;tierDistribution=100,0?project=gen-lang-client-0791754762)")
 
 # Display instructions for calculating PTU number
-    st.subheader("4. How to calculate TPM per dollar value:")
+    st.subheader("3. How to calculate TPM per dollar value:")
     st.latex(r"""
 \begin{aligned}
 \text{TPM per 1 Dollar} &= \frac{(\text{Input Text Tokens} + \text{Input Image Tokens} + \text{Output Tokens}) \times \text{RPM}}{\frac{\text{PTU Cost per month}}{30.42 \times 24 \times 60}}
