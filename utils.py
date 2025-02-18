@@ -1,8 +1,15 @@
 import math
 
-def calculate_google_ptu_num(input_text_token, input_image_token, output_token, rpm, output_token_multiplier, chars_per_gsu):
+def calculate_google_ptu_num(input_text_token, image_number, output_token, rpm, output_token_multiplier, chars_per_gsu, char_per_image_less_128k, char_per_image_larger_128k):
     print(f"debugging>>input_token: {input_text_token}, output_token: {output_token}, rpm: {rpm}, output_token_multiplier: {output_token_multiplier}, chars_per_gsu: {chars_per_gsu}")
-    return ((input_text_token + input_image_token + (output_token * output_token_multiplier)) * 4 * (rpm / 60) ) / chars_per_gsu
+    # calculate the image token
+    googke_image_token = 0 
+    if input_text_token <= 128000:
+        googke_image_token = (char_per_image_less_128k * image_number)/4
+    else:
+        googke_image_token = (char_per_image_larger_128k * image_number)/4
+        
+    return ((input_text_token + googke_image_token + (output_token * output_token_multiplier)) * 4 * (rpm / 60) ) / chars_per_gsu
 
 def calculate_gpt4o_image_token_number(width, height, detail_level, model):
     """
@@ -15,6 +22,20 @@ def calculate_gpt4o_image_token_number(width, height, detail_level, model):
     - detail_level (str): 'low' or 'high', representing the level of image detail.
     - model (str): The model name ('GPT-4o', 'GPT-4 Turbo with Vision', or 'GPT-4o mini').
 
+    Calculation Logic:
+    Image inputs are metered and charged in tokens, just as text inputs are. The token cost of an image is determined by two factors: size and detail.
+
+    Low res cost
+        Any image with detail: low costs 85 tokens.
+
+    High res cost
+        To calculate the cost of an image with detail: high, we do the following:
+
+    Scale to fit within a 2048px x 2048px square, maintaining original aspect ratio Scale so that the image's shortest side is 768px long Count the number of 512px squares in the image—each square costs 170 tokens
+    Add 85 tokens to the total Cost calculation examples A 1024 x 1024 square image in detail: high mode costs 765 tokens 1024 is less than 2048, so there is no initial resize.  The shortest side is 1024, so we scale the image down to 768 x 768.  4 512px square tiles are needed to represent the image, so the final token cost is 170 * 4 + 85 = 765.  A 2048 x 4096 image in detail: high mode costs 1105 tokens We scale down the image to 1024 x 2048 to fit within the 2048 square.  The shortest side is 1024, so we further scale down to 768 x 1536.  6 512px tiles are needed, so the final token cost is 170 * 6 + 85 = 1105.  A 4096 x 8192 image in detail: low most costs 85 tokens Regardless of input size, low detail images are a fixed cost.
+
+    https://platform.openai.com/docs/guides/vision/calculating-costs
+
     Returns:
     - int: The total token cost for processing the image.
     """
@@ -24,22 +45,14 @@ def calculate_gpt4o_image_token_number(width, height, detail_level, model):
     detail_level = detail_level.lower()
     model = model.strip()
 
-    if 'gpt-4o' in model.lower() or 'gpt-4 turbo with vision' in model.lower():
-        # Standard models
-        if detail_level == 'low':
-            return 85  # Flat rate for low detail
-        else:  # High detail
-            token_cost_per_tile = 170
-            base_token_cost = 85
-    elif 'gpt-4o mini' in model.lower():
-        # Mini model
-        if detail_level == 'low':
-            return 2833  # Flat rate for low detail
-        else:
-            token_cost_per_tile = 5667
-            base_token_cost = 2833
+    if detail_level == 'low':
+        return 85  # Flat rate for low detail
     else:
-        raise ValueError("Invalid model name. Must be 'GPT-4o', 'GPT-4 Turbo with Vision', or 'GPT-4o mini'.")
+        token_cost_per_tile = 170
+        base_token_cost = 85
+    
+    if width <= 0 or height <= 0:
+        return 0
 
     # High detail mode calculations
     # Step 1: Resize image to fit within a 2048 x 2048 pixel square
@@ -64,16 +77,20 @@ def calculate_gpt4o_image_token_number(width, height, detail_level, model):
 
     return token_cost
 
-def calculate_azure_openai_ptu_num(model_name, input_token, image_input_token,output_token, peak_calls_per_min):
+def calculate_tpm_per_1_dollar(input_text_token, input_image_token, output_token, rpm, ptu_cost):
+    return ((input_text_token + input_image_token + output_token ) * rpm) / (ptu_cost / (30.42 * 24 * 60)) / 1_000_000
+    
+
+def calculate_azure_openai_ptu_num(model_name, input_token, image_input_token,output_token, peak_calls_per_min, minimal_ptu_deployment_number):
     # Model configurations
     if model_name == 'azure openai GPT-4o':
-        DEPLOYABLE_INCREMENT = 50
+        DEPLOYABLE_INCREMENT = minimal_ptu_deployment_number
         INPUT_TPM_PER_PTU = 2500
         OUTPUT_TPM_PER_PTU = 833
     elif model_name == 'azure openai GPT-4o-mini':
-        DEPLOYABLE_INCREMENT = 25
+        DEPLOYABLE_INCREMENT = minimal_ptu_deployment_number
         INPUT_TPM_PER_PTU = 37000
-        OUTPUT_TPM_PER_PTU = 12_333
+        OUTPUT_TPM_PER_PTU = 12333
     else:
         raise ValueError("Unsupported model. Choose 'azure openai GPT-4o' or 'azure openai GPT-4o-mini'")
 
@@ -93,7 +110,7 @@ def calculate_azure_openai_ptu_num(model_name, input_token, image_input_token,ou
 
     # Calculate deployable PTUs
     deployable_ptus = math.ceil(total_required_ptus / DEPLOYABLE_INCREMENT) * DEPLOYABLE_INCREMENT
-    return deployable_ptus, total_required_ptus, total_input_tpm, total_output_tpm, total_tokens_per_minute
+    return total_required_ptus, deployable_ptus, total_input_tpm, total_output_tpm, total_tokens_per_minute
     
 
 def calculate_ptu_utilization(ptu_num, min_ptu_deployment_unit):

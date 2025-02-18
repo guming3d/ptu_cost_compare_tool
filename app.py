@@ -1,8 +1,11 @@
 import streamlit as st
 import json
 import os
-from utils import calculate_google_ptu_num, calculate_ptu_utilization, calculate_paygo_cost, calculate_ptu_cost, calculate_cost_saving_percentage, calculate_azure_openai_ptu_num, calculate_gemini_image_token, calculate_gpt4o_image_token_number
+from utils import calculate_google_ptu_num, calculate_ptu_utilization, calculate_paygo_cost, calculate_ptu_cost, calculate_cost_saving_percentage, calculate_azure_openai_ptu_num, calculate_tpm_per_1_dollar, calculate_gemini_image_token, calculate_gpt4o_image_token_number
+
 from calculate_image_token import calculate_image_token
+import matplotlib.pyplot as plt
+import pandas as pd
 
 # Load model configuration
 config_path = os.path.join(os.path.dirname(__file__), 'model_config.json')
@@ -47,20 +50,24 @@ if "google" in model_name.lower():
     char_per_image_larger_128k = selected_model_config["chars per image(>128k input tokens)"]
     
     total_image_token = 0
-    # for width, height, quality in image_params:
-    #     total_image_token += calculate_gemini_image_token(width, height, quality, model_name)
-    ptu_num = calculate_google_ptu_num(input_text_token, total_image_token, output_token, rpm, output_token_multiple_ratio, chars_per_gsu)
-    st.sidebar.write(f"Required PTU Number: {ptu_num:.2f}")
+    for width, height, quality in image_params:
+         total_image_token += calculate_gemini_image_token(width, height, quality, model_name)
+    image_number = len(image_params)
+    require_ptu_num = calculate_google_ptu_num(input_text_token, image_number, output_token, rpm, output_token_multiple_ratio, chars_per_gsu, char_per_image_less_128k, char_per_image_larger_128k)
+    st.sidebar.write(f"Required PTU Number: {require_ptu_num:.2f}")
 elif "gpt-4o" in model_name.lower():
+    selected_model_config = next((model for model in model_config if model["model name"] == model_name), None)
+    minimal_ptu_deployment_number = selected_model_config["PTU minumum deployment unit"]
     total_image_token = 0
     for width, height, quality in image_params:
         total_image_token += calculate_gpt4o_image_token_number(width, height, quality, model_name)
-    deploy_ptu_num, require_ptu_num, total_input_tpm, total_output_tpm, total_tokens_per_minute = calculate_azure_openai_ptu_num(model_name, input_text_token, total_image_token, output_token, rpm)
+
+    require_ptu_num, deploy_ptu_num, total_input_tpm, total_output_tpm, total_tokens_per_minute = calculate_azure_openai_ptu_num(model_name, input_text_token,total_image_token,output_token, rpm, minimal_ptu_deployment_number)
+
     st.sidebar.write(f"Required PTU Number: {deploy_ptu_num:.2f} ({require_ptu_num:.3f})")
     st.sidebar.write(f"Tokens per minute : {total_tokens_per_minute} ({total_input_tpm} prompt, {total_output_tpm} generated)")
-    ptu_num = deploy_ptu_num
 else:
-    ptu_num = st.sidebar.number_input("Required PTU Number", min_value=1.0, value=100.0, format="%.2f")
+    require_ptu_num = st.sidebar.number_input("Required PTU Number", min_value=1.0, value=100.0, format="%.2f")
 
 ptu_subscription_type = st.sidebar.selectbox("PTU Subscription Type", ["Monthly", "Yearly"])
 
@@ -96,12 +103,13 @@ st.markdown("""
 col1, col2 = st.sidebar.columns(2)
 with col1:
     if st.button("Add Compare"):
-        ptu_num_calculated = ptu_num
+        ptu_num_calculated = require_ptu_num
         ptu_utilization = calculate_ptu_utilization(ptu_num_calculated, min_ptu_deployment_unit)
         paygo_cost = calculate_paygo_cost(input_text_token, output_token, rpm, model_name)
         ptu_discount = selected_model_config[f"PTU {ptu_subscription_type.lower()} discount"]
         ptu_cost = calculate_ptu_cost(ptu_num_calculated, min_ptu_deployment_unit, ptu_price_per_unit, ptu_discount)
         cost_saving_percentage = calculate_cost_saving_percentage(ptu_cost, paygo_cost)
+        TPM_per_1dollor = calculate_tpm_per_1_dollar(input_text_token, total_image_token, output_token, rpm, ptu_cost)
 
         # Calculate detailed PayGO cost breakdown
         input_cost, output_cost, total_cost = calculate_paygo_cost(input_text_token, output_token, rpm, model_name, detailed=True)
@@ -116,6 +124,7 @@ with col1:
             st.sidebar.markdown(f"<p style='color:darkgreen;'>Total PayGO Cost:<br>{total_cost}</p>", unsafe_allow_html=True)
             st.sidebar.divider()
             st.sidebar.markdown(f"<p style='color:darkgreen;'>PTU Cost Breakdown:</p>", unsafe_allow_html=True)
+            # st.sidebar.markdown(f"<p style='color:darkgreen;'>TPM per dollar:</p>", unsafe_allow_html=True)
             st.sidebar.markdown(f"<p style='color:darkgreen;'>Cost before discount:<br>{origial_cost}<br>After Discount:<br>{cost_after_discount}</p>", unsafe_allow_html=True)
 
         new_result = {
@@ -126,9 +135,10 @@ with col1:
             "Commitment Type": ptu_subscription_type,
             "Required PTU Num": ptu_num_calculated,
             "PTU Utilization": ptu_utilization,
-            "PayGO cost": paygo_cost,
+            # "PayGO cost": paygo_cost,
             "PTU cost": ptu_cost,
-            "PTU Cost Saving (%)": cost_saving_percentage,
+            "TPM per dollar (in millions)" : TPM_per_1dollor,
+            # "PTU Cost Saving (%)": cost_saving_percentage,
         }
         # Append new result to the results list
         st.session_state.results_list.append(new_result)
@@ -151,13 +161,15 @@ def style_rows(row):
         styles = ['background-color: lightyellow'] * len(row)
     
     # Apply color to the "Cost Saving (%)" column based on its value
-    cost_saving_percentage = float(row["PTU Cost Saving (%)"].strip('%'))
-    if cost_saving_percentage > 0:
-        styles[-1] = 'background-color: lightgreen'
-    else:
-        # change the text color to white if the cost saving percentage is negative
-        styles[-1] = 'background-color: orange ; color: white'
+    # cost_saving_percentage = float(row["PTU Cost Saving (%)"].strip('%'))
+    # if cost_saving_percentage > 0:
+    #     styles[-1] = 'background-color: lightgreen'
+    # else:
+    #     # change the text color to white if the cost saving percentage is negative
+    #     styles[-1] = 'background-color: orange ; color: white'
     
+    # Apply blue font to the "TPM per dollar" column
+    styles[-1] = 'color: blue'
     return styles
 
 if not results_df.empty:
@@ -170,6 +182,39 @@ if not results_df.empty:
     st.dataframe(styled_df)
 
 # If results are not empty, display "Export to Excel" button
+
+# Plot PTU cost and TPM per dollar
+if not results_df.empty:
+    col1, col2 = st.columns(2)
+
+    with col1:
+        # Plot PTU cost
+        fig1, ax1 = plt.subplots()
+        ax1.set_xlabel('Model Name')
+        ax1.set_ylabel('PTU Cost(USD)', color='tab:orange')
+        x_labels = [f"{model}\n{commitment}" for model, commitment in zip(results_df["Model Name"], results_df["Commitment Type"])]
+        colors = ['tab:blue' if 'azure' in model.lower() else 'tab:orange' for model in results_df['Model Name']]
+        ax1.bar(x_labels, results_df['PTU cost'], color=colors)
+        ax1.tick_params(axis='y', labelcolor='tab:red')
+            # Rotate x-axis labels for better readability
+        ax1.set_xticks(range(len(x_labels)))
+        ax1.set_xticklabels(x_labels, rotation=45, ha='right')
+        fig1.tight_layout()
+        st.pyplot(fig1)
+
+    with col2:
+        # Plot TPM per dollar
+        fig2, ax2 = plt.subplots()
+        ax2.set_xlabel('Model Name')
+        ax2.set_ylabel('TPM per dollar (in millions)', color='tab:blue')
+        x_labels = [f"{model}\n{commitment}" for model, commitment in zip(results_df["Model Name"], results_df["Commitment Type"])]
+        colors = ['tab:blue' if 'azure' in model.lower() else 'tab:orange' for model in results_df['Model Name']]
+        ax2.bar(x_labels, results_df['TPM per dollar (in millions)'], color=colors)
+        ax2.tick_params(axis='y', labelcolor='tab:blue')
+        ax2.set_xticks(range(len(x_labels)))
+        ax2.set_xticklabels(x_labels, rotation=45, ha='right')
+        fig2.tight_layout()
+        st.pyplot(fig2)
 if not results_df.empty:
     if st.button("Export to Excel", key="export_to_excel"):
         import io
@@ -215,30 +260,30 @@ with st.container(border=True):
 """)
     st.divider()
 
-    st.subheader("2. How to calculate PayGO Monthly Cost(All Models):")
-    st.latex(r"""
-\begin{aligned}
-\text{Input Cost} &= \left( \frac{\text{Input Tokens} \times \left( \frac{\text{RPM}}{60} \right) \times 3600 \times 24 \times 30.42}{1000} \right) \times \text{Input Token Price per 1k}
-\end{aligned}
-""")
+#     st.subheader("2. How to calculate PayGO Monthly Cost(All Models):")
+#     st.latex(r"""
+# \begin{aligned}
+# \text{Input Cost} &= \left( \frac{\text{Input Tokens} \times \left( \frac{\text{RPM}}{60} \right) \times 3600 \times 24 \times 30.42}{1000} \right) \times \text{Input Token Price per 1k}
+# \end{aligned}
+# """)
 
-    st.latex(r"""
-\begin{aligned}
-\text{Output Cost} &= \left( \frac{\text{Output Tokens} \times \left( \frac{\text{RPM}}{60} \right) \times 3600 \times 24 \times 30.42}{1000} \right) \times \text{Output Token Price per 1k}
-\end{aligned}
-""")
+#     st.latex(r"""
+# \begin{aligned}
+# \text{Output Cost} &= \left( \frac{\text{Output Tokens} \times \left( \frac{\text{RPM}}{60} \right) \times 3600 \times 24 \times 30.42}{1000} \right) \times \text{Output Token Price per 1k}
+# \end{aligned}
+# """)
 
-    st.latex(r"""
-\begin{aligned}
-\text{Total PayGO Cost} &= \text{Input Cost} + \text{Output Cost}
-\end{aligned}
-""")
+#     st.latex(r"""
+# \begin{aligned}
+# \text{Total PayGO Cost} &= \text{Input Cost} + \text{Output Cost}
+# \end{aligned}
+# """)
 
-    st.divider()
+#     st.divider()
 
 
 # Display instructions for calculating PTU number
-    st.subheader("3. How to estimate PTU Number(Only Google Gemini Models):")
+    st.subheader("2. How to estimate PTU Number(Only Google Gemini Models):")
     st.latex(r"""
 \begin{aligned}
 \text{PTU Number} &= \left( \frac{(\text{Input Tokens} + (\text{Output Tokens} \times \text{Output Token Multiple Ratio})) \times 4 \times \left( \frac{\text{RPM}}{60} \right)}{\text{Chars per GSU}} \right)
@@ -246,10 +291,35 @@ with st.container(border=True):
 """)
     st.markdown("[Google Cloud Model Price doc](https://cloud.google.com/vertex-ai/generative-ai/pricing#gemini-models)")
     st.markdown("[Google Cloud Provisioned Throughput doc](https://cloud.google.com/vertex-ai/generative-ai/docs/provisioned-throughput)")
+    st.markdown("[Google Cloud Provisioned Throughput Calculater](https://console.cloud.google.com/vertex-ai/provisioned-throughput/price-estimate;inputAudioSecondsPerQuery=0;inputCharsPerQuery=875;inputImagesPerQuery=0;inputVideoSecondsPerQuery=0;outputCharsPerQuery=75;outputImagesPerQuery=0;publisherModelName=publishers%2Fgoogle%2Fmodels%2Fgemini-1.5-flash-002;queriesPerSecond=2;tierDistribution=100,0?project=gen-lang-client-0791754762)")
+
+# Display instructions for calculating PTU number
+    st.subheader("3. How to calculate TPM per dollar value:")
+    st.latex(r"""
+\begin{aligned}
+\text{TPM per 1 Dollar} &= \frac{(\text{Input Text Tokens} + \text{Input Image Tokens} + \text{Output Tokens}) \times \text{RPM}}{\frac{\text{PTU Cost per month}}{30.42 \times 24 \times 60}}
+\end{aligned}
+""")
+
 
 
 with st.container(border=True):
     st.subheader("Model price Configuration list")
     st.json(model_config)
+
+    st.subheader("Update Model Configuration")
+    config_json_str = json.dumps(model_config, indent=4) # Convert current config to formatted JSON string
+    updated_config_str = st.text_area("Edit JSON Configuration here:", value=config_json_str, height=300)
+
+    if st.button("Update Configuration"):
+        try:
+            updated_config = json.loads(updated_config_str)
+            with open(config_path, 'w') as f:
+                json.dump(updated_config, f, indent=4)
+            st.success("Configuration updated successfully! Please refresh the app to see changes.")
+        except json.JSONDecodeError:
+            st.error("Invalid JSON format. Please check your input.")
+        except Exception as e:
+            st.error(f"An error occurred while updating configuration: {e}")
 
 
