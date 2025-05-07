@@ -106,8 +106,11 @@ def calculate_azure_openai_ptu_num(model_name, input_token, image_input_token, o
     total_input_tokens_per_call = input_token + image_input_token
 
     # Calculate tokens per minute, accounting for cache hits
-    # Note: For Azure OpenAI, cache hits still count against your TPM quota
-    total_input_tpm = peak_calls_per_min * total_input_tokens_per_call
+    # For Azure OpenAI, cached tokens don't count against input TPM quota
+    cached_tokens_per_call = input_token * (cache_hit_rate / 100)
+    non_cached_tokens_per_call = total_input_tokens_per_call - cached_tokens_per_call
+    
+    total_input_tpm = peak_calls_per_min * non_cached_tokens_per_call
     total_output_tpm = peak_calls_per_min * output_token
     total_tokens_per_minute = total_input_tpm + total_output_tpm
 
