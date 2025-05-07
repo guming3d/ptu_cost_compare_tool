@@ -301,7 +301,20 @@ with st.container(border=True):
 \end{aligned}
 """)
 
-
+    st.subheader("5. How to estimate PTU Number (Azure OpenAI Models):")
+    st.markdown(r"""
+$$
+\begin{align}
+\text{Effective Text Input Tokens per Call} &= \text{Input Text Tokens} \times \left(1 - \frac{\text{Cache Hit Rate}}{100}\right) \\
+\text{Total Input TPM} &= \text{Peak RPM} \times (\text{Effective Text Input Tokens} + \text{Input Image Tokens}) \\
+\text{Total Output TPM} &= \text{Peak RPM} \times \text{Output Tokens} \\
+\text{Required Input PTUs} &= \frac{\text{Total Input TPM}}{\text{Input TPM per PTU}} \\
+\text{Required Output PTUs} &= \frac{\text{Total Output TPM}}{\text{Output TPM per PTU}} \\
+\text{Total Required PTUs} &= \text{Required Input PTUs} + \text{Required Output PTUs} \\
+\text{Deployable PTUs} &= \left\lceil \frac{\text{Total Required PTUs}}{\text{Minimal PTU Deployment Unit}} \right\rceil \times \text{Minimal PTU Deployment Unit}
+\end{align}
+$$
+""", unsafe_allow_html=True)
 
 with st.container(border=True):
     st.subheader("Model price Configuration list")
