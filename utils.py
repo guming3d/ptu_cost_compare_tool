@@ -1,6 +1,6 @@
 import math
 
-def calculate_google_ptu_num(input_text_token, image_number, output_token, rpm, output_token_multiplier, chars_per_gsu, char_per_image_less_128k, char_per_image_larger_128k):
+def calculate_google_ptu_num(input_text_token, image_number, output_token, rpm, output_token_multiplier, chars_per_gsu, char_per_image_less_128k, char_per_image_larger_128k, cache_hit_rate=0):
     print(f"debugging>>input_token: {input_text_token}, output_token: {output_token}, rpm: {rpm}, output_token_multiplier: {output_token_multiplier}, chars_per_gsu: {chars_per_gsu}")
     # calculate the image token
     googke_image_token = 0 
@@ -8,8 +8,12 @@ def calculate_google_ptu_num(input_text_token, image_number, output_token, rpm, 
         googke_image_token = (char_per_image_less_128k * image_number)/4
     else:
         googke_image_token = (char_per_image_larger_128k * image_number)/4
+    
+    # Apply cache hit rate to the input text token calculation
+    # Cache hits still consume GSUs but at a potentially reduced rate
+    effective_input_text_token = input_text_token  # No reduction in GSU consumption for cache hits in standard calculation
         
-    return ((input_text_token + googke_image_token + (output_token * output_token_multiplier)) * 4 * (rpm / 60) ) / chars_per_gsu
+    return ((effective_input_text_token + googke_image_token + (output_token * output_token_multiplier)) * 4 * (rpm / 60) ) / chars_per_gsu
 
 def calculate_gpt4o_image_token_number(width, height, detail_level, model):
     """
@@ -81,7 +85,7 @@ def calculate_tpm_per_1_dollar(input_text_token, input_image_token, output_token
     return ((input_text_token + input_image_token + output_token ) * rpm) / (ptu_cost / (30.42 * 24 * 60)) / 1_000_000
     
 
-def calculate_azure_openai_ptu_num(model_name, input_token, image_input_token,output_token, peak_calls_per_min, minimal_ptu_deployment_number):
+def calculate_azure_openai_ptu_num(model_name, input_token, image_input_token, output_token, peak_calls_per_min, minimal_ptu_deployment_number, cache_hit_rate=0):
     # Model configurations
     if model_name == 'azure openai GPT-4o':
         DEPLOYABLE_INCREMENT = minimal_ptu_deployment_number
@@ -98,11 +102,11 @@ def calculate_azure_openai_ptu_num(model_name, input_token, image_input_token,ou
     else:
         raise ValueError("Unsupported model. Choose 'azure openai GPT-4o', 'azure openai GPT-4.1', or 'azure openai GPT-4o-mini'")
 
-    
     # Calculate total input tokens per call
     total_input_tokens_per_call = input_token + image_input_token
 
-    # Calculate tokens per minute
+    # Calculate tokens per minute, accounting for cache hits
+    # Note: For Azure OpenAI, cache hits still count against your TPM quota
     total_input_tpm = peak_calls_per_min * total_input_tokens_per_call
     total_output_tpm = peak_calls_per_min * output_token
     total_tokens_per_minute = total_input_tpm + total_output_tpm
@@ -122,7 +126,7 @@ def calculate_ptu_utilization(ptu_num, min_ptu_deployment_unit):
     utilization = ptu_num / (math.ceil(ptu_num / min_ptu_deployment_unit) * min_ptu_deployment_unit)
     return f"{utilization * 100:.2f}% ({ptu_num}/{(math.ceil(ptu_num / min_ptu_deployment_unit) * min_ptu_deployment_unit)})"
 
-def calculate_paygo_cost(input_token, output_token, rpm, model_name, detailed=False):
+def calculate_paygo_cost(input_token, output_token, rpm, model_name, cache_hit_rate=0, detailed=False):
     import json
     import os
 
@@ -137,17 +141,32 @@ def calculate_paygo_cost(input_token, output_token, rpm, model_name, detailed=Fa
         raise ValueError(f"Model {model_name} not found in configuration")
 
     input_token_price = selected_model_config["input token price per 1k"]
+    input_token_price_cache_hit = selected_model_config["input token price per 1k with cache hit"]
     output_token_price = selected_model_config["output token price per 1k"]
 
+    # Calculate tokens with and without cache hits
+    cache_hit_tokens = input_token * (cache_hit_rate / 100)
+    non_cache_hit_tokens = input_token * (1 - (cache_hit_rate / 100))
+
     # Calculate PayGO cost
-    input_cost  = ((input_token  * (rpm / 60) * 3600 * 24 * 30.42) / 1000) * input_token_price
+    input_cost_no_cache = ((non_cache_hit_tokens * (rpm / 60) * 3600 * 24 * 30.42) / 1000) * input_token_price
+    input_cost_with_cache = ((cache_hit_tokens * (rpm / 60) * 3600 * 24 * 30.42) / 1000) * input_token_price_cache_hit
+    input_cost = input_cost_no_cache + input_cost_with_cache
     output_cost = ((output_token * (rpm / 60) * 3600 * 24 * 30.42) / 1000) * output_token_price
 
     if detailed:
-        total_cost = f"{input_cost} + {output_cost} = {input_cost + output_cost}"
-        input_cost = f"(({input_token}  * ({rpm} / 60) * 3600 * 24 * 30.42) / 1000) * {input_token_price:.6f} = {input_cost}"
-        output_cost = f"(({output_token} * ({rpm} / 60) * 3600 * 24 * 30.42) / 1000) * {output_token_price:.6f} = {output_cost}"
-        return input_cost, output_cost, total_cost
+        if cache_hit_rate > 0:
+            input_cost_detail = (
+                f"Non-cached ({non_cache_hit_tokens} tokens): (({non_cache_hit_tokens} * ({rpm} / 60) * 3600 * 24 * 30.42) / 1000) * {input_token_price:.6f} = {input_cost_no_cache:.2f}\n"
+                f"Cached ({cache_hit_tokens} tokens): (({cache_hit_tokens} * ({rpm} / 60) * 3600 * 24 * 30.42) / 1000) * {input_token_price_cache_hit:.6f} = {input_cost_with_cache:.2f}\n"
+                f"Total input cost: {input_cost_no_cache:.2f} + {input_cost_with_cache:.2f} = {input_cost:.2f}"
+            )
+        else:
+            input_cost_detail = f"(({input_token} * ({rpm} / 60) * 3600 * 24 * 30.42) / 1000) * {input_token_price:.6f} = {input_cost:.2f}"
+        
+        output_cost_detail = f"(({output_token} * ({rpm} / 60) * 3600 * 24 * 30.42) / 1000) * {output_token_price:.6f} = {output_cost:.2f}"
+        total_cost = f"{input_cost:.2f} + {output_cost:.2f} = {input_cost + output_cost:.2f}"
+        return input_cost_detail, output_cost_detail, total_cost
     else:
         return input_cost + output_cost
 
