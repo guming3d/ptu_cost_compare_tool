@@ -22,6 +22,28 @@
         "PTU yearly discount": 0
     },
     {
+        "model name": "azure openai o1",
+        "output token multiple ratio": 1,
+        "input token price per 1k": 0.00015,
+        "output token price per 1k": 0.0006,
+        "PTU minumum deployment unit": 15,
+        "PTU price of monthly commitment": 260,
+        "PTU price of yearly commitment": 221,
+        "PTU monthly discount": 0,
+        "PTU yearly discount": 0
+    },
+    {
+        "model name": "azure openai o3-mini",
+        "output token multiple ratio": 1,
+        "input token price per 1k": 0.00015,
+        "output token price per 1k": 0.0006,
+        "PTU minumum deployment unit": 15,
+        "PTU price of monthly commitment": 260,
+        "PTU price of yearly commitment": 221,
+        "PTU monthly discount": 0,
+        "PTU yearly discount": 0
+    },
+    {
         "model name": "google gemini-1.5 pro",
         "output token multiple ratio": 3,
         "input token price per 1k": 0.00125,
