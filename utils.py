@@ -91,8 +91,12 @@ def calculate_azure_openai_ptu_num(model_name, input_token, image_input_token,ou
         DEPLOYABLE_INCREMENT = minimal_ptu_deployment_number
         INPUT_TPM_PER_PTU = 37000
         OUTPUT_TPM_PER_PTU = 12333
+    elif model_name == 'azure openai GPT-4.1':
+        DEPLOYABLE_INCREMENT = minimal_ptu_deployment_number
+        INPUT_TPM_PER_PTU = 3000  # Assuming similar to GPT-4o with slightly higher throughput
+        OUTPUT_TPM_PER_PTU = 750  # Assuming similar to GPT-4o with slightly higher throughput
     else:
-        raise ValueError("Unsupported model. Choose 'azure openai GPT-4o' or 'azure openai GPT-4o-mini'")
+        raise ValueError("Unsupported model. Choose 'azure openai GPT-4o', 'azure openai GPT-4.1', or 'azure openai GPT-4o-mini'")
 
     
     # Calculate total input tokens per call

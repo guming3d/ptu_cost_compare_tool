@@ -2,8 +2,19 @@
     {
         "model name": "azure openai GPT-4o",
         "output token multiple ratio": 1,
-        "input token price per 1k": 0.005,
-        "output token price per 1k": 0.015,
+        "input token price per 1k": 0.0025,
+        "output token price per 1k": 0.01,
+        "PTU minumum deployment unit": 15,
+        "PTU price of monthly commitment": 260,
+        "PTU price of yearly commitment": 221,
+        "PTU monthly discount": 0,
+        "PTU yearly discount": 0
+    },
+    {
+        "model name": "azure openai GPT-4.1",
+        "output token multiple ratio": 1,
+        "input token price per 1k": 0.002,
+        "output token price per 1k": 0.008,
         "PTU minumum deployment unit": 15,
         "PTU price of monthly commitment": 260,
         "PTU price of yearly commitment": 221,
@@ -35,8 +46,8 @@
     {
         "model name": "azure openai o3-mini",
         "output token multiple ratio": 1,
-        "input token price per 1k": 0.00015,
-        "output token price per 1k": 0.0006,
+        "input token price per 1k": 0.00011,
+        "output token price per 1k": 0.00044,
         "PTU minumum deployment unit": 15,
         "PTU price of monthly commitment": 260,
         "PTU price of yearly commitment": 221,
