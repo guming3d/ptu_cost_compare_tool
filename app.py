@@ -29,6 +29,7 @@ st.title("Model PTU Cost Calculator(Monthly)")
 st.sidebar.title("Select model and workload scenario")
 model_name = st.sidebar.selectbox("Model Name", model_list)
 input_text_token = st.sidebar.number_input("Input Token Number", min_value=0, value=3500)
+cache_hit_rate = st.sidebar.slider("Cache Hit Rate (%)", min_value=0, max_value=100, value=0, step=5)
 num_images = st.sidebar.number_input("Number of Images", min_value=0, value=0)
 
 image_params = []
@@ -53,7 +54,7 @@ if "google" in model_name.lower():
     for width, height, quality in image_params:
          total_image_token += calculate_gemini_image_token(width, height, quality, model_name)
     image_number = len(image_params)
-    require_ptu_num = calculate_google_ptu_num(input_text_token, image_number, output_token, rpm, output_token_multiple_ratio, chars_per_gsu, char_per_image_less_128k, char_per_image_larger_128k)
+    require_ptu_num = calculate_google_ptu_num(input_text_token, image_number, output_token, rpm, output_token_multiple_ratio, chars_per_gsu, char_per_image_less_128k, char_per_image_larger_128k, cache_hit_rate=cache_hit_rate)
     st.sidebar.write(f"Required PTU Number: {require_ptu_num:.2f}")
 elif "gpt-4o" in model_name.lower():
     selected_model_config = next((model for model in model_config if model["model name"] == model_name), None)
@@ -61,7 +62,7 @@ elif "gpt-4o" in model_name.lower():
     for width, height, quality in image_params:
         total_image_token += calculate_gpt4o_image_token_number(width, height, quality, model_name)
 
-    require_ptu_num, deploy_ptu_num, total_input_tpm, total_output_tpm, total_tokens_per_minute = calculate_azure_openai_ptu_num(model_name, input_text_token,total_image_token,output_token, rpm, minimal_ptu_deployment_number)
+    require_ptu_num, deploy_ptu_num, total_input_tpm, total_output_tpm, total_tokens_per_minute = calculate_azure_openai_ptu_num(model_name, input_text_token, total_image_token, output_token, rpm, minimal_ptu_deployment_number, cache_hit_rate=cache_hit_rate)
 
     st.sidebar.write(f"Required PTU Number: {deploy_ptu_num:.2f} ({require_ptu_num:.3f})")
     st.sidebar.write(f"Tokens per minute : {total_tokens_per_minute} ({total_input_tpm} prompt, {total_output_tpm} generated)")
@@ -71,7 +72,7 @@ elif "gpt-4.1" in model_name.lower():
     for width, height, quality in image_params:
         total_image_token += calculate_gpt4o_image_token_number(width, height, quality, model_name)
 
-    require_ptu_num, deploy_ptu_num, total_input_tpm, total_output_tpm, total_tokens_per_minute = calculate_azure_openai_ptu_num(model_name, input_text_token,total_image_token,output_token, rpm, minimal_ptu_deployment_number)
+    require_ptu_num, deploy_ptu_num, total_input_tpm, total_output_tpm, total_tokens_per_minute = calculate_azure_openai_ptu_num(model_name, input_text_token, total_image_token, output_token, rpm, minimal_ptu_deployment_number, cache_hit_rate=cache_hit_rate)
 
     st.sidebar.write(f"Required PTU Number: {deploy_ptu_num:.2f} ({require_ptu_num:.3f})")
     st.sidebar.write(f"Tokens per minute : {total_tokens_per_minute} ({total_input_tpm} prompt, {total_output_tpm} generated)")
@@ -114,20 +115,22 @@ with col1:
     if st.button("Add Compare"):
         ptu_num_calculated = require_ptu_num
         ptu_utilization = calculate_ptu_utilization(ptu_num_calculated, min_ptu_deployment_unit)
-        paygo_cost = calculate_paygo_cost(input_text_token, output_token, rpm, model_name)
+        paygo_cost = calculate_paygo_cost(input_text_token, output_token, rpm, model_name, cache_hit_rate=cache_hit_rate)
         ptu_discount = selected_model_config[f"PTU {ptu_subscription_type.lower()} discount"]
         ptu_cost = calculate_ptu_cost(ptu_num_calculated, min_ptu_deployment_unit, ptu_price_per_unit, ptu_discount)
         cost_saving_percentage = calculate_cost_saving_percentage(ptu_cost, paygo_cost)
         TPM_per_1dollor = calculate_tpm_per_1_dollar(input_text_token, total_image_token, output_token, rpm, ptu_cost)
 
         # Calculate detailed PayGO cost breakdown
-        input_cost, output_cost, total_cost = calculate_paygo_cost(input_text_token, output_token, rpm, model_name, detailed=True)
+        input_cost, output_cost, total_cost = calculate_paygo_cost(input_text_token, output_token, rpm, model_name, cache_hit_rate=cache_hit_rate, detailed=True)
         origial_cost, cost_after_discount = calculate_ptu_cost(ptu_num_calculated, min_ptu_deployment_unit, ptu_price_per_unit, ptu_discount, detailed=True)
 
         with st.container(border=True):
             st.sidebar.divider()
         # Display detailed PayGO cost breakdown
             st.sidebar.markdown(f"<p style='color:darkgreen;'>PayGO Cost Breakdown:</p>", unsafe_allow_html=True)
+            if cache_hit_rate > 0:
+                st.sidebar.markdown(f"<p style='color:darkgreen;'>Cache Hit Rate: {cache_hit_rate}%</p>", unsafe_allow_html=True)
             st.sidebar.markdown(f"<p style='color:darkgreen;'>Input Cost:<br>{input_cost}</p>", unsafe_allow_html=True)
             st.sidebar.markdown(f"<p style='color:darkgreen;'>Output Cost:<br>{output_cost}</p>", unsafe_allow_html=True)
             st.sidebar.markdown(f"<p style='color:darkgreen;'>Total PayGO Cost:<br>{total_cost}</p>", unsafe_allow_html=True)
@@ -139,6 +142,7 @@ with col1:
         new_result = {
             "Model Name": model_name,
             "Input Token Number": input_text_token,
+            "Cache Hit Rate (%)": cache_hit_rate,
             "Output Token Number": output_token,
             "RPM": rpm,
             "Commitment Type": ptu_subscription_type,
@@ -269,30 +273,17 @@ with st.container(border=True):
 """)
     st.divider()
 
-#     st.subheader("2. How to calculate PayGO Monthly Cost(All Models):")
-#     st.latex(r"""
-# \begin{aligned}
-# \text{Input Cost} &= \left( \frac{\text{Input Tokens} \times \left( \frac{\text{RPM}}{60} \right) \times 3600 \times 24 \times 30.42}{1000} \right) \times \text{Input Token Price per 1k}
-# \end{aligned}
-# """)
+    st.subheader("2. How cache hit rates affect costs:")
+    st.latex(r"""
+\begin{aligned}
+\text{Input Cost} &= \text{Non-cached Cost} + \text{Cached Cost} \\
+\text{Non-cached Cost} &= \left( \frac{\text{Input Tokens} \times (1 - \frac{\text{Cache Hit Rate}}{100}) \times \left( \frac{\text{RPM}}{60} \right) \times 3600 \times 24 \times 30.42}{1000} \right) \times \text{Regular Input Token Price} \\
+\text{Cached Cost} &= \left( \frac{\text{Input Tokens} \times \frac{\text{Cache Hit Rate}}{100} \times \left( \frac{\text{RPM}}{60} \right) \times 3600 \times 24 \times 30.42}{1000} \right) \times \text{Cached Input Token Price}
+\end{aligned}
+""")
+    st.divider()
 
-#     st.latex(r"""
-# \begin{aligned}
-# \text{Output Cost} &= \left( \frac{\text{Output Tokens} \times \left( \frac{\text{RPM}}{60} \right) \times 3600 \times 24 \times 30.42}{1000} \right) \times \text{Output Token Price per 1k}
-# \end{aligned}
-# """)
-
-#     st.latex(r"""
-# \begin{aligned}
-# \text{Total PayGO Cost} &= \text{Input Cost} + \text{Output Cost}
-# \end{aligned}
-# """)
-
-#     st.divider()
-
-
-# Display instructions for calculating PTU number
-    st.subheader("2. How to estimate PTU Number(Only Google Gemini Models):")
+    st.subheader("3. How to estimate PTU Number(Only Google Gemini Models):")
     st.latex(r"""
 \begin{aligned}
 \text{PTU Number} &= \left( \frac{(\text{Input Tokens} + (\text{Output Tokens} \times \text{Output Token Multiple Ratio})) \times 4 \times \left( \frac{\text{RPM}}{60} \right)}{\text{Chars per GSU}} \right)
@@ -303,7 +294,7 @@ with st.container(border=True):
     st.markdown("[Google Cloud Provisioned Throughput Calculater](https://console.cloud.google.com/vertex-ai/provisioned-throughput/price-estimate;inputAudioSecondsPerQuery=0;inputCharsPerQuery=875;inputImagesPerQuery=0;inputVideoSecondsPerQuery=0;outputCharsPerQuery=75;outputImagesPerQuery=0;publisherModelName=publishers%2Fgoogle%2Fmodels%2Fgemini-1.5-flash-002;queriesPerSecond=2;tierDistribution=100,0?project=gen-lang-client-0791754762)")
 
 # Display instructions for calculating PTU number
-    st.subheader("3. How to calculate TPM per dollar value:")
+    st.subheader("4. How to calculate TPM per dollar value:")
     st.latex(r"""
 \begin{aligned}
 \text{TPM per 1 Dollar} &= \frac{(\text{Input Text Tokens} + \text{Input Image Tokens} + \text{Output Tokens}) \times \text{RPM}}{\frac{\text{PTU Cost per month}}{30.42 \times 24 \times 60}}
