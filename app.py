@@ -144,10 +144,10 @@ with col1:
             "Commitment Type": ptu_subscription_type,
             "Required PTU Num": ptu_num_calculated,
             "PTU Utilization": ptu_utilization,
-            # "PayGO cost": paygo_cost,
+            "PayGO cost": paygo_cost,
             "PTU cost": ptu_cost,
             "TPM per dollar (in millions)" : TPM_per_1dollor,
-            # "PTU Cost Saving (%)": cost_saving_percentage,
+            "PTU Cost Saving (%)": cost_saving_percentage,
         }
         # Append new result to the results list
         st.session_state.results_list.append(new_result)
