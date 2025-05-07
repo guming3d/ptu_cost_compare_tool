@@ -40,6 +40,7 @@ for i in range(num_images):
     image_params.append((width, height, quality))
 output_token = st.sidebar.number_input("Output Token Number", min_value=0, value=300)
 rpm = st.sidebar.number_input("RPM (Request per minute)", min_value=0, value=60)
+total_image_token = 0  # Initialize total_image_token
 if "google" in model_name.lower():
     selected_model_config = next((model for model in model_config if model["model name"] == model_name), None)
     output_token_multiple_ratio = selected_model_config["output token multiple ratio"]
@@ -49,7 +50,6 @@ if "google" in model_name.lower():
     char_per_image_less_128k = selected_model_config["chars per image(<=128k input tokens)"]
     char_per_image_larger_128k = selected_model_config["chars per image(>128k input tokens)"]
     
-    total_image_token = 0
     for width, height, quality in image_params:
          total_image_token += calculate_gemini_image_token(width, height, quality, model_name)
     image_number = len(image_params)
@@ -58,7 +58,16 @@ if "google" in model_name.lower():
 elif "gpt-4o" in model_name.lower():
     selected_model_config = next((model for model in model_config if model["model name"] == model_name), None)
     minimal_ptu_deployment_number = selected_model_config["PTU minumum deployment unit"]
-    total_image_token = 0
+    for width, height, quality in image_params:
+        total_image_token += calculate_gpt4o_image_token_number(width, height, quality, model_name)
+
+    require_ptu_num, deploy_ptu_num, total_input_tpm, total_output_tpm, total_tokens_per_minute = calculate_azure_openai_ptu_num(model_name, input_text_token,total_image_token,output_token, rpm, minimal_ptu_deployment_number)
+
+    st.sidebar.write(f"Required PTU Number: {deploy_ptu_num:.2f} ({require_ptu_num:.3f})")
+    st.sidebar.write(f"Tokens per minute : {total_tokens_per_minute} ({total_input_tpm} prompt, {total_output_tpm} generated)")
+elif "gpt-4.1" in model_name.lower():
+    selected_model_config = next((model for model in model_config if model["model name"] == model_name), None)
+    minimal_ptu_deployment_number = selected_model_config["PTU minumum deployment unit"]
     for width, height, quality in image_params:
         total_image_token += calculate_gpt4o_image_token_number(width, height, quality, model_name)
 
