@@ -1,7 +1,7 @@
 import streamlit as st
 import json
 import os
-from utils import calculate_google_ptu_num, calculate_ptu_utilization, calculate_paygo_cost, calculate_ptu_cost, calculate_cost_saving_percentage, calculate_azure_openai_ptu_num, calculate_tpm_per_1_dollar, calculate_gemini_image_token, calculate_gpt4o_image_token_number
+from utils import build_calculation_explanation, calculate_google_ptu_num, calculate_ptu_utilization, calculate_paygo_cost, calculate_ptu_cost, calculate_cost_saving_percentage, calculate_provisioned_ptu_num, calculate_tpm_per_1_dollar, calculate_gemini_image_token, calculate_gpt4o_image_token_number
 
 from calculate_image_token import calculate_image_token
 import matplotlib.pyplot as plt
@@ -10,7 +10,9 @@ import pandas as pd
 # Load model configuration
 config_path = os.path.join(os.path.dirname(__file__), 'model_config.json')
 with open(config_path, 'r') as f:
-    model_config = json.load(f)
+    config_document = json.load(f)
+    model_config = config_document["models"]
+    config_metadata = config_document["metadata"]
 
 # Extract model names for dropdown
 model_list = [model["model name"] for model in model_config]
@@ -28,6 +30,13 @@ st.title("Model PTU Cost Calculator(Monthly)")
 
 st.sidebar.title("Select model and workload scenario")
 model_name = st.sidebar.selectbox("Model Name", model_list)
+selected_model_config = next(model for model in model_config if model["model name"] == model_name)
+provider = selected_model_config.get("provider", "")
+minimal_ptu_deployment_number = selected_model_config["PTU minumum deployment unit"]
+ptu_scale_increment = selected_model_config.get(
+    "PTU scale increment",
+    minimal_ptu_deployment_number,
+)
 input_text_token = st.sidebar.number_input("Input Token Number", min_value=0, value=3500)
 cache_hit_rate = st.sidebar.slider("Cache Hit Rate (%)", min_value=0, max_value=100, value=0, step=5)
 num_images = st.sidebar.number_input("Number of Images", min_value=0, value=0)
@@ -42,8 +51,9 @@ for i in range(num_images):
 output_token = st.sidebar.number_input("Output Token Number", min_value=0, value=300)
 rpm = st.sidebar.number_input("RPM (Request per minute)", min_value=0, value=60)
 total_image_token = 0  # Initialize total_image_token
-if "google" in model_name.lower():
-    selected_model_config = next((model for model in model_config if model["model name"] == model_name), None)
+deployment_type = "Configured default"
+ptu_metrics = None
+if provider == "Google":
     output_token_multiple_ratio = selected_model_config["output token multiple ratio"]
     chars_per_gsu = selected_model_config["chars per GSU"]
     price_per_image_less_128k = selected_model_config["price per image(<=128k input tokens)"]
@@ -56,28 +66,55 @@ if "google" in model_name.lower():
     image_number = len(image_params)
     require_ptu_num = calculate_google_ptu_num(input_text_token, image_number, output_token, rpm, output_token_multiple_ratio, chars_per_gsu, char_per_image_less_128k, char_per_image_larger_128k, cache_hit_rate=cache_hit_rate)
     st.sidebar.write(f"Required PTU Number: {require_ptu_num:.2f}")
-elif "gpt-4o" in model_name.lower():
-    selected_model_config = next((model for model in model_config if model["model name"] == model_name), None)
-    minimal_ptu_deployment_number = selected_model_config["PTU minumum deployment unit"]
-    for width, height, quality in image_params:
-        total_image_token += calculate_gpt4o_image_token_number(width, height, quality, model_name)
+elif provider == "Azure OpenAI":
+    deployment_type = st.sidebar.selectbox(
+        "Provisioned Deployment Type",
+        ["Global / Data Zone", "Regional"],
+    )
+    if deployment_type == "Regional":
+        minimal_ptu_deployment_number = selected_model_config["regional PTU minimum deployment unit"]
+        ptu_scale_increment = selected_model_config["regional PTU scale increment"]
+    else:
+        minimal_ptu_deployment_number = selected_model_config["PTU minumum deployment unit"]
+        ptu_scale_increment = selected_model_config["PTU scale increment"]
 
-    require_ptu_num, deploy_ptu_num, total_input_tpm, total_output_tpm, total_tokens_per_minute = calculate_azure_openai_ptu_num(model_name, input_text_token, total_image_token, output_token, rpm, minimal_ptu_deployment_number, cache_hit_rate=cache_hit_rate)
+    if "gpt-4o" in model_name.lower() or "gpt-4.1" in model_name.lower():
+        for width, height, quality in image_params:
+            total_image_token += calculate_gpt4o_image_token_number(width, height, quality, model_name)
 
-    st.sidebar.write(f"Required PTU Number: {deploy_ptu_num:.2f} ({require_ptu_num:.3f})")
-    st.sidebar.write(f"Tokens per minute : {total_tokens_per_minute} ({total_input_tpm} prompt, {total_output_tpm} generated)")
-elif "gpt-4.1" in model_name.lower():
-    selected_model_config = next((model for model in model_config if model["model name"] == model_name), None)
-    minimal_ptu_deployment_number = selected_model_config["PTU minumum deployment unit"]
-    for width, height, quality in image_params:
-        total_image_token += calculate_gpt4o_image_token_number(width, height, quality, model_name)
+    require_ptu_num, deploy_ptu_num, total_input_tpm, total_output_tpm, normalized_tpm = calculate_provisioned_ptu_num(
+        input_text_token,
+        total_image_token,
+        output_token,
+        rpm,
+        minimal_ptu_deployment_number,
+        ptu_scale_increment,
+        selected_model_config["input TPM per PTU"],
+        selected_model_config["output token multiple ratio"],
+        cache_hit_rate=cache_hit_rate,
+    )
+    ptu_metrics = {
+        "effective_text_input": input_text_token * (1 - cache_hit_rate / 100),
+        "total_input_tpm": total_input_tpm,
+        "total_output_tpm": total_output_tpm,
+        "normalized_tpm": normalized_tpm,
+    }
 
-    require_ptu_num, deploy_ptu_num, total_input_tpm, total_output_tpm, total_tokens_per_minute = calculate_azure_openai_ptu_num(model_name, input_text_token, total_image_token, output_token, rpm, minimal_ptu_deployment_number, cache_hit_rate=cache_hit_rate)
-
-    st.sidebar.write(f"Required PTU Number: {deploy_ptu_num:.2f} ({require_ptu_num:.3f})")
-    st.sidebar.write(f"Tokens per minute : {total_tokens_per_minute} ({total_input_tpm} prompt, {total_output_tpm} generated)")
+    st.sidebar.write(f"Required PTU Number: {deploy_ptu_num:.0f} ({require_ptu_num:.3f})")
+    st.sidebar.write(f"Normalized TPM: {normalized_tpm:.0f} ({total_input_tpm:.0f} prompt, {total_output_tpm:.0f} generated)")
 else:
-    require_ptu_num = st.sidebar.number_input("Required PTU Number", min_value=1.0, value=100.0, format="%.2f")
+    minimal_ptu_deployment_number = selected_model_config["PTU minumum deployment unit"]
+    ptu_scale_increment = selected_model_config["PTU scale increment"]
+    st.sidebar.caption(
+        f"Published capacity: {selected_model_config['input TPM per PTU']:,} input TPM/PTU. "
+        "Enter the PTU requirement returned by the Foundry capacity calculator or your benchmark."
+    )
+    require_ptu_num = st.sidebar.number_input(
+        "Required PTU Number",
+        min_value=1.0,
+        value=float(minimal_ptu_deployment_number),
+        format="%.2f",
+    )
 
 ptu_subscription_type = st.sidebar.selectbox("PTU Subscription Type", ["Monthly", "Yearly"])
 
@@ -85,7 +122,7 @@ if model_name:
     # Get model-specific configuration
     selected_model_config = next((model for model in model_config if model["model name"] == model_name), None)
     if selected_model_config:
-        min_ptu_deployment_unit = selected_model_config["PTU minumum deployment unit"]
+        min_ptu_deployment_unit = minimal_ptu_deployment_number
         ptu_price_per_unit = selected_model_config[f"PTU price of {ptu_subscription_type.lower()} commitment"]
 
 # Add custom CSS for button styling
@@ -114,16 +151,16 @@ col1, col2 = st.sidebar.columns(2)
 with col1:
     if st.button("Add Compare"):
         ptu_num_calculated = require_ptu_num
-        ptu_utilization = calculate_ptu_utilization(ptu_num_calculated, min_ptu_deployment_unit)
+        ptu_utilization = calculate_ptu_utilization(ptu_num_calculated, min_ptu_deployment_unit, ptu_scale_increment)
         paygo_cost = calculate_paygo_cost(input_text_token, output_token, rpm, model_name, cache_hit_rate=cache_hit_rate)
         ptu_discount = selected_model_config[f"PTU {ptu_subscription_type.lower()} discount"]
-        ptu_cost = calculate_ptu_cost(ptu_num_calculated, min_ptu_deployment_unit, ptu_price_per_unit, ptu_discount)
+        ptu_cost = calculate_ptu_cost(ptu_num_calculated, min_ptu_deployment_unit, ptu_price_per_unit, ptu_discount, scale_increment=ptu_scale_increment)
         cost_saving_percentage = calculate_cost_saving_percentage(ptu_cost, paygo_cost)
         TPM_per_1dollor = calculate_tpm_per_1_dollar(input_text_token, total_image_token, output_token, rpm, ptu_cost)
 
         # Calculate detailed PayGO cost breakdown
         input_cost, output_cost, total_cost = calculate_paygo_cost(input_text_token, output_token, rpm, model_name, cache_hit_rate=cache_hit_rate, detailed=True)
-        origial_cost, cost_after_discount = calculate_ptu_cost(ptu_num_calculated, min_ptu_deployment_unit, ptu_price_per_unit, ptu_discount, detailed=True)
+        origial_cost, cost_after_discount = calculate_ptu_cost(ptu_num_calculated, min_ptu_deployment_unit, ptu_price_per_unit, ptu_discount, detailed=True, scale_increment=ptu_scale_increment)
 
         with st.container(border=True):
             st.sidebar.divider()
@@ -152,6 +189,29 @@ with col1:
             "PTU cost": ptu_cost,
             "TPM per dollar (in millions)" : TPM_per_1dollor,
             "PTU Cost Saving (%)": cost_saving_percentage,
+            "_explanation": build_calculation_explanation(
+                model_name=model_name,
+                provider=provider,
+                model_config=selected_model_config,
+                input_text_tokens=input_text_token,
+                input_image_tokens=total_image_token,
+                output_tokens=output_token,
+                rpm=rpm,
+                cache_hit_rate=cache_hit_rate,
+                required_ptus=ptu_num_calculated,
+                minimum_ptus=min_ptu_deployment_unit,
+                scale_increment=ptu_scale_increment,
+                ptu_price_per_unit=ptu_price_per_unit,
+                ptu_discount=ptu_discount,
+                paygo_cost=paygo_cost,
+                ptu_cost=ptu_cost,
+                tpm_per_dollar=TPM_per_1dollor,
+                cost_saving_percentage=cost_saving_percentage,
+                commitment_type=ptu_subscription_type,
+                deployment_type=deployment_type,
+                ptu_metrics=ptu_metrics,
+                image_count=len(image_params),
+            ),
         }
         # Append new result to the results list
         st.session_state.results_list.append(new_result)
@@ -160,9 +220,15 @@ with col2:
     if st.button("Clear Result"):
         st.session_state.results_list = []
 
-# Convert results list to a DataFrame
-import pandas as pd
-results_df = pd.DataFrame(st.session_state.results_list)
+# Convert display-safe result fields to a DataFrame. Calculation traces stay in session state.
+results_df = pd.DataFrame([
+    {
+        key: value
+        for key, value in result.items()
+        if not key.startswith("_")
+    }
+    for result in st.session_state.results_list
+])
 
 
 # Function to apply styles based on model name and cost saving percentage
@@ -185,76 +251,112 @@ def style_rows(row):
     styles[-1] = 'color: blue'
     return styles
 
-if not results_df.empty:
-    # Apply the row styles, header styles, and format to two decimal places
-    styled_df = results_df.style.apply(style_rows, axis=1).set_table_styles(
-        [{'selector': 'th', 'props': [('font-weight', 'bold'), ('color', 'Blue')]}]
-    ).format(precision=2)
+comparison_tab, explanation_tab = st.tabs(["Comparison", "Calculation explanations"])
 
-    # Display the styled DataFrame
-    st.dataframe(styled_df)
+with comparison_tab:
+    if results_df.empty:
+        st.info("Add a model comparison to see calculated outputs.")
+    else:
+        styled_df = results_df.style.apply(style_rows, axis=1).set_table_styles(
+            [{'selector': 'th', 'props': [('font-weight', 'bold'), ('color', 'Blue')]}]
+        ).format(precision=2)
+        st.dataframe(styled_df)
 
-# If results are not empty, display "Export to Excel" button
+        col1, col2 = st.columns(2)
 
-# Plot PTU cost and TPM per dollar
-if not results_df.empty:
-    col1, col2 = st.columns(2)
+        with col1:
+            fig1, ax1 = plt.subplots()
+            ax1.set_xlabel('Model Name')
+            ax1.set_ylabel('PTU Cost(USD)', color='tab:orange')
+            x_labels = [f"{model}\n{commitment}" for model, commitment in zip(results_df["Model Name"], results_df["Commitment Type"])]
+            colors = ['tab:blue' if 'azure' in model.lower() else 'tab:orange' for model in results_df['Model Name']]
+            ax1.bar(x_labels, results_df['PTU cost'], color=colors)
+            ax1.tick_params(axis='y', labelcolor='tab:red')
+            ax1.set_xticks(range(len(x_labels)))
+            ax1.set_xticklabels(x_labels, rotation=45, ha='right')
+            fig1.tight_layout()
+            st.pyplot(fig1)
 
-    with col1:
-        # Plot PTU cost
-        fig1, ax1 = plt.subplots()
-        ax1.set_xlabel('Model Name')
-        ax1.set_ylabel('PTU Cost(USD)', color='tab:orange')
-        x_labels = [f"{model}\n{commitment}" for model, commitment in zip(results_df["Model Name"], results_df["Commitment Type"])]
-        colors = ['tab:blue' if 'azure' in model.lower() else 'tab:orange' for model in results_df['Model Name']]
-        ax1.bar(x_labels, results_df['PTU cost'], color=colors)
-        ax1.tick_params(axis='y', labelcolor='tab:red')
-            # Rotate x-axis labels for better readability
-        ax1.set_xticks(range(len(x_labels)))
-        ax1.set_xticklabels(x_labels, rotation=45, ha='right')
-        fig1.tight_layout()
-        st.pyplot(fig1)
+        with col2:
+            fig2, ax2 = plt.subplots()
+            ax2.set_xlabel('Model Name')
+            ax2.set_ylabel('TPM per dollar (in millions)', color='tab:blue')
+            x_labels = [f"{model}\n{commitment}" for model, commitment in zip(results_df["Model Name"], results_df["Commitment Type"])]
+            colors = ['tab:blue' if 'azure' in model.lower() else 'tab:orange' for model in results_df['Model Name']]
+            ax2.bar(x_labels, results_df['TPM per dollar (in millions)'], color=colors)
+            ax2.tick_params(axis='y', labelcolor='tab:blue')
+            ax2.set_xticks(range(len(x_labels)))
+            ax2.set_xticklabels(x_labels, rotation=45, ha='right')
+            fig2.tight_layout()
+            st.pyplot(fig2)
 
-    with col2:
-        # Plot TPM per dollar
-        fig2, ax2 = plt.subplots()
-        ax2.set_xlabel('Model Name')
-        ax2.set_ylabel('TPM per dollar (in millions)', color='tab:blue')
-        x_labels = [f"{model}\n{commitment}" for model, commitment in zip(results_df["Model Name"], results_df["Commitment Type"])]
-        colors = ['tab:blue' if 'azure' in model.lower() else 'tab:orange' for model in results_df['Model Name']]
-        ax2.bar(x_labels, results_df['TPM per dollar (in millions)'], color=colors)
-        ax2.tick_params(axis='y', labelcolor='tab:blue')
-        ax2.set_xticks(range(len(x_labels)))
-        ax2.set_xticklabels(x_labels, rotation=45, ha='right')
-        fig2.tight_layout()
-        st.pyplot(fig2)
-if not results_df.empty:
-    if st.button("Export to Excel", key="export_to_excel"):
-        import io
-        from pandas import ExcelWriter
+        if st.button("Export to Excel", key="export_to_excel"):
+            import io
+            from pandas import ExcelWriter
 
-        # Create a BytesIO buffer to hold the Excel file
-        buffer = io.BytesIO()
+            buffer = io.BytesIO()
+            with ExcelWriter(buffer, engine='xlsxwriter') as writer:
+                results_df.to_excel(writer, index=False, sheet_name='Results')
+            buffer.seek(0)
 
-        # Write the DataFrame to the buffer
-        with ExcelWriter(buffer, engine='xlsxwriter') as writer:
-            results_df.to_excel(writer, index=False, sheet_name='Results')
+            from datetime import datetime
+            current_time = datetime.now().strftime("%Y-%m-%d-%H:%M")
+            filename = f"ptu-cost-compare-{current_time}.xlsx"
 
-        # Set the buffer's position to the beginning
-        buffer.seek(0)
+            st.download_button(
+                label="Download Excel file",
+                data=buffer,
+                file_name=filename,
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
 
-        # Generate the filename with the current timestamp
-        from datetime import datetime
-        current_time = datetime.now().strftime("%Y-%m-%d-%H:%M")
-        filename = f"ptu-cost-compare-{current_time}.xlsx"
-
-        # Provide a download link for the Excel file with the generated filename
-        st.download_button(
-            label="Download Excel file",
-            data=buffer,
-            file_name=filename,
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+with explanation_tab:
+    if not st.session_state.results_list:
+        st.info("Add a model comparison to generate its calculation explanation.")
+    else:
+        st.caption(
+            "Each explanation is a snapshot captured when the comparison row was added. "
+            "Changing sidebar inputs does not alter existing traces."
         )
+        for index, result in enumerate(st.session_state.results_list, start=1):
+            explanation = result.get("_explanation")
+            label = (
+                f"Row {index}: {result['Model Name']} | "
+                f"{result['Commitment Type']} | {result['RPM']} RPM"
+            )
+            with st.expander(label, expanded=index == 1):
+                if not explanation:
+                    st.warning(
+                        "This row was created before calculation explanations were enabled. "
+                        "Clear it and add the comparison again."
+                    )
+                    continue
+
+                st.markdown(
+                    f"**Provider:** {explanation['provider']}  \n"
+                    f"**Deployment:** {explanation['deployment_type']}  \n"
+                    f"**Commitment:** {explanation['commitment_type']}"
+                )
+                st.markdown("#### Captured inputs and prices")
+                st.json(explanation["inputs"], expanded=False)
+
+                for step_number, step in enumerate(explanation["steps"], start=1):
+                    result_value = step["result"]
+                    if isinstance(result_value, (int, float)):
+                        result_display = f"{result_value:,.4f}".rstrip("0").rstrip(".")
+                    else:
+                        result_display = str(result_value)
+
+                    st.markdown(
+                        f"#### {step_number}. {step['output']}: "
+                        f"`{result_display} {step['unit']}`"
+                    )
+                    st.markdown("**Formula**")
+                    st.latex(step["formula"])
+                    st.markdown("**Selected values substituted**")
+                    st.latex(step["substitution"])
+                    if step.get("note"):
+                        st.info(step["note"])
 
 st.divider()        
 
@@ -318,10 +420,11 @@ $$
 
 with st.container(border=True):
     st.subheader("Model price Configuration list")
-    st.json(model_config)
+    st.caption(f"Verified {config_metadata['verified date']} | {config_metadata['pricing scope']}")
+    st.json(config_document)
 
     st.subheader("Update Model Configuration")
-    config_json_str = json.dumps(model_config, indent=4) # Convert current config to formatted JSON string
+    config_json_str = json.dumps(config_document, indent=4)
     updated_config_str = st.text_area("Edit JSON Configuration here:", value=config_json_str, height=300)
 
     if st.button("Update Configuration"):
@@ -334,5 +437,3 @@ with st.container(border=True):
             st.error("Invalid JSON format. Please check your input.")
         except Exception as e:
             st.error(f"An error occurred while updating configuration: {e}")
-
-

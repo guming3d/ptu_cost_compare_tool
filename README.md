@@ -4,6 +4,10 @@
 
 This project is designed to calculate the cost of using different AI models based on their token usage and PTU (Provision Throughput Unit) costs. It utilizes various libraries such as `streamlit`, `pandas`, `openpyxl`, and `xlsxwriter` to achieve its functionality.
 
+The bundled catalog includes current Azure OpenAI provisioned models and Fireworks models whose PayGO prices are published in the Azure Retail Prices API. Model throughput, deployment minimums, scale increments, pricing scope, source URLs, and verification date are recorded in `model_config.json`.
+
+Azure OpenAI PTUs are estimated automatically with Microsoft's normalized TPM formula. Fireworks PTU requirements are entered manually because Microsoft's public sizing table currently publishes input TPM per PTU but not the output-to-input weighting needed for the same formula.
+
 ![Screenshot](images/screenshot.jpg)
 
 ## Installation Guide
@@ -48,6 +52,6 @@ To set up the project, follow these steps:
    - **PTU Subscription Type**: Choose between "Monthly" or "Yearly".
 
 3. Click on "Add Compare" to calculate and add the results to the comparison table.
+   - Open the **Calculation explanations** tab to inspect the exact formulas, selected inputs, model prices, intermediate values, PTU rounding, and final value for each comparison row.
 4. Click on "Clear Result" to clear the comparison table.
 5. If the comparison table is not empty, click on "Export to Excel" to download the results as an Excel file.
-
