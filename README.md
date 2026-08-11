@@ -1,57 +1,37 @@
-# Model PTU Cost Calculator
+# Azure Foundry PTU Cost Planner
 
-## Introduction
+A React and TypeScript calculator for comparing monthly PayGO and provisioned throughput costs. The interface is a responsive Vite single-page application with no Streamlit or Python runtime.
 
-This project is designed to calculate the cost of using different AI models based on their token usage and PTU (Provision Throughput Unit) costs. It utilizes various libraries such as `streamlit`, `pandas`, `openpyxl`, and `xlsxwriter` to achieve its functionality.
+The bundled catalog includes Azure OpenAI, Fireworks on Microsoft Foundry, and Google models. Azure OpenAI PTUs are estimated with normalized TPM sizing, Fireworks sizing remains a manual capacity input, and each saved comparison includes a complete calculation trace.
 
-The bundled catalog includes current Azure OpenAI provisioned models and Fireworks models whose PayGO prices are published in the Azure Retail Prices API. Model throughput, deployment minimums, scale increments, pricing scope, source URLs, and verification date are recorded in `model_config.json`.
+## Development
 
-Azure OpenAI PTUs are estimated automatically with Microsoft's normalized TPM formula. Fireworks PTU requirements are entered manually because Microsoft's public sizing table currently publishes input TPM per PTU but not the output-to-input weighting needed for the same formula.
+```bash
+npm install
+npm run dev
+```
 
-![Screenshot](images/screenshot.jpg)
+Open `http://localhost:5173`.
 
-## Installation Guide
+## Validation
 
-If you don't want to deploy this tool locally, you can access it [here](https://gbb-ptu-cost-compare.streamlit.app).
+```bash
+npm run typecheck
+npm test
+npm run build
+```
 
-To set up the project, follow these steps:
+## Container
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/guming3d/ptu_cost_compare_tool.git
-   cd ptu_cost_compare_tool
-   ```
+```bash
+docker build -t ptu-cost-planner .
+docker run --rm -p 8501:8501 ptu-cost-planner
+```
 
-2. **Create a virtual environment:**
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # On Windows use `venv\Scripts\activate`
-   ```
+Open `http://localhost:8501`.
 
-3. **Install the dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+## Catalog
 
-4. **Run the application:**
-   ```bash
-   streamlit run app.py
-   ```
+Pricing and throughput metadata remains in `model_config.json`. The in-app catalog editor validates updates and stores them in the browser's local storage. Restoring the bundled catalog clears that local override.
 
-## Usage
-
-### Streamlit Web Application
-
-1. Open your web browser and navigate to the Streamlit application.
-2. Use the sidebar to input the following parameters:
-   - **Input Token Number**: The number of input tokens.
-   - **Output Token Number**: The number of output tokens.
-   - **RPM (Request per minute)**: The number of requests per minute.
-   - **Model Name**: Select the model from the dropdown list.
-   - **PTU Number**: The number of PTUs.
-   - **PTU Subscription Type**: Choose between "Monthly" or "Yearly".
-
-3. Click on "Add Compare" to calculate and add the results to the comparison table.
-   - Open the **Calculation explanations** tab to inspect the exact formulas, selected inputs, model prices, intermediate values, PTU rounding, and final value for each comparison row.
-4. Click on "Clear Result" to clear the comparison table.
-5. If the comparison table is not empty, click on "Export to Excel" to download the results as an Excel file.
+The calculator is an estimate. Azure pricing can vary by geography, deployment type, currency, and commercial agreement.

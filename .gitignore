@@ -1,0 +1,11 @@
+.aider*
+.env
+.venv/
+.vscode/
+__pycache__/
+*.py[cod]
+node_modules/
+dist/
+*.tsbuildinfo
+npm-debug.log*
+.DS_Store

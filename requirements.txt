@@ -1,7 +1,0 @@
-streamlit==1.37.0
-pandas==2.2.2
-numpy==1.26.4
-pyarrow==17.0.0
-openpyxl==3.0.9
-xlsxwriter==3.0.1
-matplotlib==3.9.2

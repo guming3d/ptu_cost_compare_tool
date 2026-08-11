@@ -1,0 +1,12 @@
+.git
+.github
+.aider*
+.env
+.venv
+.vscode
+__pycache__
+node_modules
+dist
+*.pyc
+*.tsbuildinfo
+npm-debug.log*

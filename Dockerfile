@@ -1,21 +1,18 @@
-# Use the official Python image as the base image
-FROM python:3.12-slim
+FROM node:22-alpine AS build
 
-# Set the working directory
 WORKDIR /app
 
-# Copy the requirements file
-COPY requirements.txt .
+COPY package.json package-lock.json ./
+RUN npm ci
 
-# Install the dependencies
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy the rest of the application code
 COPY . .
+RUN npm run build
 
-# Expose the port that Streamlit will run on
+FROM nginx:1.27-alpine
+
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/dist /usr/share/nginx/html
+
 EXPOSE 8501
 
-# Run the Streamlit app
-CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.enableCORS=false"]
-
+CMD ["nginx", "-g", "daemon off;"]
