@@ -86,6 +86,12 @@ a {
   text-decoration: none;
 }
 
+.header-actions {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+}
+
 .site-header nav {
   display: flex;
   gap: 28px;
@@ -100,6 +106,22 @@ a {
 
 .site-header nav a:hover {
   color: var(--accent-dark);
+}
+
+.language-select {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 650;
+}
+
+.language-select select {
+  width: auto;
+  min-height: 34px;
+  padding: 0 30px 0 10px;
+  font-size: 0.76rem;
 }
 
 main {
@@ -1020,6 +1042,14 @@ footer span:first-child {
   }
 
   .site-header nav a:not(:first-child) {
+    display: none;
+  }
+
+  .header-actions {
+    gap: 12px;
+  }
+
+  .language-select > span {
     display: none;
   }
 

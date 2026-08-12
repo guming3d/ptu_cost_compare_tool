@@ -6,8 +6,15 @@ import { MetricBars } from "./components/MetricBars";
 import { ReferenceInfo } from "./components/ReferenceInfo";
 import { ResultsTable } from "./components/ResultsTable";
 import { readStoredCatalog } from "./data/catalog";
+import {
+  DEFAULT_LANGUAGE,
+  getLocale,
+  getUiText,
+  languageOptions,
+} from "./i18n";
 import { calculateScenario } from "./lib/calculations";
 import { exportResultsToExcel } from "./lib/exportExcel";
+import type { Language } from "./i18n";
 import type {
   CatalogDocument,
   CommitmentType,
@@ -18,13 +25,8 @@ import type {
 
 type ActiveTab = "comparison" | "explanations";
 
-const currencyFormatter = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  maximumFractionDigits: 2,
-});
-
 function App() {
+  const [language, setLanguage] = useState<Language>(DEFAULT_LANGUAGE);
   const [catalog, setCatalog] = useState<CatalogDocument>(readStoredCatalog);
   const [selectedModelName, setSelectedModelName] = useState(
     () => catalog.models[0]["model name"],
@@ -44,6 +46,17 @@ function App() {
   const [results, setResults] = useState<ComparisonResult[]>([]);
   const [activeTab, setActiveTab] = useState<ActiveTab>("comparison");
   const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const text = getUiText(language);
+  const locale = getLocale(language);
+  const currencyFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat(locale, {
+        style: "currency",
+        currency: "USD",
+        maximumFractionDigits: 2,
+      }),
+    [locale],
+  );
 
   const selectedModel =
     catalog.models.find(
@@ -65,6 +78,10 @@ function App() {
       setDeploymentType("Global / Data Zone");
     }
   }, [selectedModel]);
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
 
   const scenarioInput = useMemo(
     () => ({
@@ -115,7 +132,7 @@ function App() {
       setActiveTab("comparison");
     } catch (error) {
       setSubmissionError(
-        error instanceof Error ? error.message : "Unable to calculate scenario.",
+        error instanceof Error ? error.message : text.errors.calculate,
       );
     }
   };
@@ -132,42 +149,56 @@ function App() {
         <a
           className="wordmark"
           href="#top"
-          aria-label="Azure Foundry PTU Cost Planner home"
+          aria-label={text.header.homeLabel}
         >
           Azure Foundry PTU Cost Planner
         </a>
-        <nav aria-label="Page navigation">
-          <a href="#calculator">Calculator</a>
-          <a
-            href={catalog.metadata["ptu sizing source"]}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Microsoft sizing guide
-          </a>
-        </nav>
+        <div className="header-actions">
+          <nav aria-label={text.header.navigationLabel}>
+            <a href="#calculator">{text.header.calculator}</a>
+            <a
+              href={catalog.metadata["ptu sizing source"]}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {text.header.sizingGuide}
+            </a>
+          </nav>
+          <label className="language-select">
+            <span>{text.header.language}</span>
+            <select
+              value={language}
+              onChange={(event) =>
+                setLanguage(event.target.value as Language)
+              }
+            >
+              {languageOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </header>
 
       <main id="top">
         <section className="hero">
           <div>
-            <h1>Compare PTU and PayGO cost</h1>
-            <p>
-              Estimate provisioned capacity, monthly spend, utilization, and
-              cost efficiency across the bundled model catalog.
-            </p>
+            <h1>{text.hero.title}</h1>
+            <p>{text.hero.description}</p>
           </div>
           <dl className="catalog-summary">
             <div>
-              <dt>Models</dt>
+              <dt>{text.hero.models}</dt>
               <dd>{catalog.models.length}</dd>
             </div>
             <div>
-              <dt>Catalog verified</dt>
+              <dt>{text.hero.catalogVerified}</dt>
               <dd>{catalog.metadata["verified date"]}</dd>
             </div>
             <div>
-              <dt>Currency</dt>
+              <dt>{text.hero.currency}</dt>
               <dd>{catalog.metadata.currency}</dd>
             </div>
           </dl>
@@ -200,26 +231,30 @@ function App() {
             onAdd={addComparison}
             onClear={() => setResults([])}
             hasResults={results.length > 0}
+            language={language}
           />
 
           <div className="results-column">
-            <section className="summary-grid" aria-label="Current cost estimate">
+            <section
+              className="summary-grid"
+              aria-label={text.summary.ariaLabel}
+            >
               <article>
-                <span>PayGO estimate</span>
+                <span>{text.summary.paygoEstimate}</span>
                 <strong>
                   {preview ? currencyFormatter.format(preview.paygoCost) : "--"}
                 </strong>
-                <small>per month</small>
+                <small>{text.summary.perMonth}</small>
               </article>
               <article>
-                <span>PTU estimate</span>
+                <span>{text.summary.ptuEstimate}</span>
                 <strong>
                   {preview ? currencyFormatter.format(preview.ptuCost) : "--"}
                 </strong>
-                <small>per month</small>
+                <small>{text.summary.perMonth}</small>
               </article>
               <article>
-                <span>Estimated savings</span>
+                <span>{text.summary.estimatedSavings}</span>
                 <strong
                   className={
                     preview && preview.savings >= 0
@@ -229,13 +264,17 @@ function App() {
                 >
                   {preview ? `${preview.savings.toFixed(2)}%` : "--"}
                 </strong>
-                <small>PTU versus PayGO</small>
+                <small>{text.summary.ptuVersusPaygo}</small>
               </article>
             </section>
 
             <section className="content-card results-card">
               <div className="results-toolbar">
-                <div className="tab-list" role="tablist" aria-label="Results">
+                <div
+                  className="tab-list"
+                  role="tablist"
+                  aria-label={text.results.ariaLabel}
+                >
                   <button
                     className={activeTab === "comparison" ? "active" : ""}
                     type="button"
@@ -243,7 +282,7 @@ function App() {
                     aria-selected={activeTab === "comparison"}
                     onClick={() => setActiveTab("comparison")}
                   >
-                    Comparison
+                    {text.results.comparison}
                     {results.length > 0 ? <span>{results.length}</span> : null}
                   </button>
                   <button
@@ -253,27 +292,24 @@ function App() {
                     aria-selected={activeTab === "explanations"}
                     onClick={() => setActiveTab("explanations")}
                   >
-                    Calculation details
+                    {text.results.calculationDetails}
                   </button>
                 </div>
                 <button
                   className="button button-secondary button-small"
                   type="button"
                   disabled={results.length === 0}
-                  onClick={() => exportResultsToExcel(results)}
+                  onClick={() => exportResultsToExcel(results, language)}
                 >
-                  Export Excel
+                  {text.results.exportExcel}
                 </button>
               </div>
 
               {results.length === 0 ? (
                 <div className="empty-state">
                   <span aria-hidden="true">+</span>
-                  <h2>Add a scenario to start comparing.</h2>
-                  <p>
-                    The current estimate updates live. Add it to keep a snapshot
-                    and compare another model or commitment.
-                  </p>
+                  <h2>{text.results.emptyTitle}</h2>
+                  <p>{text.results.emptyDescription}</p>
                 </div>
               ) : activeTab === "comparison" ? (
                 <>
@@ -284,18 +320,21 @@ function App() {
                         current.filter((result) => result.id !== id),
                       )
                     }
+                    language={language}
                   />
                   <div className="chart-grid">
                     <MetricBars
-                      title="Monthly PTU cost"
-                      description="Provisioned cost after the configured commitment discount."
+                      title={text.results.monthlyPtuCost}
+                      description={text.results.monthlyPtuCostDescription}
                       results={results}
                       value={(result) => result.ptuCost}
                       format={(value) => currencyFormatter.format(value)}
                     />
                     <MetricBars
-                      title="Throughput efficiency"
-                      description="Millions of workload tokens per minute for each PTU dollar."
+                      title={text.results.throughputEfficiency}
+                      description={
+                        text.results.throughputEfficiencyDescription
+                      }
                       results={results}
                       value={(result) => result.tpmPerDollar}
                       format={(value) => value.toFixed(2)}
@@ -303,27 +342,31 @@ function App() {
                   </div>
                 </>
               ) : (
-                <ExplanationPanel results={results} />
+                <ExplanationPanel results={results} language={language} />
               )}
             </section>
           </div>
         </section>
 
         <div id="methodology">
-          <ReferenceInfo />
+          <ReferenceInfo language={language} />
         </div>
 
-        <CatalogEditor catalog={catalog} onCatalogChange={updateCatalog} />
+        <CatalogEditor
+          catalog={catalog}
+          onCatalogChange={updateCatalog}
+          language={language}
+        />
       </main>
 
       <footer>
         <span>Azure Foundry PTU Cost Planner</span>
         <span>
-          Pricing is indicative and can vary by geography, agreement, and
-          deployment type.
+          {text.footer.disclaimer}
         </span>
         <span>
-          Author: <a href="mailto:minggu@microsoft.com">minggu@microsoft.com</a>
+          {text.footer.author}:{" "}
+          <a href="mailto:minggu@microsoft.com">minggu@microsoft.com</a>
         </span>
       </footer>
     </div>

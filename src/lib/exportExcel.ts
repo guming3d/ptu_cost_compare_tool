@@ -1,3 +1,9 @@
+import {
+  getUiText,
+  localizeCommitment,
+  localizeDeployment,
+} from "../i18n";
+import type { Language } from "../i18n";
 import type { ComparisonResult } from "../types";
 
 function escapeHtml(value: string | number): string {
@@ -8,24 +14,28 @@ function escapeHtml(value: string | number): string {
     .replaceAll('"', "&quot;");
 }
 
-export function exportResultsToExcel(results: ComparisonResult[]): void {
+export function exportResultsToExcel(
+  results: ComparisonResult[],
+  language: Language,
+): void {
+  const text = getUiText(language).export;
   const headers = [
-    "Model Name",
-    "Provider",
-    "Input Token Number",
-    "Input Image Tokens",
-    "Cache Hit Rate (%)",
-    "Output Token Number",
-    "RPM",
-    "Commitment Type",
-    "Deployment Type",
-    "Required PTU Num",
-    "Deployed PTUs",
-    "PTU Utilization (%)",
-    "PayGO cost",
-    "PTU cost",
-    "TPM per dollar (in millions)",
-    "PTU Cost Saving (%)",
+    text.modelName,
+    text.provider,
+    text.inputTokens,
+    text.imageTokens,
+    text.cacheHitRate,
+    text.outputTokens,
+    text.rpm,
+    text.commitment,
+    text.deployment,
+    text.requiredPtus,
+    text.deployedPtus,
+    text.utilization,
+    text.paygoCost,
+    text.ptuCost,
+    text.efficiency,
+    text.savings,
   ];
 
   const rows = results.map((result) => [
@@ -36,8 +46,8 @@ export function exportResultsToExcel(results: ComparisonResult[]): void {
     result.cacheHitRate,
     result.outputTokens,
     result.rpm,
-    result.commitmentType,
-    result.deploymentType,
+    localizeCommitment(result.commitmentType, language),
+    localizeDeployment(result.deploymentType, language),
     result.requiredPtus,
     result.deployedPtus,
     result.ptuUtilization,

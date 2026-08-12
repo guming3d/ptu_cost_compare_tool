@@ -4,6 +4,8 @@ import type {
   ModelConfig,
   WorkloadImage,
 } from "../types";
+import { getLocale, getUiText } from "../i18n";
+import type { Language } from "../i18n";
 import { NumberField } from "./NumberField";
 
 interface CalculatorFormProps {
@@ -36,6 +38,7 @@ interface CalculatorFormProps {
   onAdd: () => void;
   onClear: () => void;
   hasResults: boolean;
+  language: Language;
 }
 
 function createImage(index: number): WorkloadImage {
@@ -73,7 +76,10 @@ export function CalculatorForm({
   onAdd,
   onClear,
   hasResults,
+  language,
 }: CalculatorFormProps) {
+  const text = getUiText(language).calculator;
+  const locale = getLocale(language);
   const isAzure = selectedModel.provider === "Azure OpenAI";
   const isManual = selectedModel["PTU sizing mode"] === "manual";
   const imageMeteringSupported =
@@ -93,13 +99,13 @@ export function CalculatorForm({
   };
 
   return (
-    <aside className="calculator-card" aria-label="Workload inputs">
+    <aside className="calculator-card" aria-label={text.ariaLabel}>
       <div className="section-heading">
-        <h2>Model and traffic</h2>
+        <h2>{text.heading}</h2>
       </div>
 
       <label className="field">
-        <span className="field-label">Model</span>
+        <span className="field-label">{text.model}</span>
         <select
           value={selectedModelName}
           onChange={(event) => onModelChange(event.target.value)}
@@ -115,26 +121,26 @@ export function CalculatorForm({
 
       <div className="field-grid">
         <NumberField
-          label="Input tokens / request"
+          label={text.inputTokens}
           value={inputTextTokens}
           onChange={onInputTextTokensChange}
         />
         <NumberField
-          label="Output tokens / request"
+          label={text.outputTokens}
           value={outputTokens}
           onChange={onOutputTokensChange}
         />
       </div>
 
       <NumberField
-        label="Requests per minute"
+        label={text.rpm}
         value={rpm}
         onChange={onRpmChange}
       />
 
       <label className="field">
         <span className="field-label">
-          Cache hit rate <strong>{cacheHitRate}%</strong>
+          {text.cacheHitRate} <strong>{cacheHitRate}%</strong>
         </span>
         <input
           className="range-input"
@@ -153,51 +159,53 @@ export function CalculatorForm({
 
       {isAzure ? (
         <label className="field">
-          <span className="field-label">Provisioned deployment</span>
+          <span className="field-label">{text.provisionedDeployment}</span>
           <select
             value={deploymentType}
             onChange={(event) =>
               onDeploymentTypeChange(event.target.value as DeploymentType)
             }
           >
-            <option value="Global / Data Zone">Global / Data Zone</option>
-            <option value="Regional">Regional</option>
+            <option value="Global / Data Zone">{text.globalDataZone}</option>
+            <option value="Regional">{text.regional}</option>
           </select>
         </label>
       ) : null}
 
       {isManual ? (
         <NumberField
-          label="Required PTUs"
+          label={text.requiredPtus}
           value={manualRequiredPtus}
           onChange={onManualRequiredPtusChange}
           min={1}
           step={1}
-          hint={`Published capacity: ${selectedModel["input TPM per PTU"]?.toLocaleString("en-US") ?? "N/A"} input TPM/PTU. Enter a benchmarked capacity estimate.`}
+          hint={`${text.publishedCapacity}: ${
+            selectedModel["input TPM per PTU"]?.toLocaleString(locale) ?? "N/A"
+          } ${text.benchmarkHint}`}
         />
       ) : null}
 
       <label className="field">
-        <span className="field-label">Commitment</span>
+        <span className="field-label">{text.commitment}</span>
         <select
           value={commitmentType}
           onChange={(event) =>
             onCommitmentTypeChange(event.target.value as CommitmentType)
           }
         >
-          <option value="Monthly">Monthly</option>
-          <option value="Yearly">Yearly</option>
+          <option value="Monthly">{text.monthly}</option>
+          <option value="Yearly">{text.yearly}</option>
         </select>
       </label>
 
       <div className="image-section">
         <div className="image-section-header">
           <div>
-            <span className="field-label">Image inputs</span>
+            <span className="field-label">{text.imageInputs}</span>
             <span className="field-hint">
               {imageMeteringSupported
-                ? "Optional image workload per request."
-                : "This model has no image sizing rule in the catalog."}
+                ? text.optionalImage
+                : text.noImageRule}
             </span>
           </div>
           <button
@@ -208,7 +216,7 @@ export function CalculatorForm({
               onImagesChange([...images, createImage(images.length)])
             }
           >
-            Add image
+            {text.addImage}
           </button>
         </div>
 
@@ -216,7 +224,7 @@ export function CalculatorForm({
           <div className="image-row" key={image.id}>
             <span className="image-index">{index + 1}</span>
             <input
-              aria-label={`Image ${index + 1} width`}
+              aria-label={`${text.image} ${index + 1} ${text.width}`}
               type="number"
               min="1"
               value={image.width}
@@ -226,7 +234,7 @@ export function CalculatorForm({
             />
             <span className="dimension-separator">x</span>
             <input
-              aria-label={`Image ${index + 1} height`}
+              aria-label={`${text.image} ${index + 1} ${text.height}`}
               type="number"
               min="1"
               value={image.height}
@@ -235,7 +243,7 @@ export function CalculatorForm({
               }
             />
             <select
-              aria-label={`Image ${index + 1} quality`}
+              aria-label={`${text.image} ${index + 1}`}
               value={image.quality}
               onChange={(event) =>
                 updateImage(image.id, {
@@ -243,13 +251,13 @@ export function CalculatorForm({
                 })
               }
             >
-              <option value="low">Low</option>
-              <option value="high">High</option>
+              <option value="low">{text.low}</option>
+              <option value="high">{text.high}</option>
             </select>
             <button
               className="icon-button"
               type="button"
-              aria-label={`Remove image ${index + 1}`}
+              aria-label={`${text.removeImage} ${index + 1}`}
               onClick={() =>
                 onImagesChange(images.filter((item) => item.id !== image.id))
               }
@@ -262,14 +270,14 @@ export function CalculatorForm({
 
       <div className="estimate-panel" aria-live="polite">
         <div>
-          <span>Required capacity</span>
+          <span>{text.requiredCapacity}</span>
           <strong>
             {preview ? preview.requiredPtus.toFixed(2) : "--"}{" "}
             <small>PTUs</small>
           </strong>
         </div>
         <div>
-          <span>Deployable capacity</span>
+          <span>{text.deployableCapacity}</span>
           <strong>
             {preview ? preview.deployedPtus.toFixed(0) : "--"}{" "}
             <small>PTUs</small>
@@ -277,10 +285,10 @@ export function CalculatorForm({
         </div>
         {preview?.normalizedTpm !== undefined ? (
           <p>
-            {preview.normalizedTpm.toLocaleString("en-US", {
+            {preview.normalizedTpm.toLocaleString(locale, {
               maximumFractionDigits: 0,
             })}{" "}
-            normalized TPM
+            {text.normalizedTpm}
           </p>
         ) : null}
       </div>
@@ -289,7 +297,7 @@ export function CalculatorForm({
 
       <div className="button-row">
         <button className="button button-primary" type="button" onClick={onAdd}>
-          Add comparison
+          {text.addComparison}
         </button>
         <button
           className="button button-secondary"
@@ -297,7 +305,7 @@ export function CalculatorForm({
           onClick={onClear}
           disabled={!hasResults}
         >
-          Clear
+          {text.clear}
         </button>
       </div>
     </aside>

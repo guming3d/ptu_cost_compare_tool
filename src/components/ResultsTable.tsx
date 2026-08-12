@@ -1,31 +1,45 @@
+import {
+  getLocale,
+  getUiText,
+  localizeCommitment,
+  localizeDeployment,
+} from "../i18n";
+import type { Language } from "../i18n";
 import type { ComparisonResult } from "../types";
 
 interface ResultsTableProps {
   results: ComparisonResult[];
   onRemove: (id: string) => void;
+  language: Language;
 }
 
-const currencyFormatter = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  maximumFractionDigits: 2,
-});
+export function ResultsTable({
+  results,
+  onRemove,
+  language,
+}: ResultsTableProps) {
+  const text = getUiText(language).results;
+  const locale = getLocale(language);
+  const currencyFormatter = new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 2,
+  });
 
-export function ResultsTable({ results, onRemove }: ResultsTableProps) {
   return (
     <div className="table-scroll">
       <table className="results-table">
         <thead>
           <tr>
-            <th>Model</th>
-            <th>Workload</th>
-            <th>Commitment</th>
-            <th>Required / deployed</th>
-            <th>Utilization</th>
-            <th>PayGO / month</th>
-            <th>PTU / month</th>
-            <th>Savings</th>
-            <th aria-label="Actions" />
+            <th>{text.model}</th>
+            <th>{text.workload}</th>
+            <th>{text.commitment}</th>
+            <th>{text.requiredDeployed}</th>
+            <th>{text.utilization}</th>
+            <th>{text.paygoMonth}</th>
+            <th>{text.ptuMonth}</th>
+            <th>{text.savings}</th>
+            <th aria-label={text.actions} />
           </tr>
         </thead>
         <tbody>
@@ -36,15 +50,19 @@ export function ResultsTable({ results, onRemove }: ResultsTableProps) {
                 <span className="table-subtext">{result.provider}</span>
               </td>
               <td>
-                {result.rpm.toLocaleString("en-US")} RPM
+                {result.rpm.toLocaleString(locale)} RPM
                 <span className="table-subtext">
-                  {result.inputTextTokens.toLocaleString("en-US")} in /{" "}
-                  {result.outputTokens.toLocaleString("en-US")} out
+                  {result.inputTextTokens.toLocaleString(locale)}{" "}
+                  {text.inputShort} /{" "}
+                  {result.outputTokens.toLocaleString(locale)}{" "}
+                  {text.outputShort}
                 </span>
               </td>
               <td>
-                {result.commitmentType}
-                <span className="table-subtext">{result.deploymentType}</span>
+                {localizeCommitment(result.commitmentType, language)}
+                <span className="table-subtext">
+                  {localizeDeployment(result.deploymentType, language)}
+                </span>
               </td>
               <td>
                 {result.requiredPtus.toFixed(2)} / {result.deployedPtus}
@@ -68,7 +86,7 @@ export function ResultsTable({ results, onRemove }: ResultsTableProps) {
                   className="icon-button"
                   type="button"
                   onClick={() => onRemove(result.id)}
-                  aria-label={`Remove ${result.modelName}`}
+                  aria-label={`${text.remove} ${result.modelName}`}
                 >
                   &times;
                 </button>

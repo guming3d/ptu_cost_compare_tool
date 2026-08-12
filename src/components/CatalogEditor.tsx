@@ -5,17 +5,22 @@ import {
   isCatalogDocument,
   persistCatalog,
 } from "../data/catalog";
+import { getUiText } from "../i18n";
+import type { Language } from "../i18n";
 import type { CatalogDocument } from "../types";
 
 interface CatalogEditorProps {
   catalog: CatalogDocument;
   onCatalogChange: (catalog: CatalogDocument) => void;
+  language: Language;
 }
 
 export function CatalogEditor({
   catalog,
   onCatalogChange,
+  language,
 }: CatalogEditorProps) {
+  const text = getUiText(language).catalog;
   const [jsonValue, setJsonValue] = useState(() =>
     JSON.stringify(catalog, null, 2),
   );
@@ -26,21 +31,31 @@ export function CatalogEditor({
     setJsonValue(JSON.stringify(catalog, null, 2));
   }, [catalog]);
 
+  useEffect(() => {
+    setMessage(null);
+  }, [language]);
+
   const applyCatalog = () => {
     try {
       const parsedValue: unknown = JSON.parse(jsonValue);
       if (!isCatalogDocument(parsedValue)) {
         throw new Error(
-          "The catalog must contain metadata and at least one model with all required pricing fields.",
+          text.invalid,
         );
       }
       persistCatalog(parsedValue);
       onCatalogChange(parsedValue);
       setIsError(false);
-      setMessage("Catalog saved in this browser.");
+      setMessage(text.saved);
     } catch (error) {
       setIsError(true);
-      setMessage(error instanceof Error ? error.message : "Invalid catalog JSON.");
+      setMessage(
+        error instanceof SyntaxError
+          ? text.invalidJson
+          : error instanceof Error
+            ? error.message
+            : text.invalidJson,
+      );
     }
   };
 
@@ -48,16 +63,16 @@ export function CatalogEditor({
     clearStoredCatalog();
     onCatalogChange(bundledCatalog);
     setIsError(false);
-    setMessage("Bundled catalog restored.");
+    setMessage(text.restored);
   };
 
   return (
     <details className="content-card catalog-card">
       <summary>
         <span>
-          <strong>Model catalog</strong>
+          <strong>{text.title}</strong>
           <small>
-            {catalog.models.length} models &middot; verified{" "}
+            {catalog.models.length} {text.models} &middot; {text.verified}{" "}
             {catalog.metadata["verified date"]}
           </small>
         </span>
@@ -68,7 +83,7 @@ export function CatalogEditor({
       <div className="catalog-content">
         <p>{catalog.metadata["pricing scope"]}</p>
         <textarea
-          aria-label="Model catalog JSON"
+          aria-label={text.jsonLabel}
           value={jsonValue}
           onChange={(event) => setJsonValue(event.target.value)}
           spellCheck={false}
@@ -82,14 +97,14 @@ export function CatalogEditor({
             type="button"
             onClick={applyCatalog}
           >
-            Save catalog
+            {text.save}
           </button>
           <button
             className="button button-secondary"
             type="button"
             onClick={resetCatalog}
           >
-            Restore bundled catalog
+            {text.restore}
           </button>
         </div>
       </div>

@@ -1,40 +1,40 @@
-export function ReferenceInfo() {
+import { getUiText } from "../i18n";
+import type { Language } from "../i18n";
+
+interface ReferenceInfoProps {
+  language: Language;
+}
+
+export function ReferenceInfo({ language }: ReferenceInfoProps) {
+  const text = getUiText(language).reference;
+
   return (
     <section className="content-card reference-card">
       <div className="section-heading">
-        <h2>Reference formulas</h2>
-        <p>
-          The calculator keeps the original monthly cost and throughput rules,
-          presented here in a more compact format.
-        </p>
+        <h2>{text.title}</h2>
+        <p>{text.description}</p>
       </div>
 
       <div className="formula-grid">
         <article>
           <span>01</span>
-          <h3>PTU utilization</h3>
-          <code>required PTUs / rounded deployable PTUs x 100</code>
+          <h3>{text.utilization}</h3>
+          <code>{text.utilizationFormula}</code>
         </article>
         <article>
           <span>02</span>
-          <h3>PayGO monthly cost</h3>
-          <code>
-            tokens/request x RPM x 60 x 24 x 30.42 / 1,000 x token price
-          </code>
+          <h3>{text.paygoCost}</h3>
+          <code>{text.paygoFormula}</code>
         </article>
         <article>
           <span>03</span>
-          <h3>Automatic PTU estimate</h3>
-          <code>
-            (input TPM + output ratio x output TPM) / input TPM per PTU
-          </code>
+          <h3>{text.automaticEstimate}</h3>
+          <code>{text.automaticFormula}</code>
         </article>
         <article>
           <span>04</span>
-          <h3>TPM per dollar</h3>
-          <code>
-            workload TPM / PTU cost per minute / 1,000,000
-          </code>
+          <h3>{text.efficiency}</h3>
+          <code>{text.efficiencyFormula}</code>
         </article>
       </div>
     </section>
