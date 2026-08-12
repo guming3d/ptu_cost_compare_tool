@@ -24,7 +24,7 @@ export function ReferenceInfo() {
         </article>
         <article>
           <span>03</span>
-          <h3>Azure PTU estimate</h3>
+          <h3>Automatic PTU estimate</h3>
           <code>
             (input TPM + output ratio x output TPM) / input TPM per PTU
           </code>

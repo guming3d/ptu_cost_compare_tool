@@ -9,7 +9,7 @@
         "notes": [
             "Token prices are normalized to USD per 1,000 tokens.",
             "The yearly PTU value is the monthly equivalent of the public USD 2,652 annual reservation price.",
-            "Fireworks PTU sizing remains manual because the Microsoft sizing table does not publish an output-to-input ratio for those models.",
+            "Fireworks GLM models use a 1:1 output-to-input ratio for automatic PTU estimation; other Fireworks models remain manual.",
             "Azure prices can vary by geography, deployment type, agreement, and currency."
         ]
     },
@@ -427,7 +427,8 @@
             "PTU minumum deployment unit": 300,
             "PTU scale increment": 150,
             "input TPM per PTU": 600,
-            "PTU sizing mode": "manual",
+            "output token multiple ratio": 1,
+            "PTU sizing mode": "automatic",
             "PTU price of monthly commitment": 260,
             "PTU price of yearly commitment": 221,
             "PTU monthly discount": 0,
@@ -442,7 +443,8 @@
             "PTU minumum deployment unit": 400,
             "PTU scale increment": 200,
             "input TPM per PTU": 900,
-            "PTU sizing mode": "manual",
+            "output token multiple ratio": 1,
+            "PTU sizing mode": "automatic",
             "PTU price of monthly commitment": 260,
             "PTU price of yearly commitment": 221,
             "PTU monthly discount": 0,
@@ -457,7 +459,8 @@
             "PTU minumum deployment unit": 400,
             "PTU scale increment": 200,
             "input TPM per PTU": 300,
-            "PTU sizing mode": "manual",
+            "output token multiple ratio": 1,
+            "PTU sizing mode": "automatic",
             "PTU price of monthly commitment": 260,
             "PTU price of yearly commitment": 221,
             "PTU monthly discount": 0,

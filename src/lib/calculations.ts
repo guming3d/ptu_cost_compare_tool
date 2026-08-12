@@ -281,6 +281,13 @@ function calculateImageInputTokens(input: ScenarioInput): number {
   );
 }
 
+function usesAutomaticProvisionedSizing(model: ModelConfig): boolean {
+  return (
+    model.provider === "Azure OpenAI" ||
+    model["PTU sizing mode"] === "automatic"
+  );
+}
+
 function buildExplanation(args: {
   input: ScenarioInput;
   inputImageTokens: number;
@@ -356,10 +363,10 @@ function buildExplanation(args: {
     },
   ];
 
-  if (model.provider === "Azure OpenAI") {
+  if (usesAutomaticProvisionedSizing(model)) {
     const metrics = ptuMetrics;
     if (!metrics) {
-      throw new Error("Azure PTU metrics are required for the explanation.");
+      throw new Error("Automatic PTU metrics are required for the explanation.");
     }
     const outputRatio = requirePositive(
       model["output token multiple ratio"],
@@ -524,7 +531,7 @@ export function calculateScenario(input: ScenarioInput): ComparisonResult {
   let requiredPtus: number;
   let ptuMetrics: PtuMetrics | undefined;
 
-  if (input.model.provider === "Azure OpenAI") {
+  if (usesAutomaticProvisionedSizing(input.model)) {
     const provisioned = calculateProvisionedPtuNum(
       input.inputTextTokens,
       inputImageTokens,

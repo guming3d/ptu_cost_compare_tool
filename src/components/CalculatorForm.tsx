@@ -75,7 +75,7 @@ export function CalculatorForm({
   hasResults,
 }: CalculatorFormProps) {
   const isAzure = selectedModel.provider === "Azure OpenAI";
-  const isManual = !isAzure && selectedModel.provider !== "Google";
+  const isManual = selectedModel["PTU sizing mode"] === "manual";
   const imageMeteringSupported =
     selectedModel.provider === "Google" ||
     selectedModelName.toLowerCase().includes("gpt-4o") ||

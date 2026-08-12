@@ -69,9 +69,31 @@ describe("PTU calculations", () => {
     expect(calculateGpt4oImageTokens(4096, 8192, "low")).toBe(85);
   });
 
-  it("keeps Fireworks sizing manual and rounds the deployment", () => {
+  it("estimates Fireworks GLM sizing with a 1:1 token ratio", () => {
     const result = calculateScenario({
       model: model("fireworks GLM 5.2"),
+      inputTextTokens: 114_000,
+      outputTokens: 2253,
+      rpm: 100,
+      cacheHitRate: 91,
+      images: [],
+      commitmentType: "Monthly",
+      deploymentType: "Global / Data Zone",
+    });
+
+    expect(result.requiredPtus).toBeCloseTo(4171);
+    expect(result.deployedPtus).toBe(4200);
+    expect(result.normalizedTpm).toBeCloseTo(1_251_300);
+    expect(
+      result.explanation.steps.find(
+        (step) => step.output === "Required PTU Num",
+      )?.formula,
+    ).toContain("normalized TPM");
+  });
+
+  it("keeps non-GLM Fireworks sizing manual", () => {
+    const result = calculateScenario({
+      model: model("fireworks DeepSeek V4 Pro"),
       inputTextTokens: 3500,
       outputTokens: 300,
       rpm: 60,
@@ -84,11 +106,6 @@ describe("PTU calculations", () => {
 
     expect(result.requiredPtus).toBe(401);
     expect(result.deployedPtus).toBe(600);
-    expect(
-      result.explanation.steps.find(
-        (step) => step.output === "Required PTU Num",
-      )?.formula,
-    ).toContain("user supplied");
   });
 
   it("ships the verified current model catalog", () => {
