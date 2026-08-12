@@ -2,7 +2,11 @@
 
 A React and TypeScript calculator for comparing monthly PayGO and provisioned throughput costs. The interface is a responsive Vite single-page application with no Streamlit or Python runtime.
 
-The bundled catalog includes Azure OpenAI, Fireworks on Microsoft Foundry, and Google models. Azure OpenAI PTUs are estimated with normalized TPM sizing, Fireworks sizing remains a manual capacity input, and each saved comparison includes a complete calculation trace.
+The bundled catalog includes Azure OpenAI, Fireworks on Microsoft Foundry, and Google models. Azure OpenAI and Fireworks GLM PTUs are estimated with normalized TPM sizing, other Fireworks models support manual capacity input, and each saved comparison includes a complete calculation trace. The interface supports English and Simplified Chinese, with English displayed by default.
+
+## UI preview
+
+![English Azure Foundry PTU Cost Planner interface](docs/images/ptu-cost-planner-english.png)
 
 ## Development
 
