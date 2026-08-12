@@ -533,6 +533,165 @@ textarea:focus {
   color: var(--warning);
 }
 
+.optimizer-card {
+  margin-bottom: 18px;
+  padding: 24px;
+  overflow: hidden;
+}
+
+.optimizer-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+  gap: 28px;
+  align-items: start;
+}
+
+.recommendation {
+  padding: 16px 18px;
+  border: 1px solid #ecd8bd;
+  border-radius: 11px;
+  background: var(--warning-soft);
+}
+
+.recommendation.positive {
+  border-color: #c7e5d5;
+  background: var(--success-soft);
+}
+
+.recommendation > span,
+.recommendation small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.recommendation > span {
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.recommendation strong {
+  display: block;
+  font-size: 0.88rem;
+}
+
+.recommendation p {
+  margin: 8px 0 6px;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.cost-chart-scroll {
+  margin-top: 24px;
+  overflow-x: auto;
+}
+
+.cost-chart {
+  display: block;
+  width: 100%;
+  min-width: 680px;
+}
+
+.chart-grid-line {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.chart-axis-label,
+.chart-axis-title,
+.current-rpm-label {
+  fill: var(--muted);
+  font-family: inherit;
+}
+
+.chart-axis-label {
+  font-size: 11px;
+}
+
+.chart-axis-title {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.current-rpm-line {
+  stroke: #98a2b3;
+  stroke-dasharray: 4 5;
+  stroke-width: 1;
+}
+
+.current-rpm-label {
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.paygo-line,
+.ptu-line {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.paygo-line {
+  stroke: #344054;
+  stroke-width: 3;
+}
+
+.ptu-line {
+  stroke-width: 2;
+}
+
+.chart-legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px 18px;
+  margin-top: 8px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.chart-legend > div {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 3px 9px;
+  align-items: center;
+  min-width: 0;
+}
+
+.legend-line {
+  width: 24px;
+  border-top: 3px solid;
+  grid-row: 1 / 3;
+}
+
+.legend-line.paygo {
+  border-color: #344054;
+}
+
+.chart-legend strong,
+.chart-legend small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chart-legend strong {
+  font-size: 0.7rem;
+}
+
+.chart-legend small {
+  color: var(--muted);
+  font-size: 0.64rem;
+}
+
+.optimizer-note {
+  margin: 18px 0 0;
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
+
 .content-card {
   border-radius: 18px;
 }
@@ -1070,6 +1229,10 @@ footer span:first-child {
   .summary-grid,
   .chart-grid,
   .formula-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .optimizer-heading {
     grid-template-columns: 1fr;
   }
 

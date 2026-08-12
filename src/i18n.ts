@@ -70,6 +70,25 @@ const UI_TEXT = {
       perMonth: "per month",
       ptuVersusPaygo: "PTU versus PayGO",
     },
+    optimizer: {
+      ariaLabel: "PTU configuration optimizer",
+      title: "Best PTU configuration",
+      description:
+        "Compare every available commitment and deployment option for this model at the current workload.",
+      bestConfiguration: "Lowest-cost configuration",
+      saves: "Saves",
+      paygoLowerBy: "PayGO is lower by",
+      perMonthAt: "per month at",
+      breakEven: "Estimated first break-even",
+      breakEvenNotReached: "No break-even is shown in this traffic range.",
+      chartAriaLabel:
+        "Monthly PayGO and PTU cost lines by requests per minute and configuration",
+      rpmAxis: "Requests per minute (RPM)",
+      currentTraffic: "Current traffic",
+      legend: "Cost line legend and current monthly values",
+      assumptions:
+        "The curve keeps the current tokens per request, cache rate, images, and manual PTU estimate fixed. PTU lines step upward because capacity is rounded to deployable units.",
+    },
     results: {
       ariaLabel: "Results",
       comparison: "Comparison",
@@ -216,6 +235,23 @@ const UI_TEXT = {
       estimatedSavings: "预计节省",
       perMonth: "每月",
       ptuVersusPaygo: "PTU 相比 PayGO",
+    },
+    optimizer: {
+      ariaLabel: "PTU 配置优化器",
+      title: "最佳 PTU 配置",
+      description: "按当前工作负载比较此模型所有可用的承诺周期和部署选项。",
+      bestConfiguration: "成本最低的配置",
+      saves: "每月节省",
+      paygoLowerBy: "PayGO 每月低",
+      perMonthAt: "，当前流量",
+      breakEven: "预计首次盈亏平衡点",
+      breakEvenNotReached: "当前流量范围内未显示盈亏平衡点。",
+      chartAriaLabel: "按每分钟请求数和配置展示的 PayGO 与 PTU 月度成本曲线",
+      rpmAxis: "每分钟请求数（RPM）",
+      currentTraffic: "当前流量",
+      legend: "成本曲线图例和当前月度价格",
+      assumptions:
+        "曲线固定使用当前每次请求令牌数、缓存命中率、图像和手动 PTU 估算。由于容量会向上取整为可部署单元，PTU 曲线呈阶梯式变化。",
     },
     results: {
       ariaLabel: "结果",

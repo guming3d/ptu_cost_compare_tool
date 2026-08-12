@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CalculatorForm } from "./components/CalculatorForm";
 import { CatalogEditor } from "./components/CatalogEditor";
+import { CostOptimizer } from "./components/CostOptimizer";
 import { ExplanationPanel } from "./components/ExplanationPanel";
 import { MetricBars } from "./components/MetricBars";
 import { ReferenceInfo } from "./components/ReferenceInfo";
@@ -12,7 +13,10 @@ import {
   getUiText,
   languageOptions,
 } from "./i18n";
-import { calculateScenario } from "./lib/calculations";
+import {
+  calculateCostOptimization,
+  calculateScenario,
+} from "./lib/calculations";
 import { exportResultsToExcel } from "./lib/exportExcel";
 import type { Language } from "./i18n";
 import type {
@@ -119,6 +123,14 @@ function App() {
         ptuCost: result.ptuCost,
         savings: result.costSavingPercentage,
       };
+    } catch {
+      return null;
+    }
+  }, [scenarioInput]);
+
+  const optimization = useMemo(() => {
+    try {
+      return calculateCostOptimization(scenarioInput);
     } catch {
       return null;
     }
@@ -267,6 +279,14 @@ function App() {
                 <small>{text.summary.ptuVersusPaygo}</small>
               </article>
             </section>
+
+            {optimization ? (
+              <CostOptimizer
+                optimization={optimization}
+                currentRpm={rpm}
+                language={language}
+              />
+            ) : null}
 
             <section className="content-card results-card">
               <div className="results-toolbar">

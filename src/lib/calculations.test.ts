@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { bundledCatalog } from "../data/catalog";
 import type { ModelConfig } from "../types";
 import {
+  calculateCostOptimization,
   calculateGpt4oImageTokens,
   calculateProvisionedPtuNum,
   calculatePtuCost,
@@ -106,6 +107,57 @@ describe("PTU calculations", () => {
 
     expect(result.requiredPtus).toBe(401);
     expect(result.deployedPtus).toBe(600);
+  });
+
+  it("finds the lowest-cost PTU configuration and builds comparable curves", () => {
+    const optimization = calculateCostOptimization({
+      model: model("azure openai gpt-5.2 (2025-12-11)"),
+      inputTextTokens: 3500,
+      outputTokens: 300,
+      rpm: 60,
+      cacheHitRate: 0,
+      images: [],
+      commitmentType: "Monthly",
+      deploymentType: "Regional",
+    });
+
+    expect(optimization.configurations).toHaveLength(4);
+    expect(optimization.bestConfiguration.commitmentType).toBe("Yearly");
+    expect(optimization.bestConfiguration.deploymentType).toBe(
+      "Global / Data Zone",
+    );
+    expect(
+      optimization.bestConfiguration.points.some((point) => point.rpm === 60),
+    ).toBe(true);
+    expect(
+      new Set(
+        optimization.configurations.map(
+          (configuration) => configuration.current.paygoCost,
+        ),
+      ).size,
+    ).toBe(1);
+    expect(optimization.bestConfiguration.breakEvenRpm).toBeGreaterThan(0);
+  });
+
+  it("keeps manually sized PTU cost fixed across the optimization curve", () => {
+    const optimization = calculateCostOptimization({
+      model: model("fireworks DeepSeek V4 Pro"),
+      inputTextTokens: 3500,
+      outputTokens: 300,
+      rpm: 60,
+      cacheHitRate: 0,
+      images: [],
+      commitmentType: "Monthly",
+      deploymentType: "Global / Data Zone",
+      manualRequiredPtus: 401,
+    });
+
+    expect(optimization.configurations).toHaveLength(2);
+    expect(
+      new Set(
+        optimization.bestConfiguration.points.map((point) => point.ptuCost),
+      ).size,
+    ).toBe(1);
   });
 
   it("ships the verified current model catalog", () => {

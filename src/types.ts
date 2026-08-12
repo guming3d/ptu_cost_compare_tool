@@ -118,3 +118,28 @@ export interface ComparisonResult {
   normalizedTpm?: number;
   explanation: CalculationExplanation;
 }
+
+export interface CostCurvePoint {
+  rpm: number;
+  paygoCost: number;
+  ptuCost: number;
+  deployedPtus: number;
+}
+
+export interface PtuConfigurationCurve {
+  id: string;
+  commitmentType: CommitmentType;
+  deploymentType: string;
+  points: CostCurvePoint[];
+  current: CostCurvePoint & {
+    savings: number;
+    savingsPercentage: number;
+  };
+  breakEvenRpm?: number;
+}
+
+export interface CostOptimization {
+  maxRpm: number;
+  configurations: PtuConfigurationCurve[];
+  bestConfiguration: PtuConfigurationCurve;
+}

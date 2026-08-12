@@ -2,8 +2,12 @@ import type {
   CalculationExplanation,
   CalculationStep,
   ComparisonResult,
+  CostOptimization,
   CostBreakdown,
+  CostCurvePoint,
+  DeploymentType,
   ModelConfig,
+  PtuConfigurationCurve,
   PtuMetrics,
   ScenarioInput,
 } from "../types";
@@ -512,7 +516,27 @@ function buildExplanation(args: {
   };
 }
 
-export function calculateScenario(input: ScenarioInput): ComparisonResult {
+interface ScenarioCalculation {
+  minimumPtus: number;
+  scaleIncrement: number;
+  deploymentLabel: string;
+  pricePerUnit: number;
+  discount: number;
+  inputImageTokens: number;
+  requiredPtus: number;
+  ptuMetrics?: PtuMetrics;
+  paygo: CostBreakdown;
+  ptuPricing: {
+    deployedPtus: number;
+    costBeforeDiscount: number;
+    discountedCost: number;
+  };
+  ptuUtilization: number;
+  tpmPerDollar: number;
+  costSavingPercentage: number;
+}
+
+function calculateScenarioValues(input: ScenarioInput): ScenarioCalculation {
   requireNonNegative(input.inputTextTokens, "Input tokens");
   requireNonNegative(input.outputTokens, "Output tokens");
   requireNonNegative(input.rpm, "RPM");
@@ -603,6 +627,40 @@ export function calculateScenario(input: ScenarioInput): ComparisonResult {
     paygo.totalCost === 0
       ? 0
       : ((paygo.totalCost - ptuPricing.discountedCost) / paygo.totalCost) * 100;
+
+  return {
+    minimumPtus,
+    scaleIncrement,
+    deploymentLabel,
+    pricePerUnit,
+    discount,
+    inputImageTokens,
+    requiredPtus,
+    ptuMetrics,
+    paygo,
+    ptuPricing,
+    ptuUtilization,
+    tpmPerDollar,
+    costSavingPercentage,
+  };
+}
+
+export function calculateScenario(input: ScenarioInput): ComparisonResult {
+  const {
+    minimumPtus,
+    scaleIncrement,
+    deploymentLabel,
+    pricePerUnit,
+    discount,
+    inputImageTokens,
+    requiredPtus,
+    ptuMetrics,
+    paygo,
+    ptuPricing,
+    ptuUtilization,
+    tpmPerDollar,
+    costSavingPercentage,
+  } = calculateScenarioValues(input);
   const explanation = buildExplanation({
     input,
     inputImageTokens,
@@ -645,5 +703,124 @@ export function calculateScenario(input: ScenarioInput): ComparisonResult {
     ptuDiscount: discount,
     normalizedTpm: ptuMetrics?.normalizedTpm,
     explanation,
+  };
+}
+
+function getOptimizationDeployments(input: ScenarioInput): DeploymentType[] {
+  if (input.model.provider !== "Azure OpenAI") {
+    return ["Global / Data Zone"];
+  }
+
+  const hasRegionalConfiguration =
+    (input.model["regional PTU minimum deployment unit"] ?? 0) > 0 &&
+    (input.model["regional PTU scale increment"] ?? 0) > 0;
+
+  return hasRegionalConfiguration
+    ? ["Global / Data Zone", "Regional"]
+    : ["Global / Data Zone"];
+}
+
+function calculateCurvePoint(
+  input: ScenarioInput,
+  rpm: number,
+): CostCurvePoint {
+  const result = calculateScenarioValues({ ...input, rpm });
+  return {
+    rpm,
+    paygoCost: result.paygo.totalCost,
+    ptuCost: result.ptuPricing.discountedCost,
+    deployedPtus: result.ptuPricing.deployedPtus,
+  };
+}
+
+function findEstimatedBreakEven(points: CostCurvePoint[]): number | undefined {
+  const point = points.find(
+    (candidate) =>
+      candidate.rpm > 0 && candidate.paygoCost >= candidate.ptuCost,
+  );
+  return point?.rpm;
+}
+
+export function calculateCostOptimization(
+  input: ScenarioInput,
+): CostOptimization {
+  const deployments = getOptimizationDeployments(input);
+  const commitments = ["Monthly", "Yearly"] as const;
+  const configurations = deployments.flatMap((deploymentType) =>
+    commitments.map((commitmentType) => ({
+      deploymentType,
+      commitmentType,
+      input: {
+        ...input,
+        deploymentType,
+        commitmentType,
+      },
+    })),
+  );
+
+  const paygoAtOneRpm = calculatePaygoCost(
+    input.inputTextTokens,
+    input.outputTokens,
+    1,
+    input.model,
+    input.cacheHitRate,
+  ).totalCost;
+  const lowestMinimumPtuCost = Math.min(
+    ...configurations.map(({ input: configurationInput }) =>
+      calculateScenarioValues({ ...configurationInput, rpm: 0 }).ptuPricing
+        .discountedCost,
+    ),
+  );
+  const estimatedBreakEven =
+    paygoAtOneRpm > 0 ? lowestMinimumPtuCost / paygoAtOneRpm : 0;
+  const maxRpm = Math.max(
+    100,
+    Math.ceil(input.rpm * 2),
+    Math.ceil(estimatedBreakEven * 1.5),
+  );
+  const sampledRpms = Array.from(
+    { length: 41 },
+    (_, index) => (maxRpm * index) / 40,
+  );
+  const rpms = Array.from(new Set([...sampledRpms, input.rpm])).sort(
+    (left, right) => left - right,
+  );
+
+  const curves: PtuConfigurationCurve[] = configurations.map(
+    ({ deploymentType, commitmentType, input: configurationInput }) => {
+      const points = rpms.map((rpm) =>
+        calculateCurvePoint(configurationInput, rpm),
+      );
+      const currentPoint = calculateCurvePoint(configurationInput, input.rpm);
+      const savings = currentPoint.paygoCost - currentPoint.ptuCost;
+
+      return {
+        id: `${deploymentType}-${commitmentType}`,
+        commitmentType,
+        deploymentType:
+          input.model.provider === "Azure OpenAI"
+            ? deploymentType
+            : "Configured default",
+        points,
+        current: {
+          ...currentPoint,
+          savings,
+          savingsPercentage:
+            currentPoint.paygoCost === 0
+              ? 0
+              : (savings / currentPoint.paygoCost) * 100,
+        },
+        breakEvenRpm: findEstimatedBreakEven(points),
+      };
+    },
+  );
+  const bestConfiguration = curves.reduce((best, candidate) =>
+    candidate.current.ptuCost < best.current.ptuCost ? candidate : best,
+  );
+
+  return {
+    maxRpm,
+    configurations: curves,
+    bestConfiguration,
   };
 }
