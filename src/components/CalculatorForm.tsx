@@ -6,6 +6,7 @@ import type {
 } from "../types";
 import { getLocale, getUiText } from "../i18n";
 import type { Language } from "../i18n";
+import { supportsAzureImageInput } from "../lib/calculations";
 import { NumberField } from "./NumberField";
 
 interface CalculatorFormProps {
@@ -84,9 +85,8 @@ export function CalculatorForm({
   const isManual = selectedModel["PTU sizing mode"] === "manual";
   const imageMeteringSupported =
     selectedModel.provider === "Google" ||
-    selectedModelName.toLowerCase().includes("gpt-4o") ||
-    selectedModelName.toLowerCase().includes("gpt-4.1") ||
-    selectedModelName.toLowerCase().includes("o4-mini");
+    (selectedModel.provider === "Azure OpenAI" &&
+      supportsAzureImageInput(selectedModelName));
 
   const updateImage = (
     id: string,

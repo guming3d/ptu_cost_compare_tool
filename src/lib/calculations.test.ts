@@ -10,6 +10,7 @@ import {
   calculateScenario,
   MINUTES_PER_MONTH,
   roundUpPtus,
+  supportsAzureImageInput,
 } from "./calculations";
 
 function model(name: string): ModelConfig {
@@ -86,6 +87,26 @@ describe("PTU calculations", () => {
         "low",
       ),
     ).toBe(7);
+    expect(
+      calculateAzureImageTokens(
+        "azure openai gpt-4.1-mini",
+        255,
+        7983,
+        "high",
+      ),
+    ).toBe(
+      calculateAzureImageTokens(
+        "azure openai gpt-4.1-mini",
+        7983,
+        255,
+        "high",
+      ),
+    );
+    expect(calculateAzureImageTokens("azure openai o3", 1024, 1024, "high")).toBe(
+      675,
+    );
+    expect(supportsAzureImageInput("azure openai o1")).toBe(true);
+    expect(supportsAzureImageInput("azure openai o3-mini")).toBe(false);
   });
 
   it("includes Azure image input tokens in PayGO cost", () => {

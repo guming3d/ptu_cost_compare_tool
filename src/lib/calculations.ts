@@ -114,26 +114,24 @@ function calculatePatchImageTokens(
   let heightPatches = Math.ceil(height / patchSize);
 
   if (widthPatches * heightPatches > patchCap) {
-    const shrink = Math.sqrt(
-      (patchCap * patchSize * patchSize) / (width * height),
-    );
-    const scaledWidth = width * shrink;
-    const scaledHeight = height * shrink;
-    const scaledWidthPatches = scaledWidth / patchSize;
+    const widthPatchRatio = width / patchSize;
+    const heightPatchRatio = height / patchSize;
+    let low = 0;
+    let high = 1;
 
-    for (
-      widthPatches = Math.floor(scaledWidthPatches);
-      widthPatches >= 1;
-      widthPatches -= 1
-    ) {
-      const secondScale = widthPatches / scaledWidthPatches;
-      heightPatches = Math.ceil(
-        (scaledHeight * secondScale) / patchSize,
-      );
-      if (widthPatches * heightPatches <= patchCap) {
-        break;
+    for (let iteration = 0; iteration < 50; iteration += 1) {
+      const scale = (low + high) / 2;
+      const scaledWidthPatches = Math.ceil(widthPatchRatio * scale);
+      const scaledHeightPatches = Math.ceil(heightPatchRatio * scale);
+      if (scaledWidthPatches * scaledHeightPatches <= patchCap) {
+        low = scale;
+      } else {
+        high = scale;
       }
     }
+
+    widthPatches = Math.ceil(widthPatchRatio * low);
+    heightPatches = Math.ceil(heightPatchRatio * low);
   }
 
   return Math.ceil(widthPatches * heightPatches * multiplier);
@@ -168,8 +166,25 @@ export function calculateAzureImageTokens(
       5667,
     );
   }
+  if (
+    /(?:^| )(?:o1|o3)(?: |$|\()/.test(normalizedName)
+  ) {
+    return calculateDetailImageTokens(
+      width,
+      height,
+      detailLevel,
+      75,
+      150,
+    );
+  }
 
   return calculateGpt4oImageTokens(width, height, detailLevel);
+}
+
+export function supportsAzureImageInput(modelName: string): boolean {
+  return /(?:^| )(?:gpt-4o(?:-mini)?|gpt-4\.1(?:-mini|-nano)?|o4-mini|o1|o3)(?: |$|\()/.test(
+    modelName.toLowerCase(),
+  );
 }
 
 export function calculateProvisionedPtuNum(
@@ -360,12 +375,9 @@ function getCommitmentPricing(input: ScenarioInput): {
 }
 
 function calculateImageInputTokens(input: ScenarioInput): number {
-  const normalizedName = input.model["model name"].toLowerCase();
   const supportsAzureImageMetering =
     input.model.provider === "Azure OpenAI" &&
-    (normalizedName.includes("gpt-4o") ||
-      normalizedName.includes("gpt-4.1") ||
-      normalizedName.includes("o4-mini"));
+    supportsAzureImageInput(input.model["model name"]);
 
   if (!supportsAzureImageMetering) {
     return 0;
