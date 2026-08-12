@@ -95,11 +95,14 @@ describe("PTU calculations", () => {
     const modelNames = new Set(
       bundledCatalog.models.map((item) => item["model name"]),
     );
+    const glm52 = model("fireworks GLM 5.2");
 
-    expect(bundledCatalog.metadata["verified date"]).toBe("2026-08-10");
+    expect(bundledCatalog.metadata["verified date"]).toBe("2026-08-12");
     expect(modelNames.has("azure openai gpt-5.6-luna (2026-07-09)")).toBe(true);
     expect(modelNames.has("azure openai o4-mini (2025-04-16)")).toBe(true);
     expect(modelNames.has("fireworks DeepSeek v3.2")).toBe(true);
     expect(modelNames.has("fireworks MiniMax M3")).toBe(true);
+    expect(glm52["PTU price of monthly commitment"]).toBe(260);
+    expect(glm52["PTU price of yearly commitment"]).toBe(221);
   });
 });

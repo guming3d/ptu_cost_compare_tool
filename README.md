@@ -25,7 +25,7 @@ npm run build
 
 ```bash
 docker build -t ptu-cost-planner .
-docker run --rm -p 8501:8501 ptu-cost-planner
+docker run --rm -p 8501:80 ptu-cost-planner
 ```
 
 Open `http://localhost:8501`.
