@@ -38,6 +38,21 @@ function linePath(
     .join(" ");
 }
 
+function stepPath(
+  points: CostCurvePoint[],
+  x: (rpm: number) => number,
+  y: (cost: number) => number,
+): string {
+  if (points.length === 0) {
+    return "";
+  }
+
+  return points.slice(1).reduce((path, point, index) => {
+    const previous = points[index];
+    return `${path} L ${x(point.rpm)} ${y(previous.ptuCost)} L ${x(point.rpm)} ${y(point.ptuCost)}`;
+  }, `M ${x(points[0].rpm)} ${y(points[0].ptuCost)}`);
+}
+
 function configurationLabel(
   configuration: PtuConfigurationCurve,
   language: Language,
@@ -77,6 +92,28 @@ export function CostOptimizer({
   const yTicks = Array.from({ length: 5 }, (_, index) => index / 4);
   const xTicks = Array.from({ length: 5 }, (_, index) => index / 4);
   const paygoPoints = best.points;
+  const tablePointIndexes = Array.from(
+    new Set([
+      ...Array.from(
+        { length: Math.min(41, paygoPoints.length) },
+        (_, index) =>
+          Math.round(
+            (index * (paygoPoints.length - 1)) /
+              Math.max(Math.min(40, paygoPoints.length - 1), 1),
+          ),
+      ),
+      paygoPoints.findIndex((point) => point.rpm === currentRpm),
+      ...optimization.configurations.map((configuration) =>
+        configuration.breakEvenRpm === undefined
+          ? -1
+          : paygoPoints.findIndex(
+              (point) => point.rpm === configuration.breakEvenRpm,
+            ),
+      ),
+    ]),
+  )
+    .filter((index) => index >= 0)
+    .sort((left, right) => left - right);
   const currentMarkerX = x(Math.min(currentRpm, optimization.maxRpm));
   const savingsAmount = Math.abs(best.current.savings);
 
@@ -188,12 +225,7 @@ export function CostOptimizer({
           {optimization.configurations.map((configuration, index) => (
             <path
               className="ptu-line"
-              d={linePath(
-                configuration.points,
-                (point) => point.ptuCost,
-                x,
-                y,
-              )}
+              d={stepPath(configuration.points, x, y)}
               key={configuration.id}
               stroke={CONFIGURATION_COLORS[index]}
               strokeDasharray={CONFIGURATION_DASHES[index]}
@@ -242,23 +274,26 @@ export function CostOptimizer({
               </tr>
             </thead>
             <tbody>
-              {paygoPoints.map((point, pointIndex) => (
-                <tr key={point.rpm}>
-                  <td>
-                    {point.rpm.toLocaleString(locale, {
-                      maximumFractionDigits: 1,
-                    })}
-                  </td>
-                  <td>{currency.format(point.paygoCost)}</td>
-                  {optimization.configurations.map((configuration) => (
-                    <td key={configuration.id}>
-                      {currency.format(
-                        configuration.points[pointIndex].ptuCost,
-                      )}
+              {tablePointIndexes.map((pointIndex) => {
+                const point = paygoPoints[pointIndex];
+                return (
+                  <tr key={point.rpm}>
+                    <td>
+                      {point.rpm.toLocaleString(locale, {
+                        maximumFractionDigits: 1,
+                      })}
                     </td>
-                  ))}
-                </tr>
-              ))}
+                    <td>{currency.format(point.paygoCost)}</td>
+                    {optimization.configurations.map((configuration) => (
+                      <td key={configuration.id}>
+                        {currency.format(
+                          configuration.points[pointIndex].ptuCost,
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

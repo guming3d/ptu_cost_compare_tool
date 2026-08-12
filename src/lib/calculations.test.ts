@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { bundledCatalog } from "../data/catalog";
 import type { ModelConfig } from "../types";
 import {
+  calculateAzureImageTokens,
   calculateCostOptimization,
   calculateGpt4oImageTokens,
   calculateProvisionedPtuNum,
@@ -69,6 +70,22 @@ describe("PTU calculations", () => {
     expect(calculateGpt4oImageTokens(1024, 1024, "high")).toBe(765);
     expect(calculateGpt4oImageTokens(2048, 4096, "high")).toBe(1105);
     expect(calculateGpt4oImageTokens(4096, 8192, "low")).toBe(85);
+    expect(
+      calculateAzureImageTokens(
+        "azure openai GPT-4o-mini",
+        1024,
+        768,
+        "low",
+      ),
+    ).toBe(2833);
+    expect(
+      calculateAzureImageTokens(
+        "azure openai gpt-4.1-mini",
+        64,
+        64,
+        "low",
+      ),
+    ).toBe(7);
   });
 
   it("includes Azure image input tokens in PayGO cost", () => {
@@ -83,9 +100,9 @@ describe("PTU calculations", () => {
       deploymentType: "Global / Data Zone",
     });
 
-    expect(result.inputImageTokens).toBe(85);
+    expect(result.inputImageTokens).toBe(2833);
     expect(result.paygoBreakdown.imageCost).toBeCloseTo(
-      (85 * MINUTES_PER_MONTH * 0.00015) / 1000,
+      (2833 * MINUTES_PER_MONTH * 0.00015) / 1000,
     );
     expect(result.paygoCost).toBe(result.paygoBreakdown.imageCost);
   });
@@ -216,6 +233,12 @@ describe("PTU calculations", () => {
           point.rpm === optimization.bestConfiguration.breakEvenRpm,
       ),
     ).toBe(true);
+    const firstPtuCost = optimization.bestConfiguration.points[0].ptuCost;
+    const firstCapacityIncrease =
+      optimization.bestConfiguration.points.find(
+        (point) => point.ptuCost > firstPtuCost,
+      );
+    expect(firstCapacityIncrease?.rpm).toBeLessThan(100);
   });
 
   it("ships the verified current model catalog", () => {

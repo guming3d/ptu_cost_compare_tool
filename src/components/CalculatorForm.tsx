@@ -85,7 +85,8 @@ export function CalculatorForm({
   const imageMeteringSupported =
     selectedModel.provider === "Google" ||
     selectedModelName.toLowerCase().includes("gpt-4o") ||
-    selectedModelName.toLowerCase().includes("gpt-4.1");
+    selectedModelName.toLowerCase().includes("gpt-4.1") ||
+    selectedModelName.toLowerCase().includes("o4-mini");
 
   const updateImage = (
     id: string,

@@ -73,27 +73,103 @@ export function calculateGpt4oImageTokens(
   height: number,
   detailLevel: "low" | "high",
 ): number {
+  return calculateDetailImageTokens(width, height, detailLevel, 85, 170);
+}
+
+function calculateDetailImageTokens(
+  width: number,
+  height: number,
+  detailLevel: "low" | "high",
+  baseTokens: number,
+  tokensPerTile: number,
+): number {
   if (width <= 0 || height <= 0) {
     return 0;
   }
   if (detailLevel === "low") {
-    return 85;
+    return baseTokens;
   }
 
-  const firstScale = Math.min(2048 / width, 2048 / height, 1);
+  const firstScale = Math.min(2048 / width, 2048 / height);
   let resizedWidth = width * firstScale;
   let resizedHeight = height * firstScale;
   const shortestSide = Math.min(resizedWidth, resizedHeight);
-
-  if (shortestSide > 768) {
-    const secondScale = 768 / shortestSide;
-    resizedWidth *= secondScale;
-    resizedHeight *= secondScale;
-  }
+  const secondScale = 768 / shortestSide;
+  resizedWidth *= secondScale;
+  resizedHeight *= secondScale;
 
   const tiles =
     Math.ceil(resizedWidth / 512) * Math.ceil(resizedHeight / 512);
-  return tiles * 170 + 85;
+  return tiles * tokensPerTile + baseTokens;
+}
+
+function calculatePatchImageTokens(
+  width: number,
+  height: number,
+  multiplier: number,
+): number {
+  const patchSize = 32;
+  const patchCap = 1536;
+  let widthPatches = Math.ceil(width / patchSize);
+  let heightPatches = Math.ceil(height / patchSize);
+
+  if (widthPatches * heightPatches > patchCap) {
+    const shrink = Math.sqrt(
+      (patchCap * patchSize * patchSize) / (width * height),
+    );
+    const scaledWidth = width * shrink;
+    const scaledHeight = height * shrink;
+    const scaledWidthPatches = scaledWidth / patchSize;
+
+    for (
+      widthPatches = Math.floor(scaledWidthPatches);
+      widthPatches >= 1;
+      widthPatches -= 1
+    ) {
+      const secondScale = widthPatches / scaledWidthPatches;
+      heightPatches = Math.ceil(
+        (scaledHeight * secondScale) / patchSize,
+      );
+      if (widthPatches * heightPatches <= patchCap) {
+        break;
+      }
+    }
+  }
+
+  return Math.ceil(widthPatches * heightPatches * multiplier);
+}
+
+export function calculateAzureImageTokens(
+  modelName: string,
+  width: number,
+  height: number,
+  detailLevel: "low" | "high",
+): number {
+  if (width <= 0 || height <= 0) {
+    return 0;
+  }
+
+  const normalizedName = modelName.toLowerCase();
+  if (normalizedName.includes("gpt-4.1-mini")) {
+    return calculatePatchImageTokens(width, height, 1.62);
+  }
+  if (normalizedName.includes("gpt-4.1-nano")) {
+    return calculatePatchImageTokens(width, height, 2.46);
+  }
+  if (normalizedName.includes("o4-mini")) {
+    return calculatePatchImageTokens(width, height, 1.72);
+  }
+  if (normalizedName.includes("gpt-4o-mini")) {
+    return calculateDetailImageTokens(
+      width,
+      height,
+      detailLevel,
+      2833,
+      5667,
+    );
+  }
+
+  return calculateGpt4oImageTokens(width, height, detailLevel);
 }
 
 export function calculateProvisionedPtuNum(
@@ -287,7 +363,9 @@ function calculateImageInputTokens(input: ScenarioInput): number {
   const normalizedName = input.model["model name"].toLowerCase();
   const supportsAzureImageMetering =
     input.model.provider === "Azure OpenAI" &&
-    (normalizedName.includes("gpt-4o") || normalizedName.includes("gpt-4.1"));
+    (normalizedName.includes("gpt-4o") ||
+      normalizedName.includes("gpt-4.1") ||
+      normalizedName.includes("o4-mini"));
 
   if (!supportsAzureImageMetering) {
     return 0;
@@ -296,7 +374,12 @@ function calculateImageInputTokens(input: ScenarioInput): number {
   return input.images.reduce(
     (total, image) =>
       total +
-      calculateGpt4oImageTokens(image.width, image.height, image.quality),
+      calculateAzureImageTokens(
+        input.model["model name"],
+        image.width,
+        image.height,
+        image.quality,
+      ),
     0,
   );
 }
@@ -794,6 +877,55 @@ function findBreakEvenRpm(input: ScenarioInput): number | undefined {
   return candidate;
 }
 
+function getCapacityTransitionRpms(
+  input: ScenarioInput,
+  maxRpm: number,
+): number[] {
+  const isAutomaticallySized =
+    usesAutomaticProvisionedSizing(input.model) ||
+    input.model.provider === "Google";
+  if (!isAutomaticallySized) {
+    return [];
+  }
+
+  const oneRpmPoint = calculateCurvePoint(input, 1);
+  if (oneRpmPoint.requiredPtus <= 0) {
+    return [];
+  }
+
+  const { minimumPtus, scaleIncrement } = getDeploymentCapacity(input);
+  const firstBoundary =
+    Math.floor(minimumPtus / scaleIncrement) * scaleIncrement;
+  const requiredAtMaximum = oneRpmPoint.requiredPtus * maxRpm;
+  if (requiredAtMaximum < firstBoundary) {
+    return [];
+  }
+
+  const transitionCount =
+    Math.floor((requiredAtMaximum - firstBoundary) / scaleIncrement) + 1;
+  const maximumTransitions = 120;
+  const transitionIndexes =
+    transitionCount <= maximumTransitions
+      ? Array.from({ length: transitionCount }, (_, index) => index)
+      : Array.from(
+          { length: maximumTransitions },
+          (_, index) =>
+            Math.round(
+              (index * (transitionCount - 1)) / (maximumTransitions - 1),
+            ),
+        );
+  const epsilon = Math.max(maxRpm * 1e-9, Number.EPSILON);
+
+  return Array.from(new Set(transitionIndexes)).flatMap((index) => {
+    const capacity = firstBoundary + index * scaleIncrement;
+    const transitionRpm = capacity / oneRpmPoint.requiredPtus;
+    return [
+      transitionRpm,
+      Math.min(maxRpm, transitionRpm + epsilon),
+    ];
+  });
+}
+
 export function calculateCostOptimization(
   input: ScenarioInput,
 ): CostOptimization {
@@ -833,9 +965,13 @@ export function calculateCostOptimization(
     ...configuration,
     breakEvenRpm: findBreakEvenRpm(configuration.input),
   }));
+  const transitionRpms = configuredBreakEvens.flatMap((configuration) =>
+    getCapacityTransitionRpms(configuration.input, maxRpm),
+  );
   const rpms = Array.from(
     new Set([
       ...sampledRpms,
+      ...transitionRpms,
       input.rpm,
       ...configuredBreakEvens.flatMap(({ breakEvenRpm }) =>
         breakEvenRpm === undefined || breakEvenRpm > maxRpm
