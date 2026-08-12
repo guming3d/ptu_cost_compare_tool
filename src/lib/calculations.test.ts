@@ -68,6 +68,7 @@ describe("PTU calculations", () => {
   });
 
   it("calculates Azure high-detail image tiles", () => {
+    expect(calculateGpt4oImageTokens(512, 512, "high")).toBe(255);
     expect(calculateGpt4oImageTokens(1024, 1024, "high")).toBe(765);
     expect(calculateGpt4oImageTokens(2048, 4096, "high")).toBe(1105);
     expect(calculateGpt4oImageTokens(4096, 8192, "low")).toBe(85);
@@ -104,6 +105,9 @@ describe("PTU calculations", () => {
     );
     expect(calculateAzureImageTokens("azure openai o3", 1024, 1024, "high")).toBe(
       675,
+    );
+    expect(calculateAzureImageTokens("azure openai o3", 512, 512, "high")).toBe(
+      225,
     );
     expect(supportsAzureImageInput("azure openai o1")).toBe(true);
     expect(supportsAzureImageInput("azure openai o3-mini")).toBe(false);
@@ -260,6 +264,33 @@ describe("PTU calculations", () => {
         (point) => point.ptuCost > firstPtuCost,
       );
     expect(firstCapacityIncrease?.rpm).toBeLessThan(100);
+  });
+
+  it("uses the first positive deployable tier for regional break-even", () => {
+    const optimization = calculateCostOptimization({
+      model: model("azure openai o1"),
+      inputTextTokens: 3500,
+      outputTokens: 0,
+      rpm: 20,
+      cacheHitRate: 75,
+      images: [],
+      commitmentType: "Monthly",
+      deploymentType: "Regional",
+    });
+    const regionalMonthly = optimization.configurations.find(
+      (configuration) =>
+        configuration.commitmentType === "Monthly" &&
+        configuration.deploymentType === "Regional",
+    );
+    const breakEvenPoint = regionalMonthly?.points.find(
+      (point) => point.rpm === regionalMonthly.breakEvenRpm,
+    );
+
+    expect(regionalMonthly?.breakEvenRpm).toBeGreaterThan(0);
+    expect(breakEvenPoint?.deployedPtus).toBe(50);
+    expect(breakEvenPoint?.paygoCost).toBeCloseTo(
+      breakEvenPoint?.ptuCost ?? 0,
+    );
   });
 
   it("ships the verified current model catalog", () => {

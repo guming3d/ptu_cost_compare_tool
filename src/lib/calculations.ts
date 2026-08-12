@@ -90,13 +90,16 @@ function calculateDetailImageTokens(
     return baseTokens;
   }
 
-  const firstScale = Math.min(2048 / width, 2048 / height);
+  const firstScale = Math.min(2048 / width, 2048 / height, 1);
   let resizedWidth = width * firstScale;
   let resizedHeight = height * firstScale;
   const shortestSide = Math.min(resizedWidth, resizedHeight);
-  const secondScale = 768 / shortestSide;
-  resizedWidth *= secondScale;
-  resizedHeight *= secondScale;
+
+  if (shortestSide > 768) {
+    const secondScale = 768 / shortestSide;
+    resizedWidth *= secondScale;
+    resizedHeight *= secondScale;
+  }
 
   const tiles =
     Math.ceil(resizedWidth / 512) * Math.ceil(resizedHeight / 512);
@@ -868,25 +871,55 @@ function calculateCurvePoint(
 }
 
 function findBreakEvenRpm(input: ScenarioInput): number | undefined {
-  const minimumPoint = calculateCurvePoint(input, 0);
   const oneRpmPoint = calculateCurvePoint(input, 1);
   if (oneRpmPoint.paygoCost <= 0) {
     return undefined;
   }
 
-  const candidate = minimumPoint.ptuCost / oneRpmPoint.paygoCost;
   const isAutomaticallySized =
     usesAutomaticProvisionedSizing(input.model) ||
     input.model.provider === "Google";
-  if (
-    isAutomaticallySized &&
-    oneRpmPoint.requiredPtus > 0 &&
-    candidate > minimumPoint.deployedPtus / oneRpmPoint.requiredPtus
-  ) {
-    return undefined;
+  if (!isAutomaticallySized || oneRpmPoint.requiredPtus <= 0) {
+    return calculateCurvePoint(input, 0).ptuCost / oneRpmPoint.paygoCost;
   }
 
-  return candidate;
+  const { minimumPtus, scaleIncrement } = getDeploymentCapacity(input);
+  const { pricePerUnit, discount } = getCommitmentPricing(input);
+  const unitCost = pricePerUnit * (1 - discount);
+  const requiredPtusPerRpm = oneRpmPoint.requiredPtus;
+  let lowerRequiredPtus = 0;
+  let upperRequiredPtus = Math.max(
+    scaleIncrement,
+    Math.floor(minimumPtus / scaleIncrement) * scaleIncrement,
+  );
+  let deployedPtus = roundUpPtus(
+    Number.EPSILON,
+    minimumPtus,
+    scaleIncrement,
+  );
+
+  for (let tier = 0; tier < 2; tier += 1) {
+    const lowerRpm = lowerRequiredPtus / requiredPtusPerRpm;
+    const upperRpm = upperRequiredPtus / requiredPtusPerRpm;
+    const candidateRpm =
+      (deployedPtus * unitCost) / oneRpmPoint.paygoCost;
+
+    if (candidateRpm > lowerRpm && candidateRpm <= upperRpm) {
+      return candidateRpm;
+    }
+    if (candidateRpm <= lowerRpm) {
+      return lowerRpm;
+    }
+    if (requiredPtusPerRpm * unitCost >= oneRpmPoint.paygoCost) {
+      return undefined;
+    }
+
+    lowerRequiredPtus = upperRequiredPtus;
+    upperRequiredPtus += scaleIncrement;
+    deployedPtus = upperRequiredPtus;
+  }
+
+  return undefined;
 }
 
 function getCapacityTransitionRpms(
@@ -906,8 +939,10 @@ function getCapacityTransitionRpms(
   }
 
   const { minimumPtus, scaleIncrement } = getDeploymentCapacity(input);
-  const firstBoundary =
-    Math.floor(minimumPtus / scaleIncrement) * scaleIncrement;
+  const firstBoundary = Math.max(
+    scaleIncrement,
+    Math.floor(minimumPtus / scaleIncrement) * scaleIncrement,
+  );
   const requiredAtMaximum = oneRpmPoint.requiredPtus * maxRpm;
   if (requiredAtMaximum < firstBoundary) {
     return [];
