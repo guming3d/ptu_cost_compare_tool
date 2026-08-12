@@ -7,6 +7,7 @@ import {
   calculateProvisionedPtuNum,
   calculatePtuCost,
   calculateScenario,
+  MINUTES_PER_MONTH,
   roundUpPtus,
 } from "./calculations";
 
@@ -68,6 +69,42 @@ describe("PTU calculations", () => {
     expect(calculateGpt4oImageTokens(1024, 1024, "high")).toBe(765);
     expect(calculateGpt4oImageTokens(2048, 4096, "high")).toBe(1105);
     expect(calculateGpt4oImageTokens(4096, 8192, "low")).toBe(85);
+  });
+
+  it("includes Azure image input tokens in PayGO cost", () => {
+    const result = calculateScenario({
+      model: model("azure openai GPT-4o-mini"),
+      inputTextTokens: 0,
+      outputTokens: 0,
+      rpm: 1,
+      cacheHitRate: 0,
+      images: [{ id: "image", width: 1024, height: 768, quality: "low" }],
+      commitmentType: "Monthly",
+      deploymentType: "Global / Data Zone",
+    });
+
+    expect(result.inputImageTokens).toBe(85);
+    expect(result.paygoBreakdown.imageCost).toBeCloseTo(
+      (85 * MINUTES_PER_MONTH * 0.00015) / 1000,
+    );
+    expect(result.paygoCost).toBe(result.paygoBreakdown.imageCost);
+  });
+
+  it("includes Google per-image charges in PayGO cost", () => {
+    const result = calculateScenario({
+      model: model("google gemini-1.5 pro"),
+      inputTextTokens: 1000,
+      outputTokens: 0,
+      rpm: 1,
+      cacheHitRate: 0,
+      images: [{ id: "image", width: 1024, height: 768, quality: "low" }],
+      commitmentType: "Monthly",
+      deploymentType: "Global / Data Zone",
+    });
+
+    expect(result.paygoBreakdown.imageCost).toBeCloseTo(
+      MINUTES_PER_MONTH * 0.00032875,
+    );
   });
 
   it("estimates Fireworks GLM sizing with a 1:1 token ratio", () => {
@@ -158,6 +195,27 @@ describe("PTU calculations", () => {
         optimization.bestConfiguration.points.map((point) => point.ptuCost),
       ).size,
     ).toBe(1);
+  });
+
+  it("calculates break-even independently of a large chart range", () => {
+    const optimization = calculateCostOptimization({
+      model: model("azure openai gpt-5.6-luna (2026-07-09)"),
+      inputTextTokens: 3500,
+      outputTokens: 300,
+      rpm: 1_000_000,
+      cacheHitRate: 0,
+      images: [],
+      commitmentType: "Monthly",
+      deploymentType: "Global / Data Zone",
+    });
+
+    expect(optimization.bestConfiguration.breakEvenRpm).toBeLessThan(100);
+    expect(
+      optimization.bestConfiguration.points.some(
+        (point) =>
+          point.rpm === optimization.bestConfiguration.breakEvenRpm,
+      ),
+    ).toBe(true);
   });
 
   it("ships the verified current model catalog", () => {

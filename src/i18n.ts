@@ -86,8 +86,10 @@ const UI_TEXT = {
       rpmAxis: "Requests per minute (RPM)",
       currentTraffic: "Current traffic",
       legend: "Cost line legend and current monthly values",
+      dataTable: "View chart data",
+      rpm: "RPM",
       assumptions:
-        "The curve keeps the current tokens per request, cache rate, images, and manual PTU estimate fixed. PTU lines step upward because capacity is rounded to deployable units.",
+        "The curve keeps the current tokens per request, cache rate, images, and manual PTU estimate fixed. PTU costs use capacity rounded to deployable units.",
     },
     results: {
       ariaLabel: "Results",
@@ -131,7 +133,7 @@ const UI_TEXT = {
       utilizationFormula: "required PTUs / rounded deployable PTUs x 100",
       paygoCost: "PayGO monthly cost",
       paygoFormula:
-        "tokens/request x RPM x 60 x 24 x 30.42 / 1,000 x token price",
+        "text/image usage x RPM x 60 x 24 x 30.42 x applicable unit price",
       automaticEstimate: "Automatic PTU estimate",
       automaticFormula:
         "(input TPM + output ratio x output TPM) / input TPM per PTU",
@@ -250,8 +252,10 @@ const UI_TEXT = {
       rpmAxis: "每分钟请求数（RPM）",
       currentTraffic: "当前流量",
       legend: "成本曲线图例和当前月度价格",
+      dataTable: "查看图表数据",
+      rpm: "RPM",
       assumptions:
-        "曲线固定使用当前每次请求令牌数、缓存命中率、图像和手动 PTU 估算。由于容量会向上取整为可部署单元，PTU 曲线呈阶梯式变化。",
+        "曲线固定使用当前每次请求令牌数、缓存命中率、图像和手动 PTU 估算。PTU 成本使用向上取整后的可部署容量。",
     },
     results: {
       ariaLabel: "结果",
@@ -293,7 +297,7 @@ const UI_TEXT = {
       utilizationFormula: "所需 PTU / 向上取整后的可部署 PTU x 100",
       paygoCost: "PayGO 月度成本",
       paygoFormula:
-        "每次请求令牌数 x RPM x 60 x 24 x 30.42 / 1,000 x 令牌价格",
+        "文本/图像用量 x RPM x 60 x 24 x 30.42 x 相应单价",
       automaticEstimate: "自动 PTU 估算",
       automaticFormula:
         "（输入 TPM + 输出比率 x 输出 TPM）/ 每 PTU 输入 TPM",
@@ -344,6 +348,7 @@ const UI_TEXT = {
 const ZH_EXPLANATION_TEXT: Record<string, string> = {
   "Monthly requests": "每月请求数",
   "Monthly PayGO input cost": "每月 PayGO 输入成本",
+  "Monthly PayGO image cost": "每月 PayGO 图像成本",
   "Monthly PayGO output cost": "每月 PayGO 输出成本",
   "PayGO cost": "PayGO 成本",
   "Effective text input tokens": "有效文本输入令牌",
@@ -369,6 +374,12 @@ const ZH_EXPLANATION_TEXT: Record<string, string> = {
     "输出令牌 x 每月请求数 / 1,000 x 输出价格",
   "PayGO cost = input cost + output cost":
     "PayGO 成本 = 输入成本 + 输出成本",
+  "image count x monthly requests x image price":
+    "图像数 x 每月请求数 x 图像单价",
+  "image input tokens x monthly requests / 1,000 x input price":
+    "图像输入令牌 x 每月请求数 / 1,000 x 输入价格",
+  "PayGO cost = input cost + image cost + output cost":
+    "PayGO 成本 = 输入成本 + 图像成本 + 输出成本",
   "input tokens x (1 - cache hit rate / 100)":
     "输入令牌 x（1 - 缓存命中率 / 100）",
   "RPM x (effective text input + image input) + output ratio x (RPM x output tokens)":

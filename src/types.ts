@@ -89,6 +89,7 @@ export interface CostBreakdown {
   nonCachedInputCost: number;
   cachedInputCost: number;
   inputCost: number;
+  imageCost: number;
   outputCost: number;
   totalCost: number;
 }
@@ -123,6 +124,7 @@ export interface CostCurvePoint {
   rpm: number;
   paygoCost: number;
   ptuCost: number;
+  requiredPtus: number;
   deployedPtus: number;
 }
 

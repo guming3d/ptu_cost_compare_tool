@@ -21,6 +21,8 @@ const CHART_WIDTH = 960;
 const CHART_HEIGHT = 360;
 const CHART_MARGIN = { top: 24, right: 24, bottom: 54, left: 82 };
 const CONFIGURATION_COLORS = ["#1677c8", "#7047a8", "#bd641d", "#168463"];
+const CONFIGURATION_DASHES = [undefined, "9 5", "2 4", "10 4 2 4"];
+const LEGEND_STYLES = ["solid", "dashed", "dotted", "double"] as const;
 
 function linePath(
   points: CostCurvePoint[],
@@ -34,21 +36,6 @@ function linePath(
       return `${command} ${x(point.rpm)} ${y(value(point))}`;
     })
     .join(" ");
-}
-
-function stepPath(
-  points: CostCurvePoint[],
-  x: (rpm: number) => number,
-  y: (cost: number) => number,
-): string {
-  if (points.length === 0) {
-    return "";
-  }
-
-  return points.slice(1).reduce((path, point, index) => {
-    const previous = points[index];
-    return `${path} L ${x(point.rpm)} ${y(previous.ptuCost)} L ${x(point.rpm)} ${y(point.ptuCost)}`;
-  }, `M ${x(points[0].rpm)} ${y(points[0].ptuCost)}`);
 }
 
 function configurationLabel(
@@ -118,7 +105,7 @@ export function CostOptimizer({
           <small>
             {best.breakEvenRpm !== undefined
               ? `${text.breakEven}: ${best.breakEvenRpm.toLocaleString(locale, {
-                  maximumFractionDigits: 0,
+                  maximumFractionDigits: 1,
                 })} RPM`
               : text.breakEvenNotReached}
           </small>
@@ -201,9 +188,15 @@ export function CostOptimizer({
           {optimization.configurations.map((configuration, index) => (
             <path
               className="ptu-line"
-              d={stepPath(configuration.points, x, y)}
+              d={linePath(
+                configuration.points,
+                (point) => point.ptuCost,
+                x,
+                y,
+              )}
               key={configuration.id}
               stroke={CONFIGURATION_COLORS[index]}
+              strokeDasharray={CONFIGURATION_DASHES[index]}
             />
           ))}
         </svg>
@@ -219,7 +212,10 @@ export function CostOptimizer({
           <div key={configuration.id}>
             <span
               className="legend-line"
-              style={{ borderColor: CONFIGURATION_COLORS[index] }}
+              style={{
+                borderColor: CONFIGURATION_COLORS[index],
+                borderTopStyle: LEGEND_STYLES[index],
+              }}
               aria-hidden="true"
             />
             <strong>{configurationLabel(configuration, language)}</strong>
@@ -230,6 +226,43 @@ export function CostOptimizer({
           </div>
         ))}
       </div>
+      <details className="cost-data">
+        <summary>{text.dataTable}</summary>
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>{text.rpm}</th>
+                <th>PayGO</th>
+                {optimization.configurations.map((configuration) => (
+                  <th key={configuration.id}>
+                    {configurationLabel(configuration, language)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {paygoPoints.map((point, pointIndex) => (
+                <tr key={point.rpm}>
+                  <td>
+                    {point.rpm.toLocaleString(locale, {
+                      maximumFractionDigits: 1,
+                    })}
+                  </td>
+                  <td>{currency.format(point.paygoCost)}</td>
+                  {optimization.configurations.map((configuration) => (
+                    <td key={configuration.id}>
+                      {currency.format(
+                        configuration.points[pointIndex].ptuCost,
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
       <p className="optimizer-note">{text.assumptions}</p>
     </section>
   );

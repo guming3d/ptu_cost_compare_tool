@@ -685,6 +685,62 @@ textarea:focus {
   font-size: 0.64rem;
 }
 
+.cost-data {
+  margin-top: 18px;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
+.cost-data summary {
+  color: var(--accent-dark);
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.cost-data .table-scroll {
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.cost-data table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  font-size: 0.67rem;
+}
+
+.cost-data th,
+.cost-data td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.cost-data th {
+  background: #fafbfc;
+  color: var(--muted);
+  font-size: 0.62rem;
+}
+
+.cost-data th:first-child,
+.cost-data td:first-child {
+  position: sticky;
+  left: 0;
+  background: var(--surface);
+  text-align: left;
+}
+
+.cost-data th:first-child {
+  background: #fafbfc;
+}
+
+.cost-data tbody tr:last-child td {
+  border-bottom: 0;
+}
+
 .optimizer-note {
   margin: 18px 0 0;
   color: var(--muted);

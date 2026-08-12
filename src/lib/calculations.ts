@@ -142,10 +142,14 @@ export function calculatePaygoCost(
   rpm: number,
   model: ModelConfig,
   cacheHitRate = 0,
+  imageInputTokens = 0,
+  imageCount = 0,
 ): CostBreakdown {
   if (cacheHitRate < 0 || cacheHitRate > 100) {
     throw new Error("Cache hit rate must be between 0 and 100.");
   }
+  requireNonNegative(imageInputTokens, "Image input tokens");
+  requireNonNegative(imageCount, "Image count");
 
   const monthlyRequests = rpm * MINUTES_PER_MONTH;
   const cachedInputTokens = inputTokens * (cacheHitRate / 100);
@@ -159,14 +163,26 @@ export function calculatePaygoCost(
   const outputCost =
     ((outputTokens * monthlyRequests) / 1000) *
     model["output token price per 1k"];
+  const imageTokenCost =
+    ((imageInputTokens * monthlyRequests) / 1000) *
+    model["input token price per 1k"];
+  const imageUnitPrice =
+    model.provider === "Google"
+      ? inputTokens <= 128_000
+        ? (model["price per image(<=128k input tokens)"] ?? 0)
+        : (model["price per image(>128k input tokens)"] ?? 0)
+      : 0;
+  const imageCost =
+    imageTokenCost + imageCount * monthlyRequests * imageUnitPrice;
   const inputCost = nonCachedInputCost + cachedInputCost;
 
   return {
     nonCachedInputCost,
     cachedInputCost,
     inputCost,
+    imageCost,
     outputCost,
-    totalCost: inputCost + outputCost,
+    totalCost: inputCost + imageCost + outputCost,
   };
 }
 
@@ -347,6 +363,30 @@ function buildExplanation(args: {
       substitution: `(${nonCachedTokens.toLocaleString("en-US")} x ${monthlyRequests.toLocaleString("en-US")} / 1,000 x ${model["input token price per 1k"]}) + (${cachedTokens.toLocaleString("en-US")} x ${monthlyRequests.toLocaleString("en-US")} / 1,000 x ${model["input token price per 1k with cache hit"]}) = ${paygo.inputCost.toFixed(2)}`,
       note: `${input.inputTextTokens.toLocaleString("en-US")} input tokens per request at a ${input.cacheHitRate}% cache-hit rate.`,
     },
+  ];
+
+  if (paygo.imageCost > 0) {
+    const googleImagePrice =
+      input.inputTextTokens <= 128_000
+        ? model["price per image(<=128k input tokens)"]
+        : model["price per image(>128k input tokens)"];
+    const usesPerImagePricing =
+      model.provider === "Google" && googleImagePrice !== undefined;
+
+    steps.push({
+      output: "Monthly PayGO image cost",
+      result: paygo.imageCost,
+      unit: "USD/month",
+      formula: usesPerImagePricing
+        ? "image count x monthly requests x image price"
+        : "image input tokens x monthly requests / 1,000 x input price",
+      substitution: usesPerImagePricing
+        ? `${input.images.length} x ${monthlyRequests.toLocaleString("en-US")} x ${googleImagePrice} = ${paygo.imageCost.toFixed(2)}`
+        : `${inputImageTokens.toLocaleString("en-US")} x ${monthlyRequests.toLocaleString("en-US")} / 1,000 x ${model["input token price per 1k"]} = ${paygo.imageCost.toFixed(2)}`,
+    });
+  }
+
+  steps.push(
     {
       output: "Monthly PayGO output cost",
       result: paygo.outputCost,
@@ -358,14 +398,10 @@ function buildExplanation(args: {
       output: "PayGO cost",
       result: paygo.totalCost,
       unit: "USD/month",
-      formula: "PayGO cost = input cost + output cost",
-      substitution: `${paygo.inputCost.toFixed(2)} + ${paygo.outputCost.toFixed(2)} = ${paygo.totalCost.toFixed(2)}`,
-      note:
-        inputImageTokens > 0
-          ? `${inputImageTokens.toLocaleString("en-US")} calculated image input tokens are used for PTU sizing and TPM-per-dollar, matching the original tool.`
-          : undefined,
+      formula: "PayGO cost = input cost + image cost + output cost",
+      substitution: `${paygo.inputCost.toFixed(2)} + ${paygo.imageCost.toFixed(2)} + ${paygo.outputCost.toFixed(2)} = ${paygo.totalCost.toFixed(2)}`,
     },
-  ];
+  );
 
   if (usesAutomaticProvisionedSizing(model)) {
     const metrics = ptuMetrics;
@@ -606,6 +642,8 @@ function calculateScenarioValues(input: ScenarioInput): ScenarioCalculation {
     input.rpm,
     input.model,
     input.cacheHitRate,
+    inputImageTokens,
+    input.images.length,
   );
   const ptuPricing = calculatePtuCost(
     requiredPtus,
@@ -729,16 +767,31 @@ function calculateCurvePoint(
     rpm,
     paygoCost: result.paygo.totalCost,
     ptuCost: result.ptuPricing.discountedCost,
+    requiredPtus: result.requiredPtus,
     deployedPtus: result.ptuPricing.deployedPtus,
   };
 }
 
-function findEstimatedBreakEven(points: CostCurvePoint[]): number | undefined {
-  const point = points.find(
-    (candidate) =>
-      candidate.rpm > 0 && candidate.paygoCost >= candidate.ptuCost,
-  );
-  return point?.rpm;
+function findBreakEvenRpm(input: ScenarioInput): number | undefined {
+  const minimumPoint = calculateCurvePoint(input, 0);
+  const oneRpmPoint = calculateCurvePoint(input, 1);
+  if (oneRpmPoint.paygoCost <= 0) {
+    return undefined;
+  }
+
+  const candidate = minimumPoint.ptuCost / oneRpmPoint.paygoCost;
+  const isAutomaticallySized =
+    usesAutomaticProvisionedSizing(input.model) ||
+    input.model.provider === "Google";
+  if (
+    isAutomaticallySized &&
+    oneRpmPoint.requiredPtus > 0 &&
+    candidate > minimumPoint.deployedPtus / oneRpmPoint.requiredPtus
+  ) {
+    return undefined;
+  }
+
+  return candidate;
 }
 
 export function calculateCostOptimization(
@@ -758,13 +811,7 @@ export function calculateCostOptimization(
     })),
   );
 
-  const paygoAtOneRpm = calculatePaygoCost(
-    input.inputTextTokens,
-    input.outputTokens,
-    1,
-    input.model,
-    input.cacheHitRate,
-  ).totalCost;
+  const paygoAtOneRpm = calculateCurvePoint(configurations[0].input, 1).paygoCost;
   const lowestMinimumPtuCost = Math.min(
     ...configurations.map(({ input: configurationInput }) =>
       calculateScenarioValues({ ...configurationInput, rpm: 0 }).ptuPricing
@@ -782,12 +829,29 @@ export function calculateCostOptimization(
     { length: 41 },
     (_, index) => (maxRpm * index) / 40,
   );
-  const rpms = Array.from(new Set([...sampledRpms, input.rpm])).sort(
-    (left, right) => left - right,
-  );
+  const configuredBreakEvens = configurations.map((configuration) => ({
+    ...configuration,
+    breakEvenRpm: findBreakEvenRpm(configuration.input),
+  }));
+  const rpms = Array.from(
+    new Set([
+      ...sampledRpms,
+      input.rpm,
+      ...configuredBreakEvens.flatMap(({ breakEvenRpm }) =>
+        breakEvenRpm === undefined || breakEvenRpm > maxRpm
+          ? []
+          : [breakEvenRpm],
+      ),
+    ]),
+  ).sort((left, right) => left - right);
 
-  const curves: PtuConfigurationCurve[] = configurations.map(
-    ({ deploymentType, commitmentType, input: configurationInput }) => {
+  const curves: PtuConfigurationCurve[] = configuredBreakEvens.map(
+    ({
+      deploymentType,
+      commitmentType,
+      input: configurationInput,
+      breakEvenRpm,
+    }) => {
       const points = rpms.map((rpm) =>
         calculateCurvePoint(configurationInput, rpm),
       );
@@ -810,7 +874,7 @@ export function calculateCostOptimization(
               ? 0
               : (savings / currentPoint.paygoCost) * 100,
         },
-        breakEvenRpm: findEstimatedBreakEven(points),
+        breakEvenRpm,
       };
     },
   );
