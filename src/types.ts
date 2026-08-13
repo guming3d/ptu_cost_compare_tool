@@ -89,6 +89,7 @@ export interface CostBreakdown {
   nonCachedInputCost: number;
   cachedInputCost: number;
   inputCost: number;
+  imageCost: number;
   outputCost: number;
   totalCost: number;
 }
@@ -117,4 +118,30 @@ export interface ComparisonResult {
   ptuDiscount: number;
   normalizedTpm?: number;
   explanation: CalculationExplanation;
+}
+
+export interface CostCurvePoint {
+  rpm: number;
+  paygoCost: number;
+  ptuCost: number;
+  requiredPtus: number;
+  deployedPtus: number;
+}
+
+export interface PtuConfigurationCurve {
+  id: string;
+  commitmentType: CommitmentType;
+  deploymentType: string;
+  points: CostCurvePoint[];
+  current: CostCurvePoint & {
+    savings: number;
+    savingsPercentage: number;
+  };
+  breakEvenRpm?: number;
+}
+
+export interface CostOptimization {
+  maxRpm: number;
+  configurations: PtuConfigurationCurve[];
+  bestConfiguration: PtuConfigurationCurve;
 }

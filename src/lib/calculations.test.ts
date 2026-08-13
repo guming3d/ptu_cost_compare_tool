@@ -2,11 +2,15 @@ import { describe, expect, it } from "vitest";
 import { bundledCatalog } from "../data/catalog";
 import type { ModelConfig } from "../types";
 import {
+  calculateAzureImageTokens,
+  calculateCostOptimization,
   calculateGpt4oImageTokens,
   calculateProvisionedPtuNum,
   calculatePtuCost,
   calculateScenario,
+  MINUTES_PER_MONTH,
   roundUpPtus,
+  supportsAzureImageInput,
 } from "./calculations";
 
 function model(name: string): ModelConfig {
@@ -64,9 +68,85 @@ describe("PTU calculations", () => {
   });
 
   it("calculates Azure high-detail image tiles", () => {
+    expect(calculateGpt4oImageTokens(512, 512, "high")).toBe(255);
     expect(calculateGpt4oImageTokens(1024, 1024, "high")).toBe(765);
     expect(calculateGpt4oImageTokens(2048, 4096, "high")).toBe(1105);
     expect(calculateGpt4oImageTokens(4096, 8192, "low")).toBe(85);
+    expect(
+      calculateAzureImageTokens(
+        "azure openai GPT-4o-mini",
+        1024,
+        768,
+        "low",
+      ),
+    ).toBe(2833);
+    expect(
+      calculateAzureImageTokens(
+        "azure openai gpt-4.1-mini",
+        64,
+        64,
+        "low",
+      ),
+    ).toBe(7);
+    expect(
+      calculateAzureImageTokens(
+        "azure openai gpt-4.1-mini",
+        255,
+        7983,
+        "high",
+      ),
+    ).toBe(
+      calculateAzureImageTokens(
+        "azure openai gpt-4.1-mini",
+        7983,
+        255,
+        "high",
+      ),
+    );
+    expect(calculateAzureImageTokens("azure openai o3", 1024, 1024, "high")).toBe(
+      675,
+    );
+    expect(calculateAzureImageTokens("azure openai o3", 512, 512, "high")).toBe(
+      225,
+    );
+    expect(supportsAzureImageInput("azure openai o1")).toBe(true);
+    expect(supportsAzureImageInput("azure openai o3-mini")).toBe(false);
+  });
+
+  it("includes Azure image input tokens in PayGO cost", () => {
+    const result = calculateScenario({
+      model: model("azure openai GPT-4o-mini"),
+      inputTextTokens: 0,
+      outputTokens: 0,
+      rpm: 1,
+      cacheHitRate: 0,
+      images: [{ id: "image", width: 1024, height: 768, quality: "low" }],
+      commitmentType: "Monthly",
+      deploymentType: "Global / Data Zone",
+    });
+
+    expect(result.inputImageTokens).toBe(2833);
+    expect(result.paygoBreakdown.imageCost).toBeCloseTo(
+      (2833 * MINUTES_PER_MONTH * 0.00015) / 1000,
+    );
+    expect(result.paygoCost).toBe(result.paygoBreakdown.imageCost);
+  });
+
+  it("includes Google per-image charges in PayGO cost", () => {
+    const result = calculateScenario({
+      model: model("google gemini-1.5 pro"),
+      inputTextTokens: 1000,
+      outputTokens: 0,
+      rpm: 1,
+      cacheHitRate: 0,
+      images: [{ id: "image", width: 1024, height: 768, quality: "low" }],
+      commitmentType: "Monthly",
+      deploymentType: "Global / Data Zone",
+    });
+
+    expect(result.paygoBreakdown.imageCost).toBeCloseTo(
+      MINUTES_PER_MONTH * 0.00032875,
+    );
   });
 
   it("estimates Fireworks GLM sizing with a 1:1 token ratio", () => {
@@ -106,6 +186,111 @@ describe("PTU calculations", () => {
 
     expect(result.requiredPtus).toBe(401);
     expect(result.deployedPtus).toBe(600);
+  });
+
+  it("finds the lowest-cost PTU configuration and builds comparable curves", () => {
+    const optimization = calculateCostOptimization({
+      model: model("azure openai gpt-5.2 (2025-12-11)"),
+      inputTextTokens: 3500,
+      outputTokens: 300,
+      rpm: 60,
+      cacheHitRate: 0,
+      images: [],
+      commitmentType: "Monthly",
+      deploymentType: "Regional",
+    });
+
+    expect(optimization.configurations).toHaveLength(4);
+    expect(optimization.bestConfiguration.commitmentType).toBe("Yearly");
+    expect(optimization.bestConfiguration.deploymentType).toBe(
+      "Global / Data Zone",
+    );
+    expect(
+      optimization.bestConfiguration.points.some((point) => point.rpm === 60),
+    ).toBe(true);
+    expect(
+      new Set(
+        optimization.configurations.map(
+          (configuration) => configuration.current.paygoCost,
+        ),
+      ).size,
+    ).toBe(1);
+    expect(optimization.bestConfiguration.breakEvenRpm).toBeGreaterThan(0);
+  });
+
+  it("keeps manually sized PTU cost fixed across the optimization curve", () => {
+    const optimization = calculateCostOptimization({
+      model: model("fireworks DeepSeek V4 Pro"),
+      inputTextTokens: 3500,
+      outputTokens: 300,
+      rpm: 60,
+      cacheHitRate: 0,
+      images: [],
+      commitmentType: "Monthly",
+      deploymentType: "Global / Data Zone",
+      manualRequiredPtus: 401,
+    });
+
+    expect(optimization.configurations).toHaveLength(2);
+    expect(
+      new Set(
+        optimization.bestConfiguration.points.map((point) => point.ptuCost),
+      ).size,
+    ).toBe(1);
+  });
+
+  it("calculates break-even independently of a large chart range", () => {
+    const optimization = calculateCostOptimization({
+      model: model("azure openai gpt-5.6-luna (2026-07-09)"),
+      inputTextTokens: 3500,
+      outputTokens: 300,
+      rpm: 1_000_000,
+      cacheHitRate: 0,
+      images: [],
+      commitmentType: "Monthly",
+      deploymentType: "Global / Data Zone",
+    });
+
+    expect(optimization.bestConfiguration.breakEvenRpm).toBeLessThan(100);
+    expect(
+      optimization.bestConfiguration.points.some(
+        (point) =>
+          point.rpm === optimization.bestConfiguration.breakEvenRpm,
+      ),
+    ).toBe(true);
+    const firstPtuCost = optimization.bestConfiguration.points[0].ptuCost;
+    const firstCapacityIncrease =
+      optimization.bestConfiguration.points.find(
+        (point) => point.ptuCost > firstPtuCost,
+      );
+    expect(firstCapacityIncrease?.rpm).toBeLessThan(100);
+  });
+
+  it("uses the first positive deployable tier for regional break-even", () => {
+    const optimization = calculateCostOptimization({
+      model: model("azure openai o1"),
+      inputTextTokens: 3500,
+      outputTokens: 0,
+      rpm: 20,
+      cacheHitRate: 75,
+      images: [],
+      commitmentType: "Monthly",
+      deploymentType: "Regional",
+    });
+    const regionalMonthly = optimization.configurations.find(
+      (configuration) =>
+        configuration.commitmentType === "Monthly" &&
+        configuration.deploymentType === "Regional",
+    );
+    const breakEvenPoint = regionalMonthly?.points.find(
+      (point) => point.rpm === regionalMonthly.breakEvenRpm,
+    );
+
+    expect(regionalMonthly?.breakEvenRpm).toBeGreaterThan(0);
+    expect(breakEvenPoint?.deployedPtus).toBe(50);
+    expect(breakEvenPoint?.paygoCost).toBeCloseTo(
+      breakEvenPoint?.ptuCost ?? 0,
+    );
   });
 
   it("ships the verified current model catalog", () => {

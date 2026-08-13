@@ -2,8 +2,12 @@ import type {
   CalculationExplanation,
   CalculationStep,
   ComparisonResult,
+  CostOptimization,
   CostBreakdown,
+  CostCurvePoint,
+  DeploymentType,
   ModelConfig,
+  PtuConfigurationCurve,
   PtuMetrics,
   ScenarioInput,
 } from "../types";
@@ -69,11 +73,21 @@ export function calculateGpt4oImageTokens(
   height: number,
   detailLevel: "low" | "high",
 ): number {
+  return calculateDetailImageTokens(width, height, detailLevel, 85, 170);
+}
+
+function calculateDetailImageTokens(
+  width: number,
+  height: number,
+  detailLevel: "low" | "high",
+  baseTokens: number,
+  tokensPerTile: number,
+): number {
   if (width <= 0 || height <= 0) {
     return 0;
   }
   if (detailLevel === "low") {
-    return 85;
+    return baseTokens;
   }
 
   const firstScale = Math.min(2048 / width, 2048 / height, 1);
@@ -89,7 +103,91 @@ export function calculateGpt4oImageTokens(
 
   const tiles =
     Math.ceil(resizedWidth / 512) * Math.ceil(resizedHeight / 512);
-  return tiles * 170 + 85;
+  return tiles * tokensPerTile + baseTokens;
+}
+
+function calculatePatchImageTokens(
+  width: number,
+  height: number,
+  multiplier: number,
+): number {
+  const patchSize = 32;
+  const patchCap = 1536;
+  let widthPatches = Math.ceil(width / patchSize);
+  let heightPatches = Math.ceil(height / patchSize);
+
+  if (widthPatches * heightPatches > patchCap) {
+    const widthPatchRatio = width / patchSize;
+    const heightPatchRatio = height / patchSize;
+    let low = 0;
+    let high = 1;
+
+    for (let iteration = 0; iteration < 50; iteration += 1) {
+      const scale = (low + high) / 2;
+      const scaledWidthPatches = Math.ceil(widthPatchRatio * scale);
+      const scaledHeightPatches = Math.ceil(heightPatchRatio * scale);
+      if (scaledWidthPatches * scaledHeightPatches <= patchCap) {
+        low = scale;
+      } else {
+        high = scale;
+      }
+    }
+
+    widthPatches = Math.ceil(widthPatchRatio * low);
+    heightPatches = Math.ceil(heightPatchRatio * low);
+  }
+
+  return Math.ceil(widthPatches * heightPatches * multiplier);
+}
+
+export function calculateAzureImageTokens(
+  modelName: string,
+  width: number,
+  height: number,
+  detailLevel: "low" | "high",
+): number {
+  if (width <= 0 || height <= 0) {
+    return 0;
+  }
+
+  const normalizedName = modelName.toLowerCase();
+  if (normalizedName.includes("gpt-4.1-mini")) {
+    return calculatePatchImageTokens(width, height, 1.62);
+  }
+  if (normalizedName.includes("gpt-4.1-nano")) {
+    return calculatePatchImageTokens(width, height, 2.46);
+  }
+  if (normalizedName.includes("o4-mini")) {
+    return calculatePatchImageTokens(width, height, 1.72);
+  }
+  if (normalizedName.includes("gpt-4o-mini")) {
+    return calculateDetailImageTokens(
+      width,
+      height,
+      detailLevel,
+      2833,
+      5667,
+    );
+  }
+  if (
+    /(?:^| )(?:o1|o3)(?: |$|\()/.test(normalizedName)
+  ) {
+    return calculateDetailImageTokens(
+      width,
+      height,
+      detailLevel,
+      75,
+      150,
+    );
+  }
+
+  return calculateGpt4oImageTokens(width, height, detailLevel);
+}
+
+export function supportsAzureImageInput(modelName: string): boolean {
+  return /(?:^| )(?:gpt-4o(?:-mini)?|gpt-4\.1(?:-mini|-nano)?|o4-mini|o1|o3)(?: |$|\()/.test(
+    modelName.toLowerCase(),
+  );
 }
 
 export function calculateProvisionedPtuNum(
@@ -138,10 +236,14 @@ export function calculatePaygoCost(
   rpm: number,
   model: ModelConfig,
   cacheHitRate = 0,
+  imageInputTokens = 0,
+  imageCount = 0,
 ): CostBreakdown {
   if (cacheHitRate < 0 || cacheHitRate > 100) {
     throw new Error("Cache hit rate must be between 0 and 100.");
   }
+  requireNonNegative(imageInputTokens, "Image input tokens");
+  requireNonNegative(imageCount, "Image count");
 
   const monthlyRequests = rpm * MINUTES_PER_MONTH;
   const cachedInputTokens = inputTokens * (cacheHitRate / 100);
@@ -155,14 +257,26 @@ export function calculatePaygoCost(
   const outputCost =
     ((outputTokens * monthlyRequests) / 1000) *
     model["output token price per 1k"];
+  const imageTokenCost =
+    ((imageInputTokens * monthlyRequests) / 1000) *
+    model["input token price per 1k"];
+  const imageUnitPrice =
+    model.provider === "Google"
+      ? inputTokens <= 128_000
+        ? (model["price per image(<=128k input tokens)"] ?? 0)
+        : (model["price per image(>128k input tokens)"] ?? 0)
+      : 0;
+  const imageCost =
+    imageTokenCost + imageCount * monthlyRequests * imageUnitPrice;
   const inputCost = nonCachedInputCost + cachedInputCost;
 
   return {
     nonCachedInputCost,
     cachedInputCost,
     inputCost,
+    imageCost,
     outputCost,
-    totalCost: inputCost + outputCost,
+    totalCost: inputCost + imageCost + outputCost,
   };
 }
 
@@ -264,10 +378,9 @@ function getCommitmentPricing(input: ScenarioInput): {
 }
 
 function calculateImageInputTokens(input: ScenarioInput): number {
-  const normalizedName = input.model["model name"].toLowerCase();
   const supportsAzureImageMetering =
     input.model.provider === "Azure OpenAI" &&
-    (normalizedName.includes("gpt-4o") || normalizedName.includes("gpt-4.1"));
+    supportsAzureImageInput(input.model["model name"]);
 
   if (!supportsAzureImageMetering) {
     return 0;
@@ -276,7 +389,12 @@ function calculateImageInputTokens(input: ScenarioInput): number {
   return input.images.reduce(
     (total, image) =>
       total +
-      calculateGpt4oImageTokens(image.width, image.height, image.quality),
+      calculateAzureImageTokens(
+        input.model["model name"],
+        image.width,
+        image.height,
+        image.quality,
+      ),
     0,
   );
 }
@@ -343,6 +461,30 @@ function buildExplanation(args: {
       substitution: `(${nonCachedTokens.toLocaleString("en-US")} x ${monthlyRequests.toLocaleString("en-US")} / 1,000 x ${model["input token price per 1k"]}) + (${cachedTokens.toLocaleString("en-US")} x ${monthlyRequests.toLocaleString("en-US")} / 1,000 x ${model["input token price per 1k with cache hit"]}) = ${paygo.inputCost.toFixed(2)}`,
       note: `${input.inputTextTokens.toLocaleString("en-US")} input tokens per request at a ${input.cacheHitRate}% cache-hit rate.`,
     },
+  ];
+
+  if (paygo.imageCost > 0) {
+    const googleImagePrice =
+      input.inputTextTokens <= 128_000
+        ? model["price per image(<=128k input tokens)"]
+        : model["price per image(>128k input tokens)"];
+    const usesPerImagePricing =
+      model.provider === "Google" && googleImagePrice !== undefined;
+
+    steps.push({
+      output: "Monthly PayGO image cost",
+      result: paygo.imageCost,
+      unit: "USD/month",
+      formula: usesPerImagePricing
+        ? "image count x monthly requests x image price"
+        : "image input tokens x monthly requests / 1,000 x input price",
+      substitution: usesPerImagePricing
+        ? `${input.images.length} x ${monthlyRequests.toLocaleString("en-US")} x ${googleImagePrice} = ${paygo.imageCost.toFixed(2)}`
+        : `${inputImageTokens.toLocaleString("en-US")} x ${monthlyRequests.toLocaleString("en-US")} / 1,000 x ${model["input token price per 1k"]} = ${paygo.imageCost.toFixed(2)}`,
+    });
+  }
+
+  steps.push(
     {
       output: "Monthly PayGO output cost",
       result: paygo.outputCost,
@@ -354,14 +496,10 @@ function buildExplanation(args: {
       output: "PayGO cost",
       result: paygo.totalCost,
       unit: "USD/month",
-      formula: "PayGO cost = input cost + output cost",
-      substitution: `${paygo.inputCost.toFixed(2)} + ${paygo.outputCost.toFixed(2)} = ${paygo.totalCost.toFixed(2)}`,
-      note:
-        inputImageTokens > 0
-          ? `${inputImageTokens.toLocaleString("en-US")} calculated image input tokens are used for PTU sizing and TPM-per-dollar, matching the original tool.`
-          : undefined,
+      formula: "PayGO cost = input cost + image cost + output cost",
+      substitution: `${paygo.inputCost.toFixed(2)} + ${paygo.imageCost.toFixed(2)} + ${paygo.outputCost.toFixed(2)} = ${paygo.totalCost.toFixed(2)}`,
     },
-  ];
+  );
 
   if (usesAutomaticProvisionedSizing(model)) {
     const metrics = ptuMetrics;
@@ -512,7 +650,27 @@ function buildExplanation(args: {
   };
 }
 
-export function calculateScenario(input: ScenarioInput): ComparisonResult {
+interface ScenarioCalculation {
+  minimumPtus: number;
+  scaleIncrement: number;
+  deploymentLabel: string;
+  pricePerUnit: number;
+  discount: number;
+  inputImageTokens: number;
+  requiredPtus: number;
+  ptuMetrics?: PtuMetrics;
+  paygo: CostBreakdown;
+  ptuPricing: {
+    deployedPtus: number;
+    costBeforeDiscount: number;
+    discountedCost: number;
+  };
+  ptuUtilization: number;
+  tpmPerDollar: number;
+  costSavingPercentage: number;
+}
+
+function calculateScenarioValues(input: ScenarioInput): ScenarioCalculation {
   requireNonNegative(input.inputTextTokens, "Input tokens");
   requireNonNegative(input.outputTokens, "Output tokens");
   requireNonNegative(input.rpm, "RPM");
@@ -582,6 +740,8 @@ export function calculateScenario(input: ScenarioInput): ComparisonResult {
     input.rpm,
     input.model,
     input.cacheHitRate,
+    inputImageTokens,
+    input.images.length,
   );
   const ptuPricing = calculatePtuCost(
     requiredPtus,
@@ -603,6 +763,40 @@ export function calculateScenario(input: ScenarioInput): ComparisonResult {
     paygo.totalCost === 0
       ? 0
       : ((paygo.totalCost - ptuPricing.discountedCost) / paygo.totalCost) * 100;
+
+  return {
+    minimumPtus,
+    scaleIncrement,
+    deploymentLabel,
+    pricePerUnit,
+    discount,
+    inputImageTokens,
+    requiredPtus,
+    ptuMetrics,
+    paygo,
+    ptuPricing,
+    ptuUtilization,
+    tpmPerDollar,
+    costSavingPercentage,
+  };
+}
+
+export function calculateScenario(input: ScenarioInput): ComparisonResult {
+  const {
+    minimumPtus,
+    scaleIncrement,
+    deploymentLabel,
+    pricePerUnit,
+    discount,
+    inputImageTokens,
+    requiredPtus,
+    ptuMetrics,
+    paygo,
+    ptuPricing,
+    ptuUtilization,
+    tpmPerDollar,
+    costSavingPercentage,
+  } = calculateScenarioValues(input);
   const explanation = buildExplanation({
     input,
     inputImageTokens,
@@ -645,5 +839,235 @@ export function calculateScenario(input: ScenarioInput): ComparisonResult {
     ptuDiscount: discount,
     normalizedTpm: ptuMetrics?.normalizedTpm,
     explanation,
+  };
+}
+
+function getOptimizationDeployments(input: ScenarioInput): DeploymentType[] {
+  if (input.model.provider !== "Azure OpenAI") {
+    return ["Global / Data Zone"];
+  }
+
+  const hasRegionalConfiguration =
+    (input.model["regional PTU minimum deployment unit"] ?? 0) > 0 &&
+    (input.model["regional PTU scale increment"] ?? 0) > 0;
+
+  return hasRegionalConfiguration
+    ? ["Global / Data Zone", "Regional"]
+    : ["Global / Data Zone"];
+}
+
+function calculateCurvePoint(
+  input: ScenarioInput,
+  rpm: number,
+): CostCurvePoint {
+  const result = calculateScenarioValues({ ...input, rpm });
+  return {
+    rpm,
+    paygoCost: result.paygo.totalCost,
+    ptuCost: result.ptuPricing.discountedCost,
+    requiredPtus: result.requiredPtus,
+    deployedPtus: result.ptuPricing.deployedPtus,
+  };
+}
+
+function findBreakEvenRpm(input: ScenarioInput): number | undefined {
+  const oneRpmPoint = calculateCurvePoint(input, 1);
+  if (oneRpmPoint.paygoCost <= 0) {
+    return undefined;
+  }
+
+  const isAutomaticallySized =
+    usesAutomaticProvisionedSizing(input.model) ||
+    input.model.provider === "Google";
+  if (!isAutomaticallySized || oneRpmPoint.requiredPtus <= 0) {
+    return calculateCurvePoint(input, 0).ptuCost / oneRpmPoint.paygoCost;
+  }
+
+  const { minimumPtus, scaleIncrement } = getDeploymentCapacity(input);
+  const { pricePerUnit, discount } = getCommitmentPricing(input);
+  const unitCost = pricePerUnit * (1 - discount);
+  const requiredPtusPerRpm = oneRpmPoint.requiredPtus;
+  let lowerRequiredPtus = 0;
+  let upperRequiredPtus = Math.max(
+    scaleIncrement,
+    Math.floor(minimumPtus / scaleIncrement) * scaleIncrement,
+  );
+  let deployedPtus = roundUpPtus(
+    Number.EPSILON,
+    minimumPtus,
+    scaleIncrement,
+  );
+
+  for (let tier = 0; tier < 2; tier += 1) {
+    const lowerRpm = lowerRequiredPtus / requiredPtusPerRpm;
+    const upperRpm = upperRequiredPtus / requiredPtusPerRpm;
+    const candidateRpm =
+      (deployedPtus * unitCost) / oneRpmPoint.paygoCost;
+
+    if (candidateRpm > lowerRpm && candidateRpm <= upperRpm) {
+      return candidateRpm;
+    }
+    if (candidateRpm <= lowerRpm) {
+      return lowerRpm;
+    }
+    if (requiredPtusPerRpm * unitCost >= oneRpmPoint.paygoCost) {
+      return undefined;
+    }
+
+    lowerRequiredPtus = upperRequiredPtus;
+    upperRequiredPtus += scaleIncrement;
+    deployedPtus = upperRequiredPtus;
+  }
+
+  return undefined;
+}
+
+function getCapacityTransitionRpms(
+  input: ScenarioInput,
+  maxRpm: number,
+): number[] {
+  const isAutomaticallySized =
+    usesAutomaticProvisionedSizing(input.model) ||
+    input.model.provider === "Google";
+  if (!isAutomaticallySized) {
+    return [];
+  }
+
+  const oneRpmPoint = calculateCurvePoint(input, 1);
+  if (oneRpmPoint.requiredPtus <= 0) {
+    return [];
+  }
+
+  const { minimumPtus, scaleIncrement } = getDeploymentCapacity(input);
+  const firstBoundary = Math.max(
+    scaleIncrement,
+    Math.floor(minimumPtus / scaleIncrement) * scaleIncrement,
+  );
+  const requiredAtMaximum = oneRpmPoint.requiredPtus * maxRpm;
+  if (requiredAtMaximum < firstBoundary) {
+    return [];
+  }
+
+  const transitionCount =
+    Math.floor((requiredAtMaximum - firstBoundary) / scaleIncrement) + 1;
+  const maximumTransitions = 120;
+  const transitionIndexes =
+    transitionCount <= maximumTransitions
+      ? Array.from({ length: transitionCount }, (_, index) => index)
+      : Array.from(
+          { length: maximumTransitions },
+          (_, index) =>
+            Math.round(
+              (index * (transitionCount - 1)) / (maximumTransitions - 1),
+            ),
+        );
+  const epsilon = Math.max(maxRpm * 1e-9, Number.EPSILON);
+
+  return Array.from(new Set(transitionIndexes)).flatMap((index) => {
+    const capacity = firstBoundary + index * scaleIncrement;
+    const transitionRpm = capacity / oneRpmPoint.requiredPtus;
+    return [
+      transitionRpm,
+      Math.min(maxRpm, transitionRpm + epsilon),
+    ];
+  });
+}
+
+export function calculateCostOptimization(
+  input: ScenarioInput,
+): CostOptimization {
+  const deployments = getOptimizationDeployments(input);
+  const commitments = ["Monthly", "Yearly"] as const;
+  const configurations = deployments.flatMap((deploymentType) =>
+    commitments.map((commitmentType) => ({
+      deploymentType,
+      commitmentType,
+      input: {
+        ...input,
+        deploymentType,
+        commitmentType,
+      },
+    })),
+  );
+
+  const paygoAtOneRpm = calculateCurvePoint(configurations[0].input, 1).paygoCost;
+  const lowestMinimumPtuCost = Math.min(
+    ...configurations.map(({ input: configurationInput }) =>
+      calculateScenarioValues({ ...configurationInput, rpm: 0 }).ptuPricing
+        .discountedCost,
+    ),
+  );
+  const estimatedBreakEven =
+    paygoAtOneRpm > 0 ? lowestMinimumPtuCost / paygoAtOneRpm : 0;
+  const maxRpm = Math.max(
+    100,
+    Math.ceil(input.rpm * 2),
+    Math.ceil(estimatedBreakEven * 1.5),
+  );
+  const sampledRpms = Array.from(
+    { length: 41 },
+    (_, index) => (maxRpm * index) / 40,
+  );
+  const configuredBreakEvens = configurations.map((configuration) => ({
+    ...configuration,
+    breakEvenRpm: findBreakEvenRpm(configuration.input),
+  }));
+  const transitionRpms = configuredBreakEvens.flatMap((configuration) =>
+    getCapacityTransitionRpms(configuration.input, maxRpm),
+  );
+  const rpms = Array.from(
+    new Set([
+      ...sampledRpms,
+      ...transitionRpms,
+      input.rpm,
+      ...configuredBreakEvens.flatMap(({ breakEvenRpm }) =>
+        breakEvenRpm === undefined || breakEvenRpm > maxRpm
+          ? []
+          : [breakEvenRpm],
+      ),
+    ]),
+  ).sort((left, right) => left - right);
+
+  const curves: PtuConfigurationCurve[] = configuredBreakEvens.map(
+    ({
+      deploymentType,
+      commitmentType,
+      input: configurationInput,
+      breakEvenRpm,
+    }) => {
+      const points = rpms.map((rpm) =>
+        calculateCurvePoint(configurationInput, rpm),
+      );
+      const currentPoint = calculateCurvePoint(configurationInput, input.rpm);
+      const savings = currentPoint.paygoCost - currentPoint.ptuCost;
+
+      return {
+        id: `${deploymentType}-${commitmentType}`,
+        commitmentType,
+        deploymentType:
+          input.model.provider === "Azure OpenAI"
+            ? deploymentType
+            : "Configured default",
+        points,
+        current: {
+          ...currentPoint,
+          savings,
+          savingsPercentage:
+            currentPoint.paygoCost === 0
+              ? 0
+              : (savings / currentPoint.paygoCost) * 100,
+        },
+        breakEvenRpm,
+      };
+    },
+  );
+  const bestConfiguration = curves.reduce((best, candidate) =>
+    candidate.current.ptuCost < best.current.ptuCost ? candidate : best,
+  );
+
+  return {
+    maxRpm,
+    configurations: curves,
+    bestConfiguration,
   };
 }

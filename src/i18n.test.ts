@@ -13,6 +13,7 @@ describe("UI translations", () => {
 
   it("provides Simplified Chinese UI and calculation labels", () => {
     expect(getUiText("zh-CN").hero.title).toBe("比较 PTU 与 PayGO 成本");
+    expect(getUiText("zh-CN").optimizer.title).toBe("最佳 PTU 配置");
     expect(localizeExplanationText("Required PTU Num", "zh-CN")).toBe(
       "所需 PTU 数",
     );

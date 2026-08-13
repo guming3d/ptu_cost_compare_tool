@@ -70,6 +70,27 @@ const UI_TEXT = {
       perMonth: "per month",
       ptuVersusPaygo: "PTU versus PayGO",
     },
+    optimizer: {
+      ariaLabel: "PTU configuration optimizer",
+      title: "Best PTU configuration",
+      description:
+        "Compare every available commitment and deployment option for this model at the current workload.",
+      bestConfiguration: "Lowest-cost configuration",
+      saves: "Saves",
+      paygoLowerBy: "PayGO is lower by",
+      perMonthAt: "per month at",
+      breakEven: "Estimated first break-even",
+      breakEvenNotReached: "No break-even is shown in this traffic range.",
+      chartAriaLabel:
+        "Monthly PayGO and PTU cost lines by requests per minute and configuration",
+      rpmAxis: "Requests per minute (RPM)",
+      currentTraffic: "Current traffic",
+      legend: "Cost line legend and current monthly values",
+      dataTable: "View chart data",
+      rpm: "RPM",
+      assumptions:
+        "The curve keeps the current tokens per request, cache rate, images, and manual PTU estimate fixed. PTU costs use capacity rounded to deployable units.",
+    },
     results: {
       ariaLabel: "Results",
       comparison: "Comparison",
@@ -112,7 +133,7 @@ const UI_TEXT = {
       utilizationFormula: "required PTUs / rounded deployable PTUs x 100",
       paygoCost: "PayGO monthly cost",
       paygoFormula:
-        "tokens/request x RPM x 60 x 24 x 30.42 / 1,000 x token price",
+        "text/image usage x RPM x 60 x 24 x 30.42 x applicable unit price",
       automaticEstimate: "Automatic PTU estimate",
       automaticFormula:
         "(input TPM + output ratio x output TPM) / input TPM per PTU",
@@ -217,6 +238,25 @@ const UI_TEXT = {
       perMonth: "每月",
       ptuVersusPaygo: "PTU 相比 PayGO",
     },
+    optimizer: {
+      ariaLabel: "PTU 配置优化器",
+      title: "最佳 PTU 配置",
+      description: "按当前工作负载比较此模型所有可用的承诺周期和部署选项。",
+      bestConfiguration: "成本最低的配置",
+      saves: "每月节省",
+      paygoLowerBy: "PayGO 每月低",
+      perMonthAt: "，当前流量",
+      breakEven: "预计首次盈亏平衡点",
+      breakEvenNotReached: "当前流量范围内未显示盈亏平衡点。",
+      chartAriaLabel: "按每分钟请求数和配置展示的 PayGO 与 PTU 月度成本曲线",
+      rpmAxis: "每分钟请求数（RPM）",
+      currentTraffic: "当前流量",
+      legend: "成本曲线图例和当前月度价格",
+      dataTable: "查看图表数据",
+      rpm: "RPM",
+      assumptions:
+        "曲线固定使用当前每次请求令牌数、缓存命中率、图像和手动 PTU 估算。PTU 成本使用向上取整后的可部署容量。",
+    },
     results: {
       ariaLabel: "结果",
       comparison: "对比结果",
@@ -257,7 +297,7 @@ const UI_TEXT = {
       utilizationFormula: "所需 PTU / 向上取整后的可部署 PTU x 100",
       paygoCost: "PayGO 月度成本",
       paygoFormula:
-        "每次请求令牌数 x RPM x 60 x 24 x 30.42 / 1,000 x 令牌价格",
+        "文本/图像用量 x RPM x 60 x 24 x 30.42 x 相应单价",
       automaticEstimate: "自动 PTU 估算",
       automaticFormula:
         "（输入 TPM + 输出比率 x 输出 TPM）/ 每 PTU 输入 TPM",
@@ -308,6 +348,7 @@ const UI_TEXT = {
 const ZH_EXPLANATION_TEXT: Record<string, string> = {
   "Monthly requests": "每月请求数",
   "Monthly PayGO input cost": "每月 PayGO 输入成本",
+  "Monthly PayGO image cost": "每月 PayGO 图像成本",
   "Monthly PayGO output cost": "每月 PayGO 输出成本",
   "PayGO cost": "PayGO 成本",
   "Effective text input tokens": "有效文本输入令牌",
@@ -333,6 +374,12 @@ const ZH_EXPLANATION_TEXT: Record<string, string> = {
     "输出令牌 x 每月请求数 / 1,000 x 输出价格",
   "PayGO cost = input cost + output cost":
     "PayGO 成本 = 输入成本 + 输出成本",
+  "image count x monthly requests x image price":
+    "图像数 x 每月请求数 x 图像单价",
+  "image input tokens x monthly requests / 1,000 x input price":
+    "图像输入令牌 x 每月请求数 / 1,000 x 输入价格",
+  "PayGO cost = input cost + image cost + output cost":
+    "PayGO 成本 = 输入成本 + 图像成本 + 输出成本",
   "input tokens x (1 - cache hit rate / 100)":
     "输入令牌 x（1 - 缓存命中率 / 100）",
   "RPM x (effective text input + image input) + output ratio x (RPM x output tokens)":
