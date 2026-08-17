@@ -148,7 +148,7 @@ export function CalculatorForm({
           type="range"
           min="0"
           max="100"
-          step="5"
+          step="1"
           value={cacheHitRate}
           onChange={(event) => onCacheHitRateChange(Number(event.target.value))}
         />
