@@ -1,6 +1,6 @@
 {
     "metadata": {
-        "verified date": "2026-08-12",
+        "verified date": "2026-08-17",
         "currency": "USD",
         "pricing scope": "Global Standard for Azure OpenAI; US Data Zone for Fireworks on Microsoft Foundry",
         "ptu sizing source": "https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/provisioned-throughput-sizing#deployment-parameters-and-throughput-values-by-model",
@@ -25,7 +25,7 @@
             "PTU scale increment": 5,
             "regional PTU minimum deployment unit": 50,
             "regional PTU scale increment": 50,
-            "input TPM per PTU": 5950,
+            "input TPM per PTU": 30000,
             "PTU price of monthly commitment": 260,
             "PTU price of yearly commitment": 221,
             "PTU monthly discount": 0,
@@ -42,7 +42,7 @@
             "PTU scale increment": 5,
             "regional PTU minimum deployment unit": 50,
             "regional PTU scale increment": 50,
-            "input TPM per PTU": 2400,
+            "input TPM per PTU": 3000,
             "PTU price of monthly commitment": 260,
             "PTU price of yearly commitment": 221,
             "PTU monthly discount": 0,
