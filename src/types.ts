@@ -17,6 +17,7 @@ export interface ModelConfig {
   provider: string;
   "input token price per 1k": number;
   "input token price per 1k with cache hit": number;
+  "cache write token price per 1k"?: number;
   "output token price per 1k": number;
   "PTU minumum deployment unit": number;
   "PTU scale increment": number;
