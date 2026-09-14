@@ -2,6 +2,7 @@ import {
   getUiText,
   localizeCommitment,
   localizeDeployment,
+  localizeExplanationText,
 } from "../i18n";
 import type { Language } from "../i18n";
 import type { ComparisonResult } from "../types";
@@ -19,6 +20,7 @@ export function exportResultsToExcel(
   language: Language,
 ): void {
   const text = getUiText(language).export;
+  const hasContextInputs = results.some((result) => result.contextMode !== undefined);
   const headers = [
     text.modelName,
     text.provider,
@@ -36,6 +38,7 @@ export function exportResultsToExcel(
     text.ptuCost,
     text.efficiency,
     text.savings,
+    ...(hasContextInputs ? [text.contextMode, text.cacheWriteTokens] : []),
   ];
 
   const rows = results.map((result) => [
@@ -55,6 +58,10 @@ export function exportResultsToExcel(
     result.ptuCost,
     result.tpmPerDollar,
     result.costSavingPercentage,
+    ...(hasContextInputs ? [
+      result.contextMode ? localizeExplanationText(result.contextMode, language) : "",
+      result.cacheWriteTokens ?? "",
+    ] : []),
   ]);
 
   const table = `

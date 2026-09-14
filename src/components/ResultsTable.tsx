@@ -3,6 +3,7 @@ import {
   getUiText,
   localizeCommitment,
   localizeDeployment,
+  localizeExplanationText,
 } from "../i18n";
 import type { Language } from "../i18n";
 import type { ComparisonResult } from "../types";
@@ -48,6 +49,12 @@ export function ResultsTable({
               <td>
                 <strong className="table-model">{result.modelName}</strong>
                 <span className="table-subtext">{result.provider}</span>
+                {result.contextMode ? (
+                  <span className="table-subtext">
+                    {getUiText(language).calculator.contextMode}:{" "}
+                    {localizeExplanationText(result.contextMode, language)}
+                  </span>
+                ) : null}
               </td>
               <td>
                 {result.rpm.toLocaleString(locale)} RPM

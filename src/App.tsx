@@ -16,6 +16,7 @@ import {
 import {
   calculateCostOptimization,
   calculateScenario,
+  usesImageTokenSizing,
 } from "./lib/calculations";
 import { exportResultsToExcel } from "./lib/exportExcel";
 import type { Language } from "./i18n";
@@ -23,6 +24,7 @@ import type {
   CatalogDocument,
   CommitmentType,
   ComparisonResult,
+  ContextMode,
   DeploymentType,
   WorkloadImage,
 } from "./types";
@@ -39,6 +41,9 @@ function App() {
   const [outputTokens, setOutputTokens] = useState(300);
   const [rpm, setRpm] = useState(60);
   const [cacheHitRate, setCacheHitRate] = useState(0);
+  const [contextMode, setContextMode] = useState<ContextMode>("short");
+  const [cacheWriteTokens, setCacheWriteTokens] = useState(0);
+  const [imageInputTokens, setImageInputTokens] = useState(0);
   const [images, setImages] = useState<WorkloadImage[]>([]);
   const [deploymentType, setDeploymentType] =
     useState<DeploymentType>("Global / Data Zone");
@@ -94,10 +99,17 @@ function App() {
       outputTokens,
       rpm,
       cacheHitRate,
-      images,
+      images: usesImageTokenSizing(selectedModel) ? [] : images,
       commitmentType,
       deploymentType,
       manualRequiredPtus,
+      contextMode: selectedModel["long context"] ? contextMode : undefined,
+      cacheWriteTokens: selectedModel["PTU input token weights"]
+        ? cacheWriteTokens
+        : undefined,
+      imageInputTokens: usesImageTokenSizing(selectedModel)
+        ? imageInputTokens
+        : undefined,
     }),
     [
       cacheHitRate,
@@ -109,24 +121,34 @@ function App() {
       outputTokens,
       rpm,
       selectedModel,
+      contextMode,
+      cacheWriteTokens,
+      imageInputTokens,
     ],
   );
 
-  const preview = useMemo(() => {
+  const previewState = useMemo(() => {
     try {
       const result = calculateScenario(scenarioInput);
       return {
-        requiredPtus: result.requiredPtus,
-        deployedPtus: result.deployedPtus,
-        normalizedTpm: result.normalizedTpm,
-        paygoCost: result.paygoCost,
-        ptuCost: result.ptuCost,
-        savings: result.costSavingPercentage,
+        value: {
+          requiredPtus: result.requiredPtus,
+          deployedPtus: result.deployedPtus,
+          normalizedTpm: result.normalizedTpm,
+          paygoCost: result.paygoCost,
+          ptuCost: result.ptuCost,
+          savings: result.costSavingPercentage,
+        },
+        error: null,
       };
-    } catch {
-      return null;
+    } catch (error) {
+      return {
+        value: null,
+        error: error instanceof Error ? error.message : text.errors.calculate,
+      };
     }
-  }, [scenarioInput]);
+  }, [scenarioInput, text.errors.calculate]);
+  const preview = previewState.value;
 
   const optimization = useMemo(() => {
     try {
@@ -226,6 +248,12 @@ function App() {
             onInputTextTokensChange={setInputTextTokens}
             cacheHitRate={cacheHitRate}
             onCacheHitRateChange={setCacheHitRate}
+            contextMode={contextMode}
+            onContextModeChange={setContextMode}
+            cacheWriteTokens={cacheWriteTokens}
+            onCacheWriteTokensChange={setCacheWriteTokens}
+            imageInputTokens={imageInputTokens}
+            onImageInputTokensChange={setImageInputTokens}
             outputTokens={outputTokens}
             onOutputTokensChange={setOutputTokens}
             rpm={rpm}
@@ -239,7 +267,7 @@ function App() {
             manualRequiredPtus={manualRequiredPtus}
             onManualRequiredPtusChange={setManualRequiredPtus}
             preview={preview}
-            error={submissionError}
+            error={previewState.error ?? submissionError}
             onAdd={addComparison}
             onClear={() => setResults([])}
             hasResults={results.length > 0}

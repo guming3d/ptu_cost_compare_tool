@@ -1,6 +1,22 @@
 export type CommitmentType = "Monthly" | "Yearly";
 export type DeploymentType = "Global / Data Zone" | "Regional";
 export type ImageQuality = "low" | "high";
+export type ContextMode = "short" | "long";
+
+export interface PtuInputTokenWeights {
+  uncached: number;
+  cached: number;
+  cacheWrite: number;
+}
+
+export interface TokenConfig {
+  "input token price per 1k": number;
+  "input token price per 1k with cache hit": number;
+  "cache write token price per 1k"?: number;
+  "output token price per 1k": number;
+  "output token multiple ratio"?: number;
+  "PTU input token weights"?: PtuInputTokenWeights;
+}
 
 export interface CatalogMetadata {
   "verified date": string;
@@ -12,13 +28,14 @@ export interface CatalogMetadata {
   notes: string[];
 }
 
-export interface ModelConfig {
+export interface ModelConfig extends TokenConfig {
   "model name": string;
   provider: string;
-  "input token price per 1k": number;
-  "input token price per 1k with cache hit": number;
-  "cache write token price per 1k"?: number;
-  "output token price per 1k": number;
+  "long context"?: TokenConfig;
+  "image input TPM per PTU"?: number;
+  "image output-to-input ratio"?: number;
+  "image input token price per 1k"?: number;
+  "configuration notes"?: string[];
   "PTU minumum deployment unit": number;
   "PTU scale increment": number;
   "PTU price of monthly commitment": number;
@@ -28,7 +45,6 @@ export interface ModelConfig {
   "regional PTU minimum deployment unit"?: number;
   "regional PTU scale increment"?: number;
   "input TPM per PTU"?: number;
-  "output token multiple ratio"?: number;
   "PTU sizing mode"?: string;
   "chars per GSU"?: number;
   "price per image(<=128k input tokens)"?: number;
@@ -59,6 +75,9 @@ export interface ScenarioInput {
   commitmentType: CommitmentType;
   deploymentType: DeploymentType;
   manualRequiredPtus?: number;
+  contextMode?: ContextMode;
+  cacheWriteTokens?: number;
+  imageInputTokens?: number;
 }
 
 export interface PtuMetrics {
@@ -93,6 +112,7 @@ export interface CostBreakdown {
   imageCost: number;
   outputCost: number;
   totalCost: number;
+  cacheWriteCost?: number;
 }
 
 export interface ComparisonResult {
@@ -118,6 +138,8 @@ export interface ComparisonResult {
   ptuCostBeforeDiscount: number;
   ptuDiscount: number;
   normalizedTpm?: number;
+  contextMode?: ContextMode;
+  cacheWriteTokens?: number;
   explanation: CalculationExplanation;
 }
 

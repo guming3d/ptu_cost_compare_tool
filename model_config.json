@@ -15,6 +15,71 @@
     },
     "models": [
         {
+            "model name": "azure openai gpt-6-astra (2026-09-03)",
+            "provider": "Azure OpenAI",
+            "output token multiple ratio": 5,
+            "input token price per 1k": 0.01,
+            "input token price per 1k with cache hit": 0.001,
+            "cache write token price per 1k": 0.0125,
+            "output token price per 1k": 0.05,
+            "PTU input token weights": {
+                "uncached": 1,
+                "cached": 0.1,
+                "cacheWrite": 1.25
+            },
+            "long context": {
+                "output token multiple ratio": 10,
+                "input token price per 1k": 0.02,
+                "input token price per 1k with cache hit": 0.002,
+                "cache write token price per 1k": 0.025,
+                "output token price per 1k": 0.075,
+                "PTU input token weights": {
+                    "uncached": 2,
+                    "cached": 0.2,
+                    "cacheWrite": 2.5
+                }
+            },
+            "PTU minumum deployment unit": 15,
+            "PTU scale increment": 5,
+            "regional PTU minimum deployment unit": 50,
+            "regional PTU scale increment": 50,
+            "input TPM per PTU": 600,
+            "PTU price of monthly commitment": 260,
+            "PTU price of yearly commitment": 221,
+            "PTU monthly discount": 0,
+            "PTU yearly discount": 0,
+            "configuration notes": [
+                "PTU sizing and token prices: supplied Microsoft Learn sizing guide updated 2026-09-11.",
+                "Long-context output currently consumes 10 normalized tokens, not the planned 7.5; PayGO output remains USD 75 per million.",
+                "The yearly monthly-equivalent reservation price follows the existing catalog assumption."
+            ]
+        },
+        {
+            "model name": "azure openai gpt-image-2 (2026-04-21)",
+            "provider": "Azure OpenAI",
+            "input token price per 1k": 0.005,
+            "input token price per 1k with cache hit": 0.00125,
+            "image input token price per 1k": 0.008,
+            "output token price per 1k": 0.03,
+            "PTU minumum deployment unit": 100,
+            "PTU scale increment": 100,
+            "regional PTU minimum deployment unit": 100,
+            "regional PTU scale increment": 100,
+            "input TPM per PTU": 1200,
+            "image input TPM per PTU": 750,
+            "image output-to-input ratio": 3.75,
+            "PTU price of monthly commitment": 260,
+            "PTU price of yearly commitment": 221,
+            "PTU monthly discount": 0,
+            "PTU yearly discount": 0,
+            "configuration notes": [
+                "PTU sizing: supplied Microsoft Learn sizing guide updated 2026-09-11. Image-to-text factor = 1200 / 750 = 1.6; image output weight = 3.75 x 1.6 = 6.",
+                "Global Standard token prices verified via the Azure Retail Prices API on 2026-09-14: text input USD 5/M, cached text USD 1.25/M, image input USD 8/M, image output USD 30/M.",
+                "Enter measured image input/output token counts; image input caching is not modeled. No latency SLA is defined.",
+                "PTU reservation prices follow the existing catalog assumptions."
+            ]
+        },
+        {
             "model name": "azure openai gpt-5.6-luna (2026-07-09)",
             "provider": "Azure OpenAI",
             "output token multiple ratio": 6,

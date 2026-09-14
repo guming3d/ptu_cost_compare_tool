@@ -9,6 +9,27 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function isPositive(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
+function hasValidNormalizedTextConfig(value: Record<string, unknown>): boolean {
+  const weights = value["PTU input token weights"];
+  return (
+    isRecord(weights) &&
+    isPositive(weights.uncached) &&
+    typeof weights.cached === "number" &&
+    Number.isFinite(weights.cached) &&
+    weights.cached >= 0 &&
+    isPositive(weights.cacheWrite) &&
+    isPositive(value["input token price per 1k"]) &&
+    isPositive(value["input token price per 1k with cache hit"]) &&
+    isPositive(value["cache write token price per 1k"]) &&
+    isPositive(value["output token price per 1k"]) &&
+    isPositive(value["output token multiple ratio"])
+  );
+}
+
 function isModelConfig(value: unknown): value is ModelConfig {
   if (!isRecord(value)) {
     return false;
@@ -26,6 +47,39 @@ function isModelConfig(value: unknown): value is ModelConfig {
     "PTU monthly discount",
     "PTU yearly discount",
   ];
+
+  if ("PTU input token weights" in value && !hasValidNormalizedTextConfig(value)) {
+    return false;
+  }
+  if ("long context" in value) {
+    const longContext = value["long context"];
+    if (
+      !hasValidNormalizedTextConfig(value) ||
+      !isRecord(longContext) ||
+      !hasValidNormalizedTextConfig(longContext)
+    ) {
+      return false;
+    }
+  }
+  const imageFields = [
+    "image input TPM per PTU",
+    "image output-to-input ratio",
+    "image input token price per 1k",
+  ];
+  if (
+    imageFields.some((key) => key in value) &&
+    (!isPositive(value["input TPM per PTU"]) ||
+      !imageFields.every((key) => isPositive(value[key])))
+  ) {
+    return false;
+  }
+  if (
+    "configuration notes" in value &&
+    (!Array.isArray(value["configuration notes"]) ||
+      !value["configuration notes"].every((note) => typeof note === "string"))
+  ) {
+    return false;
+  }
 
   return (
     requiredStrings.every((key) => typeof value[key] === "string") &&

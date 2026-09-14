@@ -9,11 +9,18 @@ import type {
   ModelConfig,
   PtuConfigurationCurve,
   PtuMetrics,
+  PtuInputTokenWeights,
   ScenarioInput,
 } from "../types";
 
 export const MONTH_DAYS = 30.42;
 export const MINUTES_PER_MONTH = MONTH_DAYS * 24 * 60;
+
+const DEFAULT_INPUT_WEIGHTS: PtuInputTokenWeights = {
+  uncached: 1,
+  cached: 0,
+  cacheWrite: 1,
+};
 
 function requirePositive(value: number | undefined, label: string): number {
   if (value === undefined || !Number.isFinite(value) || value <= 0) {
@@ -190,6 +197,51 @@ export function supportsAzureImageInput(modelName: string): boolean {
   );
 }
 
+export function usesImageTokenSizing(model: ModelConfig): boolean {
+  return model["image input TPM per PTU"] !== undefined;
+}
+
+function getImageInputRatio(model: ModelConfig): number {
+  return usesImageTokenSizing(model)
+    ? requirePositive(model["input TPM per PTU"], "Input TPM per PTU") /
+        requirePositive(model["image input TPM per PTU"], "Image input TPM per PTU")
+    : 1;
+}
+
+function getOutputRatio(model: ModelConfig): number {
+  return usesImageTokenSizing(model)
+    ? getImageInputRatio(model) *
+        requirePositive(model["image output-to-input ratio"], "Image output ratio")
+    : requirePositive(model["output token multiple ratio"], "Output token ratio");
+}
+
+function getScenarioModel(input: ScenarioInput): ModelConfig {
+  if (input.contextMode === "long") {
+    if (!input.model["long context"]) {
+      throw new Error("This model has no long-context configuration.");
+    }
+    return { ...input.model, ...input.model["long context"] };
+  }
+  return input.model;
+}
+
+function getInputTokenSplit(
+  inputTokens: number,
+  cacheHitRate: number,
+  cacheWriteTokens: number,
+) {
+  if (!Number.isFinite(cacheHitRate) || cacheHitRate < 0 || cacheHitRate > 100) {
+    throw new Error("Cache hit rate must be between 0 and 100.");
+  }
+  requireNonNegative(cacheWriteTokens, "Cache write tokens");
+  const cachedTokens = inputTokens * (cacheHitRate / 100);
+  const uncachedTokens = inputTokens - cachedTokens - cacheWriteTokens;
+  if (uncachedTokens < 0) {
+    throw new Error("Cache reads and writes cannot exceed total input tokens.");
+  }
+  return { cachedTokens, uncachedTokens, cacheWriteTokens };
+}
+
 export function calculateProvisionedPtuNum(
   inputTokens: number,
   imageInputTokens: number,
@@ -200,18 +252,32 @@ export function calculateProvisionedPtuNum(
   inputTpmPerPtu: number,
   outputToInputRatio: number,
   cacheHitRate = 0,
+  options: {
+    inputWeights?: PtuInputTokenWeights;
+    cacheWriteTokens?: number;
+    imageInputRatio?: number;
+  } = {},
 ): {
   requiredPtus: number;
   deployedPtus: number;
   metrics: PtuMetrics;
 } {
-  if (cacheHitRate < 0 || cacheHitRate > 100) {
-    throw new Error("Cache hit rate must be between 0 and 100.");
+  const weights = options.inputWeights ?? DEFAULT_INPUT_WEIGHTS;
+  Object.entries(weights).forEach(([key, value]) =>
+    requireNonNegative(value, `PTU input weight ${key}`),
+  );
+  const tokens = getInputTokenSplit(inputTokens, cacheHitRate, options.cacheWriteTokens ?? 0);
+  if (tokens.cacheWriteTokens > 0 && !options.inputWeights) {
+    throw new Error("Cache writes require configured PTU input token weights.");
   }
-
-  const effectiveTextInput = inputTokens * (1 - cacheHitRate / 100);
+  const effectiveTextInput = options.inputWeights
+    ? tokens.uncachedTokens * weights.uncached +
+      tokens.cachedTokens * weights.cached +
+      tokens.cacheWriteTokens * weights.cacheWrite
+    : inputTokens * (1 - cacheHitRate / 100);
   const totalInputTpm =
-    peakCallsPerMinute * (effectiveTextInput + imageInputTokens);
+    peakCallsPerMinute * (effectiveTextInput + imageInputTokens *
+      requirePositive(options.imageInputRatio ?? 1, "Image input ratio"));
   const totalOutputTpm = peakCallsPerMinute * outputTokens;
   const normalizedTpm =
     totalInputTpm + totalOutputTpm * requirePositive(outputToInputRatio, "Output ratio");
@@ -238,6 +304,7 @@ export function calculatePaygoCost(
   cacheHitRate = 0,
   imageInputTokens = 0,
   imageCount = 0,
+  cacheWriteTokens = 0,
 ): CostBreakdown {
   if (cacheHitRate < 0 || cacheHitRate > 100) {
     throw new Error("Cache hit rate must be between 0 and 100.");
@@ -246,8 +313,12 @@ export function calculatePaygoCost(
   requireNonNegative(imageCount, "Image count");
 
   const monthlyRequests = rpm * MINUTES_PER_MONTH;
-  const cachedInputTokens = inputTokens * (cacheHitRate / 100);
-  const nonCachedInputTokens = inputTokens - cachedInputTokens;
+  const { cachedTokens: cachedInputTokens, uncachedTokens: nonCachedInputTokens } =
+    getInputTokenSplit(inputTokens, cacheHitRate, cacheWriteTokens);
+  const cacheWriteCost = cacheWriteTokens > 0
+    ? ((cacheWriteTokens * monthlyRequests) / 1000) *
+      requirePositive(model["cache write token price per 1k"], "Cache write price")
+    : 0;
   const nonCachedInputCost =
     ((nonCachedInputTokens * monthlyRequests) / 1000) *
     model["input token price per 1k"];
@@ -259,7 +330,9 @@ export function calculatePaygoCost(
     model["output token price per 1k"];
   const imageTokenCost =
     ((imageInputTokens * monthlyRequests) / 1000) *
-    model["input token price per 1k"];
+    (usesImageTokenSizing(model)
+      ? requirePositive(model["image input token price per 1k"], "Image input price")
+      : model["input token price per 1k"]);
   const imageUnitPrice =
     model.provider === "Google"
       ? inputTokens <= 128_000
@@ -268,7 +341,7 @@ export function calculatePaygoCost(
       : 0;
   const imageCost =
     imageTokenCost + imageCount * monthlyRequests * imageUnitPrice;
-  const inputCost = nonCachedInputCost + cachedInputCost;
+  const inputCost = nonCachedInputCost + cachedInputCost + cacheWriteCost;
 
   return {
     nonCachedInputCost,
@@ -277,6 +350,7 @@ export function calculatePaygoCost(
     imageCost,
     outputCost,
     totalCost: inputCost + imageCost + outputCost,
+    ...(model["PTU input token weights"] ? { cacheWriteCost } : {}),
   };
 }
 
@@ -378,6 +452,11 @@ function getCommitmentPricing(input: ScenarioInput): {
 }
 
 function calculateImageInputTokens(input: ScenarioInput): number {
+  if (usesImageTokenSizing(input.model)) {
+    const tokens = input.imageInputTokens ?? 0;
+    requireNonNegative(tokens, "Image input tokens");
+    return tokens;
+  }
   const supportsAzureImageMetering =
     input.model.provider === "Azure OpenAI" &&
     supportsAzureImageInput(input.model["model name"]);
@@ -440,10 +519,11 @@ function buildExplanation(args: {
     tpmPerDollar,
     costSavingPercentage,
   } = args;
-  const { model } = input;
+  const model = getScenarioModel(input);
   const monthlyRequests = input.rpm * MINUTES_PER_MONTH;
   const cachedTokens = input.inputTextTokens * (input.cacheHitRate / 100);
-  const nonCachedTokens = input.inputTextTokens - cachedTokens;
+  const cacheWriteTokens = input.cacheWriteTokens ?? 0;
+  const nonCachedTokens = input.inputTextTokens - cachedTokens - cacheWriteTokens;
   const steps: CalculationStep[] = [
     {
       output: "Monthly requests",
@@ -463,6 +543,17 @@ function buildExplanation(args: {
     },
   ];
 
+  if (model["PTU input token weights"]) {
+    steps[1] = {
+      output: "Monthly PayGO input cost",
+      result: paygo.inputCost,
+      unit: "USD/month",
+      formula:
+        "(uncached tokens x input price + cached tokens x cached price + cache write tokens x write price) x monthly requests / 1,000",
+      substitution: `(${nonCachedTokens} x ${model["input token price per 1k"]} + ${cachedTokens} x ${model["input token price per 1k with cache hit"]} + ${cacheWriteTokens} x ${model["cache write token price per 1k"]}) x ${monthlyRequests} / 1,000 = ${paygo.inputCost.toFixed(2)}`,
+    };
+  }
+
   if (paygo.imageCost > 0) {
     const googleImagePrice =
       input.inputTextTokens <= 128_000
@@ -480,7 +571,7 @@ function buildExplanation(args: {
         : "image input tokens x monthly requests / 1,000 x input price",
       substitution: usesPerImagePricing
         ? `${input.images.length} x ${monthlyRequests.toLocaleString("en-US")} x ${googleImagePrice} = ${paygo.imageCost.toFixed(2)}`
-        : `${inputImageTokens.toLocaleString("en-US")} x ${monthlyRequests.toLocaleString("en-US")} / 1,000 x ${model["input token price per 1k"]} = ${paygo.imageCost.toFixed(2)}`,
+        : `${inputImageTokens.toLocaleString("en-US")} x ${monthlyRequests.toLocaleString("en-US")} / 1,000 x ${model["image input token price per 1k"] ?? model["input token price per 1k"]} = ${paygo.imageCost.toFixed(2)}`,
     });
   }
 
@@ -506,10 +597,9 @@ function buildExplanation(args: {
     if (!metrics) {
       throw new Error("Automatic PTU metrics are required for the explanation.");
     }
-    const outputRatio = requirePositive(
-      model["output token multiple ratio"],
-      "Output token ratio",
-    );
+    const outputRatio = getOutputRatio(model);
+    const imageInputRatio = getImageInputRatio(model);
+    const weights = model["PTU input token weights"];
     const inputTpmPerPtu = requirePositive(
       model["input TPM per PTU"],
       "Input TPM per PTU",
@@ -520,16 +610,23 @@ function buildExplanation(args: {
         output: "Effective text input tokens",
         result: metrics.effectiveTextInput,
         unit: "tokens/request",
-        formula: "input tokens x (1 - cache hit rate / 100)",
-        substitution: `${input.inputTextTokens} x (1 - ${input.cacheHitRate} / 100) = ${metrics.effectiveTextInput.toFixed(2)}`,
+        formula: weights
+          ? "uncached tokens x input weight + cached tokens x cache weight + cache write tokens x write weight"
+          : "input tokens x (1 - cache hit rate / 100)",
+        substitution: weights
+          ? `${nonCachedTokens} x ${weights.uncached} + ${cachedTokens} x ${weights.cached} + ${cacheWriteTokens} x ${weights.cacheWrite} = ${metrics.effectiveTextInput.toFixed(2)}`
+          : `${input.inputTextTokens} x (1 - ${input.cacheHitRate} / 100) = ${metrics.effectiveTextInput.toFixed(2)}`,
       },
       {
         output: "Normalized TPM",
         result: metrics.normalizedTpm,
         unit: "normalized tokens/minute",
-        formula:
-          "RPM x (effective text input + image input) + output ratio x (RPM x output tokens)",
-        substitution: `${input.rpm} x (${metrics.effectiveTextInput.toFixed(2)} + ${inputImageTokens}) + ${outputRatio} x (${input.rpm} x ${input.outputTokens}) = ${metrics.normalizedTpm.toFixed(2)}`,
+        formula: usesImageTokenSizing(model)
+          ? "RPM x (effective text input + image input x image-to-text factor + image output x image output-to-input ratio x image-to-text factor)"
+          : "RPM x (effective text input + image input) + output ratio x (RPM x output tokens)",
+        substitution: usesImageTokenSizing(model)
+          ? `${input.rpm} x (${metrics.effectiveTextInput.toFixed(2)} + ${inputImageTokens} x ${imageInputRatio} + ${input.outputTokens} x ${model["image output-to-input ratio"]} x ${imageInputRatio}) = ${metrics.normalizedTpm.toFixed(2)}`
+          : `${input.rpm} x (${metrics.effectiveTextInput.toFixed(2)} + ${inputImageTokens}) + ${outputRatio} x (${input.rpm} x ${input.outputTokens}) = ${metrics.normalizedTpm.toFixed(2)}`,
       },
       {
         output: "Required PTU Num",
@@ -645,6 +742,20 @@ function buildExplanation(args: {
       outputPricePer1k: model["output token price per 1k"],
       ptuPricePerUnit: pricePerUnit,
       ptuDiscount: discount,
+      ...(model["PTU input token weights"] ? {
+        contextMode: input.contextMode ?? "short",
+        cacheWriteTokens,
+        cacheWritePricePer1k: requirePositive(model["cache write token price per 1k"], "Cache write price"),
+        inputWeight: model["PTU input token weights"].uncached,
+        cachedInputWeight: model["PTU input token weights"].cached,
+        cacheWriteWeight: model["PTU input token weights"].cacheWrite,
+        outputWeight: getOutputRatio(model),
+      } : {}),
+      ...(usesImageTokenSizing(model) ? {
+        imageInputPricePer1k: requirePositive(model["image input token price per 1k"], "Image input price"),
+        imageInputWeight: getImageInputRatio(model),
+        imageOutputWeight: getOutputRatio(model),
+      } : {}),
     },
     steps,
   };
@@ -681,6 +792,10 @@ function calculateScenarioValues(input: ScenarioInput): ScenarioCalculation {
     requirePositive(image.width, `Image ${index + 1} width`);
     requirePositive(image.height, `Image ${index + 1} height`);
   });
+  const model = getScenarioModel(input);
+  if ((input.cacheWriteTokens ?? 0) !== 0 && !model["PTU input token weights"]) {
+    throw new Error("This model has no cache-write PTU sizing configuration.");
+  }
 
   const { minimumPtus, scaleIncrement, deploymentLabel } =
     getDeploymentCapacity(input);
@@ -697,12 +812,14 @@ function calculateScenarioValues(input: ScenarioInput): ScenarioCalculation {
       input.rpm,
       minimumPtus,
       scaleIncrement,
-      requirePositive(input.model["input TPM per PTU"], "Input TPM per PTU"),
-      requirePositive(
-        input.model["output token multiple ratio"],
-        "Output token ratio",
-      ),
+      requirePositive(model["input TPM per PTU"], "Input TPM per PTU"),
+      getOutputRatio(model),
       input.cacheHitRate,
+      {
+        inputWeights: model["PTU input token weights"],
+        cacheWriteTokens: input.cacheWriteTokens,
+        imageInputRatio: getImageInputRatio(model),
+      },
     );
     requiredPtus = provisioned.requiredPtus;
     ptuMetrics = provisioned.metrics;
@@ -738,10 +855,11 @@ function calculateScenarioValues(input: ScenarioInput): ScenarioCalculation {
     input.inputTextTokens,
     input.outputTokens,
     input.rpm,
-    input.model,
+    model,
     input.cacheHitRate,
     inputImageTokens,
     input.images.length,
+    input.cacheWriteTokens,
   );
   const ptuPricing = calculatePtuCost(
     requiredPtus,
@@ -838,6 +956,10 @@ export function calculateScenario(input: ScenarioInput): ComparisonResult {
     ptuCostBeforeDiscount: ptuPricing.costBeforeDiscount,
     ptuDiscount: discount,
     normalizedTpm: ptuMetrics?.normalizedTpm,
+    ...(input.model["PTU input token weights"] ? {
+      contextMode: input.contextMode ?? "short",
+      cacheWriteTokens: input.cacheWriteTokens ?? 0,
+    } : {}),
     explanation,
   };
 }

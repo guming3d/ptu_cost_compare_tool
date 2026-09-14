@@ -1,12 +1,13 @@
 import type {
   CommitmentType,
+  ContextMode,
   DeploymentType,
   ModelConfig,
   WorkloadImage,
 } from "../types";
 import { getLocale, getUiText } from "../i18n";
 import type { Language } from "../i18n";
-import { supportsAzureImageInput } from "../lib/calculations";
+import { supportsAzureImageInput, usesImageTokenSizing } from "../lib/calculations";
 import { NumberField } from "./NumberField";
 
 interface CalculatorFormProps {
@@ -18,6 +19,12 @@ interface CalculatorFormProps {
   onInputTextTokensChange: (value: number) => void;
   cacheHitRate: number;
   onCacheHitRateChange: (value: number) => void;
+  contextMode: ContextMode;
+  onContextModeChange: (value: ContextMode) => void;
+  cacheWriteTokens: number;
+  onCacheWriteTokensChange: (value: number) => void;
+  imageInputTokens: number;
+  onImageInputTokensChange: (value: number) => void;
   outputTokens: number;
   onOutputTokensChange: (value: number) => void;
   rpm: number;
@@ -60,6 +67,12 @@ export function CalculatorForm({
   onInputTextTokensChange,
   cacheHitRate,
   onCacheHitRateChange,
+  contextMode,
+  onContextModeChange,
+  cacheWriteTokens,
+  onCacheWriteTokensChange,
+  imageInputTokens,
+  onImageInputTokensChange,
   outputTokens,
   onOutputTokensChange,
   rpm,
@@ -83,6 +96,7 @@ export function CalculatorForm({
   const locale = getLocale(language);
   const isAzure = selectedModel.provider === "Azure OpenAI";
   const isManual = selectedModel["PTU sizing mode"] === "manual";
+  const isImageModel = usesImageTokenSizing(selectedModel);
   const imageMeteringSupported =
     selectedModel.provider === "Google" ||
     (selectedModel.provider === "Azure OpenAI" &&
@@ -127,11 +141,36 @@ export function CalculatorForm({
           onChange={onInputTextTokensChange}
         />
         <NumberField
-          label={text.outputTokens}
+          label={isImageModel ? text.imageOutputTokens : text.outputTokens}
           value={outputTokens}
           onChange={onOutputTokensChange}
         />
       </div>
+
+      {selectedModel["long context"] ? (
+        <label className="field">
+          <span className="field-label">{text.contextMode}</span>
+          <select
+            value={contextMode}
+            onChange={(event) =>
+              onContextModeChange(event.target.value === "long" ? "long" : "short")
+            }
+          >
+            <option value="short">{text.shortContext}</option>
+            <option value="long">{text.longContext}</option>
+          </select>
+          <span className="field-hint">{text.astraHint}</span>
+        </label>
+      ) : null}
+
+      {selectedModel["PTU input token weights"] ? (
+        <NumberField
+          label={text.cacheWriteTokens}
+          value={cacheWriteTokens}
+          onChange={onCacheWriteTokensChange}
+          hint={text.cacheWriteHint}
+        />
+      ) : null}
 
       <NumberField
         label={text.rpm}
@@ -141,7 +180,7 @@ export function CalculatorForm({
 
       <label className="field">
         <span className="field-label">
-          {text.cacheHitRate} <strong>{cacheHitRate}%</strong>
+          {isImageModel ? text.textCacheHitRate : text.cacheHitRate} <strong>{cacheHitRate}%</strong>
         </span>
         <input
           className="range-input"
@@ -199,75 +238,84 @@ export function CalculatorForm({
         </select>
       </label>
 
-      <div className="image-section">
-        <div className="image-section-header">
-          <div>
-            <span className="field-label">{text.imageInputs}</span>
-            <span className="field-hint">
-              {imageMeteringSupported
-                ? text.optionalImage
-                : text.noImageRule}
-            </span>
-          </div>
-          <button
-            className="button button-small button-secondary"
-            type="button"
-            disabled={!imageMeteringSupported}
-            onClick={() =>
-              onImagesChange([...images, createImage(images.length)])
-            }
-          >
-            {text.addImage}
-          </button>
-        </div>
-
-        {images.map((image, index) => (
-          <div className="image-row" key={image.id}>
-            <span className="image-index">{index + 1}</span>
-            <input
-              aria-label={`${text.image} ${index + 1} ${text.width}`}
-              type="number"
-              min="1"
-              value={image.width}
-              onChange={(event) =>
-                updateImage(image.id, { width: Number(event.target.value) })
-              }
-            />
-            <span className="dimension-separator">x</span>
-            <input
-              aria-label={`${text.image} ${index + 1} ${text.height}`}
-              type="number"
-              min="1"
-              value={image.height}
-              onChange={(event) =>
-                updateImage(image.id, { height: Number(event.target.value) })
-              }
-            />
-            <select
-              aria-label={`${text.image} ${index + 1}`}
-              value={image.quality}
-              onChange={(event) =>
-                updateImage(image.id, {
-                  quality: event.target.value as WorkloadImage["quality"],
-                })
-              }
-            >
-              <option value="low">{text.low}</option>
-              <option value="high">{text.high}</option>
-            </select>
+      {isImageModel ? (
+        <NumberField
+          label={text.imageInputTokens}
+          value={imageInputTokens}
+          onChange={onImageInputTokensChange}
+          hint={text.imageTokenHint}
+        />
+      ) : (
+        <div className="image-section">
+          <div className="image-section-header">
+            <div>
+              <span className="field-label">{text.imageInputs}</span>
+              <span className="field-hint">
+                {imageMeteringSupported
+                  ? text.optionalImage
+                  : text.noImageRule}
+              </span>
+            </div>
             <button
-              className="icon-button"
+              className="button button-small button-secondary"
               type="button"
-              aria-label={`${text.removeImage} ${index + 1}`}
+              disabled={!imageMeteringSupported}
               onClick={() =>
-                onImagesChange(images.filter((item) => item.id !== image.id))
+                onImagesChange([...images, createImage(images.length)])
               }
             >
-              &times;
+              {text.addImage}
             </button>
           </div>
-        ))}
-      </div>
+
+          {images.map((image, index) => (
+            <div className="image-row" key={image.id}>
+              <span className="image-index">{index + 1}</span>
+              <input
+                aria-label={`${text.image} ${index + 1} ${text.width}`}
+                type="number"
+                min="1"
+                value={image.width}
+                onChange={(event) =>
+                  updateImage(image.id, { width: Number(event.target.value) })
+                }
+              />
+              <span className="dimension-separator">x</span>
+              <input
+                aria-label={`${text.image} ${index + 1} ${text.height}`}
+                type="number"
+                min="1"
+                value={image.height}
+                onChange={(event) =>
+                  updateImage(image.id, { height: Number(event.target.value) })
+                }
+              />
+              <select
+                aria-label={`${text.image} ${index + 1}`}
+                value={image.quality}
+                onChange={(event) =>
+                  updateImage(image.id, {
+                    quality: event.target.value as WorkloadImage["quality"],
+                  })
+                }
+              >
+                <option value="low">{text.low}</option>
+                <option value="high">{text.high}</option>
+              </select>
+              <button
+                className="icon-button"
+                type="button"
+                aria-label={`${text.removeImage} ${index + 1}`}
+                onClick={() =>
+                  onImagesChange(images.filter((item) => item.id !== image.id))
+                }
+              >
+                &times;
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="estimate-panel" aria-live="polite">
         <div>
