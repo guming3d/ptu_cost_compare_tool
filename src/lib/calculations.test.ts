@@ -171,9 +171,58 @@ describe("PTU calculations", () => {
     ).toContain("normalized TPM");
   });
 
-  it("keeps non-GLM Fireworks sizing manual", () => {
+  it("estimates non-GLM Fireworks sizing with the price-derived ratio", () => {
     const result = calculateScenario({
       model: model("fireworks DeepSeek V4 Pro"),
+      inputTextTokens: 3500,
+      outputTokens: 300,
+      rpm: 60,
+      cacheHitRate: 10,
+      images: [],
+      commitmentType: "Monthly",
+      deploymentType: "Global / Data Zone",
+      manualRequiredPtus: 401,
+    });
+
+    // 60 x 3,150 + 1.99 x 60 x 300 = 224,820 normalized TPM / 200 per PTU.
+    expect(result.normalizedTpm).toBeCloseTo(224_820);
+    expect(result.requiredPtus).toBeCloseTo(1124.1);
+    expect(result.deployedPtus).toBe(1200);
+    expect(
+      result.explanation.steps.find((step) => step.output === "Normalized TPM")
+        ?.note,
+    ).toContain("Fireworks");
+  });
+
+  it("uses the PTU override instead of the automatic Fireworks estimate", () => {
+    const result = calculateScenario({
+      model: model("fireworks DeepSeek V4 Pro"),
+      inputTextTokens: 3500,
+      outputTokens: 300,
+      rpm: 60,
+      cacheHitRate: 10,
+      images: [],
+      commitmentType: "Monthly",
+      deploymentType: "Global / Data Zone",
+      manualRequiredPtus: 401,
+      ptuOverride: true,
+    });
+    const requiredStep = result.explanation.steps.find(
+      (step) => step.output === "Required PTU Num",
+    );
+
+    expect(result.requiredPtus).toBe(401);
+    expect(result.deployedPtus).toBe(600);
+    expect(result.normalizedTpm).toBeCloseTo(224_820);
+    expect(requiredStep?.formula).toBe(
+      "Required PTUs = user supplied PTU override",
+    );
+    expect(requiredStep?.substitution).toContain("1124.1000");
+  });
+
+  it("keeps catalog-manual Fireworks sizing manual", () => {
+    const result = calculateScenario({
+      model: { ...model("fireworks DeepSeek V4 Pro"), "PTU sizing mode": "manual" },
       inputTextTokens: 3500,
       outputTokens: 300,
       rpm: 60,
@@ -218,7 +267,7 @@ describe("PTU calculations", () => {
     expect(optimization.bestConfiguration.breakEvenRpm).toBeGreaterThan(0);
   });
 
-  it("keeps manually sized PTU cost fixed across the optimization curve", () => {
+  it("keeps overridden PTU cost fixed across the optimization curve", () => {
     const optimization = calculateCostOptimization({
       model: model("fireworks DeepSeek V4 Pro"),
       inputTextTokens: 3500,
@@ -229,6 +278,7 @@ describe("PTU calculations", () => {
       commitmentType: "Monthly",
       deploymentType: "Global / Data Zone",
       manualRequiredPtus: 401,
+      ptuOverride: true,
     });
 
     expect(optimization.configurations).toHaveLength(2);
@@ -335,20 +385,44 @@ describe("PTU calculations", () => {
     expect(flash["PTU minumum deployment unit"]).toBe(100);
     expect(flash["PTU scale increment"]).toBe(50);
     expect(flash["input TPM per PTU"]).toBe(2_800);
-    expect(flash["PTU sizing mode"]).toBe("manual");
+    expect(flash["PTU sizing mode"]).toBe("automatic");
+    expect(flash["output token multiple ratio"]).toBe(3);
 
+    // Customer workload: 200M input TPM with a 94% prompt-cache hit rate.
     const result = calculateScenario({
       model: flash,
-      inputTextTokens: 3500,
-      outputTokens: 300,
-      rpm: 60,
+      inputTextTokens: 200_000,
+      outputTokens: 0,
+      rpm: 1_000,
       cacheHitRate: 94,
       images: [],
       commitmentType: "Monthly",
       deploymentType: "Global / Data Zone",
-      manualRequiredPtus: 4285.71,
     });
 
+    expect(result.normalizedTpm).toBeCloseTo(12_000_000);
+    expect(result.requiredPtus).toBeCloseTo(4285.714, 3);
     expect(result.deployedPtus).toBe(4300);
+  });
+
+  it("sizes every bundled Fireworks model automatically", () => {
+    const fireworks = bundledCatalog.models.filter((item) =>
+      item.provider.startsWith("Fireworks"),
+    );
+
+    expect(fireworks.length).toBeGreaterThan(0);
+    for (const item of fireworks) {
+      const expectedRatio = item["model name"].includes("GLM")
+        ? 1
+        : Math.round(
+            (item["output token price per 1k"] /
+              item["input token price per 1k"]) *
+              100,
+          ) / 100;
+      expect(item["PTU sizing mode"], item["model name"]).toBe("automatic");
+      expect(item["output token multiple ratio"], item["model name"]).toBe(
+        expectedRatio,
+      );
+    }
   });
 });

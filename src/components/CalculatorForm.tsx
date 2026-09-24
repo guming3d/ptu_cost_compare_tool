@@ -37,6 +37,8 @@ interface CalculatorFormProps {
   onCommitmentTypeChange: (value: CommitmentType) => void;
   manualRequiredPtus: number;
   onManualRequiredPtusChange: (value: number) => void;
+  ptuOverride: boolean;
+  onPtuOverrideChange: (value: boolean) => void;
   preview: {
     requiredPtus: number;
     deployedPtus: number;
@@ -85,6 +87,8 @@ export function CalculatorForm({
   onCommitmentTypeChange,
   manualRequiredPtus,
   onManualRequiredPtusChange,
+  ptuOverride,
+  onPtuOverrideChange,
   preview,
   error,
   onAdd,
@@ -96,6 +100,11 @@ export function CalculatorForm({
   const locale = getLocale(language);
   const isAzure = selectedModel.provider === "Azure OpenAI";
   const isManual = selectedModel["PTU sizing mode"] === "manual";
+  const canOverridePtus =
+    !isManual &&
+    selectedModel.provider.startsWith("Fireworks") &&
+    selectedModel["PTU sizing mode"] === "automatic";
+  const showManualPtus = isManual || (canOverridePtus && ptuOverride);
   const isImageModel = usesImageTokenSizing(selectedModel);
   const imageMeteringSupported =
     selectedModel.provider === "Google" ||
@@ -212,7 +221,25 @@ export function CalculatorForm({
         </label>
       ) : null}
 
-      {isManual ? (
+      {canOverridePtus ? (
+        <label className="checkbox-field">
+          <input
+            type="checkbox"
+            checked={ptuOverride}
+            onChange={(event) => onPtuOverrideChange(event.target.checked)}
+          />
+          <span className="field-label">{text.overridePtus}</span>
+        </label>
+      ) : null}
+
+      {canOverridePtus && !ptuOverride ? (
+        <span className="field-hint">
+          {text.automaticFireworksHint}{" "}
+          {selectedModel["output token multiple ratio"]?.toLocaleString(locale)}
+        </span>
+      ) : null}
+
+      {showManualPtus ? (
         <NumberField
           label={text.requiredPtus}
           value={manualRequiredPtus}

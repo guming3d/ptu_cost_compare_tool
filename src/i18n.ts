@@ -53,6 +53,9 @@ const UI_TEXT = {
       requiredPtus: "Required PTUs",
       publishedCapacity: "Published capacity",
       benchmarkHint: "input TPM/PTU. Enter a benchmarked capacity estimate.",
+      overridePtus: "Override automatic PTU estimate",
+      automaticFireworksHint:
+        "Automatic estimate. Microsoft does not publish a Fireworks output-token weight, so the catalog output-to-input ratio is used:",
       commitment: "Commitment",
       monthly: "Monthly",
       yearly: "Yearly",
@@ -233,6 +236,9 @@ const UI_TEXT = {
       requiredPtus: "所需 PTU",
       publishedCapacity: "已发布容量",
       benchmarkHint: "输入 TPM/PTU。请输入经过基准测试的容量估算值。",
+      overridePtus: "手动覆盖自动 PTU 估算",
+      automaticFireworksHint:
+        "自动估算。Microsoft 未发布 Fireworks 模型的输出令牌权重，因此使用目录中的输出/输入比率：",
       commitment: "承诺周期",
       monthly: "按月",
       yearly: "按年",
@@ -432,6 +438,12 @@ const ZH_EXPLANATION_TEXT: Record<string, string> = {
     "（输入令牌 + 图像估算 + 输出比率 x 输出令牌）x 4 x（RPM / 60）/ 每 GSU 字符数",
   "Required PTUs = user supplied capacity estimate":
     "所需 PTU = 用户提供的容量估算",
+  "Required PTUs = user supplied PTU override":
+    "所需 PTU = 用户手动覆盖的 PTU 值",
+  "The automatic estimate is replaced by the user supplied PTU override.":
+    "自动估算已被用户手动覆盖的 PTU 值替代。",
+  "Microsoft does not publish a PTU output-token weight for this Fireworks model; the catalog output ratio is used (PayGO output-to-input price ratio, or 1:1 for GLM).":
+    "Microsoft 未发布此 Fireworks 模型的 PTU 输出令牌权重；使用目录中的输出比率（PayGO 输出/输入价格比，GLM 为 1:1）。",
   "max(minimum PTUs, ceil(required PTUs / scale increment) x scale increment)":
     "max（最低 PTU，ceil（所需 PTU / 扩容步长）x 扩容步长）",
   "required PTUs / deployed PTUs x 100":

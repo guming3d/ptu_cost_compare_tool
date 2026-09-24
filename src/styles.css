@@ -279,6 +279,23 @@ main {
   line-height: 1.45;
 }
 
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  cursor: pointer;
+}
+
+.checkbox-field input {
+  width: 16px;
+  min-height: 16px;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--accent-dark);
+}
+
 input,
 select,
 textarea {

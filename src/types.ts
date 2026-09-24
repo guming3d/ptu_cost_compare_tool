@@ -75,6 +75,8 @@ export interface ScenarioInput {
   commitmentType: CommitmentType;
   deploymentType: DeploymentType;
   manualRequiredPtus?: number;
+  /** Replaces an automatic PTU estimate with manualRequiredPtus. */
+  ptuOverride?: boolean;
   contextMode?: ContextMode;
   cacheWriteTokens?: number;
   imageInputTokens?: number;

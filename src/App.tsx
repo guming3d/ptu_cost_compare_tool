@@ -52,6 +52,7 @@ function App() {
   const [manualRequiredPtus, setManualRequiredPtus] = useState(
     catalog.models[0]["PTU minumum deployment unit"],
   );
+  const [ptuOverride, setPtuOverride] = useState(false);
   const [results, setResults] = useState<ComparisonResult[]>([]);
   const [activeTab, setActiveTab] = useState<ActiveTab>("comparison");
   const [submissionError, setSubmissionError] = useState<string | null>(null);
@@ -83,6 +84,7 @@ function App() {
 
   useEffect(() => {
     setManualRequiredPtus(selectedModel["PTU minumum deployment unit"]);
+    setPtuOverride(false);
     if (selectedModel.provider !== "Azure OpenAI") {
       setDeploymentType("Global / Data Zone");
     }
@@ -103,6 +105,7 @@ function App() {
       commitmentType,
       deploymentType,
       manualRequiredPtus,
+      ptuOverride,
       contextMode: selectedModel["long context"] ? contextMode : undefined,
       cacheWriteTokens: selectedModel["PTU input token weights"]
         ? cacheWriteTokens
@@ -119,6 +122,7 @@ function App() {
       inputTextTokens,
       manualRequiredPtus,
       outputTokens,
+      ptuOverride,
       rpm,
       selectedModel,
       contextMode,
@@ -149,6 +153,13 @@ function App() {
     }
   }, [scenarioInput, text.errors.calculate]);
   const preview = previewState.value;
+
+  const updatePtuOverride = (enabled: boolean) => {
+    if (enabled && preview) {
+      setManualRequiredPtus(Math.max(1, Math.ceil(preview.requiredPtus)));
+    }
+    setPtuOverride(enabled);
+  };
 
   const optimization = useMemo(() => {
     try {
@@ -266,6 +277,8 @@ function App() {
             onCommitmentTypeChange={setCommitmentType}
             manualRequiredPtus={manualRequiredPtus}
             onManualRequiredPtusChange={setManualRequiredPtus}
+            ptuOverride={ptuOverride}
+            onPtuOverrideChange={updatePtuOverride}
             preview={preview}
             error={previewState.error ?? submissionError}
             onAdd={addComparison}

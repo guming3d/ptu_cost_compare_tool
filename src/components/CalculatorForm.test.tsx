@@ -5,7 +5,11 @@ import { getUiText } from "../i18n";
 import type { Language } from "../i18n";
 import { CalculatorForm } from "./CalculatorForm";
 
-function renderForm(modelName: string, language: Language = "en") {
+function renderForm(
+  modelName: string,
+  language: Language = "en",
+  ptuOverride = false,
+) {
   const selectedModel = bundledCatalog.models.find((model) => model["model name"].includes(modelName));
   if (!selectedModel) {
     throw new Error(`Missing model: ${modelName}`);
@@ -39,6 +43,8 @@ function renderForm(modelName: string, language: Language = "en") {
       onCommitmentTypeChange={onChange}
       manualRequiredPtus={100}
       onManualRequiredPtusChange={onChange}
+      ptuOverride={ptuOverride}
+      onPtuOverrideChange={onChange}
       preview={null}
       error={null}
       onAdd={onChange}
@@ -81,5 +87,27 @@ describe("model-specific workload controls", () => {
       expect(html).not.toContain(text.imageInputTokens);
       expect(html).toContain(text.outputTokens);
     }
+  });
+
+  it.each(["en", "zh-CN"] satisfies Language[])(
+    "sizes Fireworks models automatically with an optional override in %s",
+    (language) => {
+      const text = getUiText(language).calculator;
+      const automatic = renderForm("DeepSeek V4 Flash 0731", language);
+      expect(automatic).toContain(text.overridePtus);
+      expect(automatic).toContain(text.automaticFireworksHint);
+      expect(automatic).not.toContain(text.requiredPtus);
+
+      const overridden = renderForm("DeepSeek V4 Flash 0731", language, true);
+      expect(overridden).toContain(text.requiredPtus);
+      expect(overridden).toContain('value="100"');
+    },
+  );
+
+  it("does not offer a PTU override for Azure OpenAI models", () => {
+    const text = getUiText("en").calculator;
+    const html = renderForm("gpt-5.6-luna", "en", true);
+    expect(html).not.toContain(text.overridePtus);
+    expect(html).not.toContain(text.requiredPtus);
   });
 });

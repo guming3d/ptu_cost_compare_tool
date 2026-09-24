@@ -485,6 +485,23 @@ function usesAutomaticProvisionedSizing(model: ModelConfig): boolean {
   );
 }
 
+function usesPtuOverride(input: ScenarioInput): boolean {
+  return input.ptuOverride === true && usesAutomaticProvisionedSizing(input.model);
+}
+
+function isAutomaticallySized(input: ScenarioInput): boolean {
+  return (
+    (usesAutomaticProvisionedSizing(input.model) && !usesPtuOverride(input)) ||
+    input.model.provider === "Google"
+  );
+}
+
+function getManualRequiredPtus(input: ScenarioInput, minimumPtus: number): number {
+  const requiredPtus = input.manualRequiredPtus ?? minimumPtus;
+  requireNonNegative(requiredPtus, "Required PTUs");
+  return requiredPtus;
+}
+
 function buildExplanation(args: {
   input: ScenarioInput;
   inputImageTokens: number;
@@ -604,6 +621,9 @@ function buildExplanation(args: {
       model["input TPM per PTU"],
       "Input TPM per PTU",
     );
+    const estimatedPtus = metrics.normalizedTpm / inputTpmPerPtu;
+    const estimateSubstitution = `${metrics.normalizedTpm.toFixed(2)} / ${inputTpmPerPtu} = ${estimatedPtus.toFixed(4)}`;
+    const isFireworks = model.provider.startsWith("Fireworks");
 
     steps.push(
       {
@@ -627,14 +647,28 @@ function buildExplanation(args: {
         substitution: usesImageTokenSizing(model)
           ? `${input.rpm} x (${metrics.effectiveTextInput.toFixed(2)} + ${inputImageTokens} x ${imageInputRatio} + ${input.outputTokens} x ${model["image output-to-input ratio"]} x ${imageInputRatio}) = ${metrics.normalizedTpm.toFixed(2)}`
           : `${input.rpm} x (${metrics.effectiveTextInput.toFixed(2)} + ${inputImageTokens}) + ${outputRatio} x (${input.rpm} x ${input.outputTokens}) = ${metrics.normalizedTpm.toFixed(2)}`,
+        ...(isFireworks
+          ? {
+              note: "Microsoft does not publish a PTU output-token weight for this Fireworks model; the catalog output ratio is used (PayGO output-to-input price ratio, or 1:1 for GLM).",
+            }
+          : {}),
       },
-      {
-        output: "Required PTU Num",
-        result: requiredPtus,
-        unit: "raw PTUs",
-        formula: "normalized TPM / input TPM per PTU",
-        substitution: `${metrics.normalizedTpm.toFixed(2)} / ${inputTpmPerPtu} = ${requiredPtus.toFixed(4)}`,
-      },
+      usesPtuOverride(input)
+        ? {
+            output: "Required PTU Num",
+            result: requiredPtus,
+            unit: "raw PTUs",
+            formula: "Required PTUs = user supplied PTU override",
+            substitution: `Required PTUs = ${requiredPtus.toFixed(4)} (automatic estimate: ${estimateSubstitution})`,
+            note: "The automatic estimate is replaced by the user supplied PTU override.",
+          }
+        : {
+            output: "Required PTU Num",
+            result: requiredPtus,
+            unit: "raw PTUs",
+            formula: "normalized TPM / input TPM per PTU",
+            substitution: estimateSubstitution,
+          },
     );
   } else if (model.provider === "Google") {
     const outputRatio = requirePositive(
@@ -821,7 +855,9 @@ function calculateScenarioValues(input: ScenarioInput): ScenarioCalculation {
         imageInputRatio: getImageInputRatio(model),
       },
     );
-    requiredPtus = provisioned.requiredPtus;
+    requiredPtus = usesPtuOverride(input)
+      ? getManualRequiredPtus(input, minimumPtus)
+      : provisioned.requiredPtus;
     ptuMetrics = provisioned.metrics;
   } else if (input.model.provider === "Google") {
     requiredPtus = calculateGooglePtuNum(
@@ -844,11 +880,7 @@ function calculateScenarioValues(input: ScenarioInput): ScenarioCalculation {
       ),
     );
   } else {
-    requiredPtus =
-      input.manualRequiredPtus === undefined
-        ? minimumPtus
-        : input.manualRequiredPtus;
-    requireNonNegative(requiredPtus, "Required PTUs");
+    requiredPtus = getManualRequiredPtus(input, minimumPtus);
   }
 
   const paygo = calculatePaygoCost(
@@ -998,10 +1030,7 @@ function findBreakEvenRpm(input: ScenarioInput): number | undefined {
     return undefined;
   }
 
-  const isAutomaticallySized =
-    usesAutomaticProvisionedSizing(input.model) ||
-    input.model.provider === "Google";
-  if (!isAutomaticallySized || oneRpmPoint.requiredPtus <= 0) {
+  if (!isAutomaticallySized(input) || oneRpmPoint.requiredPtus <= 0) {
     return calculateCurvePoint(input, 0).ptuCost / oneRpmPoint.paygoCost;
   }
 
@@ -1048,10 +1077,7 @@ function getCapacityTransitionRpms(
   input: ScenarioInput,
   maxRpm: number,
 ): number[] {
-  const isAutomaticallySized =
-    usesAutomaticProvisionedSizing(input.model) ||
-    input.model.provider === "Google";
-  if (!isAutomaticallySized) {
+  if (!isAutomaticallySized(input)) {
     return [];
   }
 
