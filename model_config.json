@@ -472,6 +472,21 @@
             "PTU yearly discount": 0
         },
         {
+            "model name": "fireworks DeepSeek V4 Flash 0731",
+            "provider": "Fireworks on Microsoft Foundry",
+            "input token price per 1k": 0.000484,
+            "input token price per 1k with cache hit": 0.000015,
+            "output token price per 1k": 0.001452,
+            "PTU minumum deployment unit": 100,
+            "PTU scale increment": 50,
+            "input TPM per PTU": 2800,
+            "PTU sizing mode": "manual",
+            "PTU price of monthly commitment": 260,
+            "PTU price of yearly commitment": 221,
+            "PTU monthly discount": 0,
+            "PTU yearly discount": 0
+        },
+        {
             "model name": "fireworks DeepSeek V4 Pro",
             "provider": "Fireworks on Microsoft Foundry",
             "input token price per 1k": 0.001925,

@@ -324,4 +324,31 @@ describe("PTU calculations", () => {
     expect(glm52["PTU price of monthly commitment"]).toBe(260);
     expect(glm52["PTU price of yearly commitment"]).toBe(221);
   });
+
+  it("ships DeepSeek V4 Flash 0731 with published PTU parameters", () => {
+    const flash = model("fireworks DeepSeek V4 Flash 0731");
+
+    expect(flash.provider).toBe("Fireworks on Microsoft Foundry");
+    expect(flash["input token price per 1k"]).toBe(0.000484);
+    expect(flash["input token price per 1k with cache hit"]).toBe(0.000015);
+    expect(flash["output token price per 1k"]).toBe(0.001452);
+    expect(flash["PTU minumum deployment unit"]).toBe(100);
+    expect(flash["PTU scale increment"]).toBe(50);
+    expect(flash["input TPM per PTU"]).toBe(2_800);
+    expect(flash["PTU sizing mode"]).toBe("manual");
+
+    const result = calculateScenario({
+      model: flash,
+      inputTextTokens: 3500,
+      outputTokens: 300,
+      rpm: 60,
+      cacheHitRate: 94,
+      images: [],
+      commitmentType: "Monthly",
+      deploymentType: "Global / Data Zone",
+      manualRequiredPtus: 4285.71,
+    });
+
+    expect(result.deployedPtus).toBe(4300);
+  });
 });
