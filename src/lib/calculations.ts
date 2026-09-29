@@ -649,7 +649,7 @@ function buildExplanation(args: {
           : `${input.rpm} x (${metrics.effectiveTextInput.toFixed(2)} + ${inputImageTokens}) + ${outputRatio} x (${input.rpm} x ${input.outputTokens}) = ${metrics.normalizedTpm.toFixed(2)}`,
         ...(isFireworks
           ? {
-              note: "Microsoft does not publish a PTU output-token weight for this Fireworks model; the catalog output ratio is used (PayGO output-to-input price ratio, or 1:1 for GLM).",
+              note: "Microsoft does not publish a PTU output-token weight for this Fireworks model; the catalog output ratio is used (4:1 for DeepSeek, 1:1 for GLM, or the PayGO output-to-input price ratio for other models).",
             }
           : {}),
       },

@@ -171,7 +171,7 @@ describe("PTU calculations", () => {
     ).toContain("normalized TPM");
   });
 
-  it("estimates non-GLM Fireworks sizing with the price-derived ratio", () => {
+  it("estimates Fireworks DeepSeek sizing with a 4:1 ratio", () => {
     const result = calculateScenario({
       model: model("fireworks DeepSeek V4 Pro"),
       inputTextTokens: 3500,
@@ -184,10 +184,10 @@ describe("PTU calculations", () => {
       manualRequiredPtus: 401,
     });
 
-    // 60 x 3,150 + 1.99 x 60 x 300 = 224,820 normalized TPM / 200 per PTU.
-    expect(result.normalizedTpm).toBeCloseTo(224_820);
-    expect(result.requiredPtus).toBeCloseTo(1124.1);
-    expect(result.deployedPtus).toBe(1200);
+    // 60 x 3,150 + 4 x 60 x 300 = 261,000 normalized TPM / 200 per PTU.
+    expect(result.normalizedTpm).toBeCloseTo(261_000);
+    expect(result.requiredPtus).toBeCloseTo(1305);
+    expect(result.deployedPtus).toBe(1400);
     expect(
       result.explanation.steps.find((step) => step.output === "Normalized TPM")
         ?.note,
@@ -213,11 +213,11 @@ describe("PTU calculations", () => {
 
     expect(result.requiredPtus).toBe(401);
     expect(result.deployedPtus).toBe(600);
-    expect(result.normalizedTpm).toBeCloseTo(224_820);
+    expect(result.normalizedTpm).toBeCloseTo(261_000);
     expect(requiredStep?.formula).toBe(
       "Required PTUs = user supplied PTU override",
     );
-    expect(requiredStep?.substitution).toContain("1124.1000");
+    expect(requiredStep?.substitution).toContain("1305.0000");
   });
 
   it("keeps catalog-manual Fireworks sizing manual", () => {
@@ -352,7 +352,7 @@ describe("PTU calculations", () => {
     const gpt56Sol = model("azure openai gpt-5.6-sol (2026-07-09)");
     const glm52 = model("fireworks GLM 5.2");
 
-    expect(bundledCatalog.metadata["verified date"]).toBe("2026-08-29");
+    expect(bundledCatalog.metadata["verified date"]).toBe("2026-09-29");
     expect(modelNames.has("azure openai gpt-5.6-luna (2026-07-09)")).toBe(true);
     expect(modelNames.has("azure openai o4-mini (2025-04-16)")).toBe(true);
     expect(modelNames.has("fireworks DeepSeek v3.2")).toBe(true);
@@ -386,7 +386,7 @@ describe("PTU calculations", () => {
     expect(flash["PTU scale increment"]).toBe(50);
     expect(flash["input TPM per PTU"]).toBe(2_800);
     expect(flash["PTU sizing mode"]).toBe("automatic");
-    expect(flash["output token multiple ratio"]).toBe(3);
+    expect(flash["output token multiple ratio"]).toBe(4);
 
     // Customer workload: 200M input TPM with a 94% prompt-cache hit rate.
     const result = calculateScenario({
@@ -412,13 +412,15 @@ describe("PTU calculations", () => {
 
     expect(fireworks.length).toBeGreaterThan(0);
     for (const item of fireworks) {
-      const expectedRatio = item["model name"].includes("GLM")
-        ? 1
-        : Math.round(
+      const expectedRatio = item["model name"].includes("DeepSeek")
+        ? 4
+        : item["model name"].includes("GLM")
+          ? 1
+          : Math.round(
             (item["output token price per 1k"] /
               item["input token price per 1k"]) *
               100,
-          ) / 100;
+            ) / 100;
       expect(item["PTU sizing mode"], item["model name"]).toBe("automatic");
       expect(item["output token multiple ratio"], item["model name"]).toBe(
         expectedRatio,

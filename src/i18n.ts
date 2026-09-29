@@ -442,8 +442,8 @@ const ZH_EXPLANATION_TEXT: Record<string, string> = {
     "所需 PTU = 用户手动覆盖的 PTU 值",
   "The automatic estimate is replaced by the user supplied PTU override.":
     "自动估算已被用户手动覆盖的 PTU 值替代。",
-  "Microsoft does not publish a PTU output-token weight for this Fireworks model; the catalog output ratio is used (PayGO output-to-input price ratio, or 1:1 for GLM).":
-    "Microsoft 未发布此 Fireworks 模型的 PTU 输出令牌权重；使用目录中的输出比率（PayGO 输出/输入价格比，GLM 为 1:1）。",
+  "Microsoft does not publish a PTU output-token weight for this Fireworks model; the catalog output ratio is used (4:1 for DeepSeek, 1:1 for GLM, or the PayGO output-to-input price ratio for other models).":
+    "Microsoft 未发布此 Fireworks 模型的 PTU 输出令牌权重；使用目录中的输出比率（DeepSeek 为 4:1，GLM 为 1:1，其他模型使用 PayGO 输出/输入价格比）。",
   "max(minimum PTUs, ceil(required PTUs / scale increment) x scale increment)":
     "max（最低 PTU，ceil（所需 PTU / 扩容步长）x 扩容步长）",
   "required PTUs / deployed PTUs x 100":

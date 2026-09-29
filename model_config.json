@@ -1,6 +1,6 @@
 {
     "metadata": {
-        "verified date": "2026-08-29",
+        "verified date": "2026-09-29",
         "currency": "USD",
         "pricing scope": "Global Standard for Azure OpenAI; US Data Zone for Fireworks on Microsoft Foundry",
         "ptu sizing source": "https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/provisioned-throughput-sizing#deployment-parameters-and-throughput-values-by-model",
@@ -9,7 +9,7 @@
         "notes": [
             "Token prices are normalized to USD per 1,000 tokens.",
             "The yearly PTU value is the monthly equivalent of the public USD 2,652 annual reservation price.",
-            "Fireworks GLM models use a 1:1 output-to-input ratio for automatic PTU estimation; other Fireworks models use their PayGO output-to-input price ratio because Microsoft does not publish a Fireworks PTU output weight.",
+            "Fireworks DeepSeek models use a 4:1 output-to-input ratio and GLM models use 1:1 for automatic PTU estimation; other Fireworks models use their PayGO output-to-input price ratio because Microsoft does not publish Fireworks PTU output weights.",
             "Azure prices can vary by geography, deployment type, agreement, and currency."
         ]
     },
@@ -465,7 +465,7 @@
             "PTU minumum deployment unit": 300,
             "PTU scale increment": 150,
             "input TPM per PTU": 3000,
-            "output token multiple ratio": 2.98,
+            "output token multiple ratio": 4,
             "PTU sizing mode": "automatic",
             "PTU price of monthly commitment": 260,
             "PTU price of yearly commitment": 221,
@@ -481,7 +481,7 @@
             "PTU minumum deployment unit": 100,
             "PTU scale increment": 50,
             "input TPM per PTU": 2800,
-            "output token multiple ratio": 3,
+            "output token multiple ratio": 4,
             "PTU sizing mode": "automatic",
             "PTU price of monthly commitment": 260,
             "PTU price of yearly commitment": 221,
@@ -497,7 +497,7 @@
             "PTU minumum deployment unit": 400,
             "PTU scale increment": 200,
             "input TPM per PTU": 200,
-            "output token multiple ratio": 1.99,
+            "output token multiple ratio": 4,
             "PTU sizing mode": "automatic",
             "PTU price of monthly commitment": 260,
             "PTU price of yearly commitment": 221,

@@ -226,11 +226,11 @@ describe("GPT-image-2 normalized token accounting", () => {
 });
 
 describe("normalized model catalog configuration", () => {
-  it("loads both new dated entries without changing catalog-wide verification", () => {
+  it("loads both new dated entries with the current catalog verification", () => {
     expect(isCatalogDocument(bundledCatalog)).toBe(true);
     expect(astra["model name"]).toBe("azure openai gpt-6-astra (2026-09-03)");
     expect(image["model name"]).toBe("azure openai gpt-image-2 (2026-04-21)");
-    expect(bundledCatalog.metadata["verified date"]).toBe("2026-08-29");
+    expect(bundledCatalog.metadata["verified date"]).toBe("2026-09-29");
     expect(astra["input TPM per PTU"]).toBe(600);
     expect(astra["long context"]?.["output token multiple ratio"]).toBe(10);
     expect(image["input TPM per PTU"]).toBe(1200);
