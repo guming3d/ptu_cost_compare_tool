@@ -63,6 +63,41 @@ describe("PTU calculations", () => {
     expect(result.deployedPtus).toBe(80);
   });
 
+  it.each([
+    ["Global / Data Zone", 980],
+    ["Regional", 1000],
+  ] as const)(
+    "uses the GPT-5.4-mini 8:1 PTU override for %s without changing PayGO",
+    (deploymentType, deployedPtus) => {
+      const selectedModel = model("azure openai gpt-5.4-mini (2026-03-17)");
+      const input = {
+        model: selectedModel,
+        inputTextTokens: 14_001,
+        outputTokens: 79,
+        rpm: 7350,
+        cacheHitRate: 97,
+        images: [],
+        commitmentType: "Monthly" as const,
+        deploymentType,
+      };
+      const result = calculateScenario(input);
+      const previousRatioResult = calculateScenario({
+        ...input,
+        model: { ...selectedModel, "output token multiple ratio": 6 },
+      });
+
+      expect(selectedModel["output token multiple ratio"]).toBe(8);
+      expect(result.normalizedTpm).toBeCloseTo(7_732_420.5);
+      expect(result.requiredPtus).toBeCloseTo(978.7874050632912);
+      expect(result.deployedPtus).toBe(deployedPtus);
+      expect(result.ptuCost).toBe(deployedPtus * 260);
+      expect(result.paygoCost).toBe(previousRatioResult.paygoCost);
+      expect(
+        model("azure openai gpt-5.4 (2026-03-05)")["output token multiple ratio"],
+      ).toBe(6);
+    },
+  );
+
   it("uses the scale increment when pricing PTUs", () => {
     expect(calculatePtuCost(16, 15, 5, 260, 0).discountedCost).toBe(5200);
   });
