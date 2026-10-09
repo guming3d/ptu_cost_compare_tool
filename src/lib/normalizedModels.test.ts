@@ -17,6 +17,8 @@ function model(name: string): ModelConfig {
 
 const astra = model("gpt-6-astra");
 const image = model("gpt-image-2");
+const sol = model("gpt-6-sol");
+const sol61 = model("gpt-6.1-sol");
 
 function scenario(selectedModel: ModelConfig, changes: Partial<ScenarioInput> = {}): ScenarioInput {
   return {
@@ -225,6 +227,121 @@ describe("GPT-image-2 normalized token accounting", () => {
   });
 });
 
+describe.each([
+  { name: "gpt-6-sol", version: "2026-09-22", selectedModel: sol, shortCachePrice: 0.0002, longCachePrice: 0.0004, longCacheWeight: 0.2 },
+  { name: "gpt-6.1-sol", version: "2026-09-29", selectedModel: sol61, shortCachePrice: 0.0001, longCachePrice: 0.0002, longCacheWeight: 0.1 },
+])("$name published normalized sizing", ({ name, version, selectedModel, shortCachePrice, longCachePrice, longCacheWeight }) => {
+  it("loads the dated model with published pricing and deployment limits", () => {
+    expect(selectedModel).toMatchObject({
+      "model name": `azure openai ${name} (${version})`,
+      "provider": "Azure OpenAI",
+      "input TPM per PTU": 3000,
+      "PTU minumum deployment unit": 15,
+      "PTU scale increment": 5,
+      "regional PTU minimum deployment unit": 50,
+      "regional PTU scale increment": 50,
+      "input token price per 1k": 0.002,
+      "input token price per 1k with cache hit": shortCachePrice,
+      "cache write token price per 1k": 0.0025,
+      "output token price per 1k": 0.01,
+      "output token multiple ratio": 5,
+      "PTU input token weights": { uncached: 1, cached: 0.1, cacheWrite: 1.25 },
+      "long context": {
+        "input token price per 1k": 0.004,
+        "input token price per 1k with cache hit": longCachePrice,
+        "cache write token price per 1k": 0.005,
+        "output token price per 1k": 0.015,
+        "output token multiple ratio": 7.5,
+        "PTU input token weights": { uncached: 2, cached: longCacheWeight, cacheWrite: 2.5 },
+      },
+    });
+    expect(isCatalogDocument(JSON.parse(JSON.stringify({
+      ...bundledCatalog,
+      models: [selectedModel],
+    })))).toBe(true);
+  });
+
+  it.each([
+    ["short", 1000, 0, 0, 0, 1000],
+    ["short", 1000, 100, 0, 0, 100],
+    ["short", 1000, 0, 1000, 0, 1250],
+    ["short", 0, 0, 0, 1000, 5000],
+    ["long", 1000, 0, 0, 0, 2000],
+    ["long", 1000, 100, 0, 0, 1000 * longCacheWeight],
+    ["long", 1000, 0, 1000, 0, 2500],
+    ["long", 0, 0, 0, 1000, 7500],
+  ] satisfies [ContextMode, number, number, number, number, number][])(
+    "uses the published %s-context weight for input %s, cache rate %s, writes %s, output %s",
+    (contextMode, inputTextTokens, cacheHitRate, cacheWriteTokens, outputTokens, normalizedTpm) => {
+      const result = calculateScenario(scenario(selectedModel, {
+        contextMode, inputTextTokens, cacheHitRate, cacheWriteTokens, outputTokens, rpm: 1,
+      }));
+      expect(result.normalizedTpm).toBeCloseTo(normalizedTpm);
+      expect(result.requiredPtus).toBeCloseTo(normalizedTpm / 3000);
+      expect(result.deployedPtus).toBe(15);
+    },
+  );
+
+  it.each(["short", "long"] satisfies ContextMode[])("prices and sizes mixed %s-context buckets independently", (contextMode) => {
+    const input = scenario(selectedModel, { contextMode, cacheWriteTokens: 200, rpm: 100 });
+    const result = calculateScenario(input);
+    const isLong = contextMode === "long";
+    const normalizedPerRequest = isLong ? 1850 + 500 * longCacheWeight : 1100;
+    const costPerRequest = isLong
+      ? (300 * 0.004 + 500 * longCachePrice + 200 * 0.005 + 100 * 0.015) / 1000
+      : (300 * 0.002 + 500 * shortCachePrice + 200 * 0.0025 + 100 * 0.01) / 1000;
+    expect(result.normalizedTpm).toBeCloseTo(normalizedPerRequest * 100);
+    expect(result.requiredPtus).toBeCloseTo(normalizedPerRequest * 100 / 3000);
+    expect(result.deployedPtus).toBe(isLong ? 65 : 40);
+    expect(result.ptuCost).toBe((isLong ? 65 : 40) * 260);
+    expect(result.paygoCost).toBeCloseTo(costPerRequest * 100 * MINUTES_PER_MONTH);
+    expect(result.paygoBreakdown.cacheWriteCost).toBeCloseTo(
+      200 * (isLong ? 0.005 : 0.0025) / 1000 * 100 * MINUTES_PER_MONTH,
+    );
+    expect(result.explanation.inputs).toMatchObject({
+      contextMode,
+      cacheWriteTokens: 200,
+      cachedInputWeight: isLong ? longCacheWeight : 0.1,
+      cachedInputPricePer1k: isLong ? longCachePrice : shortCachePrice,
+      outputWeight: isLong ? 7.5 : 5,
+    });
+    expect(result.explanation.steps.find((step) => step.output === "Normalized TPM")?.result)
+      .toBe(result.normalizedTpm);
+    const regional = calculateScenario({ ...input, deploymentType: "Regional", commitmentType: "Yearly" });
+    expect(regional.deployedPtus).toBe(isLong ? 100 : 50);
+    expect(regional.ptuCost).toBe((isLong ? 100 : 50) * 221);
+    expect(regional.paygoCost).toBe(result.paygoCost);
+  });
+
+  it("retains cache capacity consumption at a 100% cache-hit rate", () => {
+    const result = calculateScenario(scenario(selectedModel, { cacheHitRate: 100, outputTokens: 0 }));
+    expect(result.contextMode).toBe("short");
+    expect(result.normalizedTpm).toBe(1000);
+    expect(result.paygoBreakdown.cachedInputCost).toBeCloseTo(shortCachePrice * 10 * MINUTES_PER_MONTH);
+    expect(result.paygoBreakdown.nonCachedInputCost).toBe(0);
+  });
+
+  it("supports the existing optimizer without treating cache writes as ordinary input", () => {
+    const input = scenario(selectedModel, { contextMode: "long", cacheWriteTokens: 200, rpm: 100 });
+    const result = calculateScenario(input);
+    const optimization = calculateCostOptimization(input);
+    expect(optimization.configurations).toHaveLength(4);
+    expect(optimization.configurations.find((configuration) =>
+      configuration.commitmentType === "Monthly" && configuration.deploymentType === "Global / Data Zone",
+    )?.current).toMatchObject({
+      requiredPtus: result.requiredPtus,
+      deployedPtus: result.deployedPtus,
+      paygoCost: result.paygoCost,
+      ptuCost: result.ptuCost,
+    });
+  });
+
+  it("rejects overlapping cached and cache-write input tokens", () => {
+    expect(() => calculateScenario(scenario(selectedModel, { cacheHitRate: 50, cacheWriteTokens: 501 })))
+      .toThrow("Cache reads and writes cannot exceed total input tokens.");
+  });
+});
+
 describe("normalized model catalog configuration", () => {
   it("loads both new dated entries with the current catalog verification", () => {
     expect(isCatalogDocument(bundledCatalog)).toBe(true);
@@ -263,7 +380,7 @@ describe("normalized model catalog configuration", () => {
   });
 
   it("does not enable normalized cache accounting for existing models", () => {
-    for (const entry of bundledCatalog.models.filter((item) => item !== astra && item !== image)) {
+    for (const entry of bundledCatalog.models.filter((item) => ![astra, image, sol, sol61].includes(item))) {
       expect(entry["PTU input token weights"]).toBeUndefined();
       expect(entry["long context"]).toBeUndefined();
       expect(entry["image input TPM per PTU"]).toBeUndefined();

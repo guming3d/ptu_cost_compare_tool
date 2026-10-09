@@ -66,6 +66,26 @@ describe("model-specific workload controls", () => {
     expect(html).not.toContain(text.imageInputTokens);
   });
 
+  it.each(["en", "zh-CN"] satisfies Language[])("shows Sol context controls and the cache exception in %s", (language) => {
+    const text = getUiText(language).calculator;
+    for (const name of ["gpt-6-sol", "gpt-6.1-sol"]) {
+      const html = renderForm(name, language);
+      expect(html).toContain(text.contextMode);
+      expect(html).toContain(text.cacheWriteTokens);
+      expect(html).toContain(renderToStaticMarkup(
+        <span className="field-hint">{text.normalizedContextHint}</span>,
+      ));
+      expect(html).toContain('value="long" selected=""');
+      expect(html).not.toContain(text.astraHint);
+      expect(html).not.toContain(text.overridePtus);
+      if (name === "gpt-6.1-sol") {
+        expect(html).toContain(text.sol61CacheHint);
+      } else {
+        expect(html).not.toContain(text.sol61CacheHint);
+      }
+    }
+  });
+
   it.each(["en", "zh-CN"] satisfies Language[])("uses measured image token controls in %s", (language) => {
     const html = renderForm("gpt-image-2", language);
     const text = getUiText(language).calculator;

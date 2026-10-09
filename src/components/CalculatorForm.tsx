@@ -168,7 +168,14 @@ export function CalculatorForm({
             <option value="short">{text.shortContext}</option>
             <option value="long">{text.longContext}</option>
           </select>
-          <span className="field-hint">{text.astraHint}</span>
+          <span className="field-hint">
+            {selectedModelName.includes("gpt-6-astra")
+              ? text.astraHint
+              : text.normalizedContextHint}
+          </span>
+          {selectedModelName.includes("gpt-6.1-sol") ? (
+            <span className="field-hint">{text.sol61CacheHint}</span>
+          ) : null}
         </label>
       ) : null}
 

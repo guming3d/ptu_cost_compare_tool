@@ -15,6 +15,88 @@
     },
     "models": [
         {
+            "model name": "azure openai gpt-6.1-sol (2026-09-29)",
+            "provider": "Azure OpenAI",
+            "output token multiple ratio": 5,
+            "input token price per 1k": 0.002,
+            "input token price per 1k with cache hit": 0.0001,
+            "cache write token price per 1k": 0.0025,
+            "output token price per 1k": 0.01,
+            "PTU input token weights": {
+                "uncached": 1,
+                "cached": 0.1,
+                "cacheWrite": 1.25
+            },
+            "long context": {
+                "output token multiple ratio": 7.5,
+                "input token price per 1k": 0.004,
+                "input token price per 1k with cache hit": 0.0002,
+                "cache write token price per 1k": 0.005,
+                "output token price per 1k": 0.015,
+                "PTU input token weights": {
+                    "uncached": 2,
+                    "cached": 0.1,
+                    "cacheWrite": 2.5
+                }
+            },
+            "PTU minumum deployment unit": 15,
+            "PTU scale increment": 5,
+            "regional PTU minimum deployment unit": 50,
+            "regional PTU scale increment": 50,
+            "input TPM per PTU": 3000,
+            "PTU price of monthly commitment": 260,
+            "PTU price of yearly commitment": 221,
+            "PTU monthly discount": 0,
+            "PTU yearly discount": 0,
+            "configuration notes": [
+                "PTU sizing and Global Standard token prices verified on 2026-10-03: https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/provisioned-throughput-sizing#deployment-parameters-and-throughput-values-by-model",
+                "Short-context cached input currently consumes 0.1 normalized tokens due to a system limitation, not its 0.05 PayGO price ratio. Long-context cached input also has weight 0.1; long-context output has weight 7.5.",
+                "Published latency target: 99% > 80 TPS. Select the applicable context tier explicitly.",
+                "PTU reservation prices follow the existing catalog assumptions, not a new reservation quote."
+            ]
+        },
+        {
+            "model name": "azure openai gpt-6-sol (2026-09-22)",
+            "provider": "Azure OpenAI",
+            "output token multiple ratio": 5,
+            "input token price per 1k": 0.002,
+            "input token price per 1k with cache hit": 0.0002,
+            "cache write token price per 1k": 0.0025,
+            "output token price per 1k": 0.01,
+            "PTU input token weights": {
+                "uncached": 1,
+                "cached": 0.1,
+                "cacheWrite": 1.25
+            },
+            "long context": {
+                "output token multiple ratio": 7.5,
+                "input token price per 1k": 0.004,
+                "input token price per 1k with cache hit": 0.0004,
+                "cache write token price per 1k": 0.005,
+                "output token price per 1k": 0.015,
+                "PTU input token weights": {
+                    "uncached": 2,
+                    "cached": 0.2,
+                    "cacheWrite": 2.5
+                }
+            },
+            "PTU minumum deployment unit": 15,
+            "PTU scale increment": 5,
+            "regional PTU minimum deployment unit": 50,
+            "regional PTU scale increment": 50,
+            "input TPM per PTU": 3000,
+            "PTU price of monthly commitment": 260,
+            "PTU price of yearly commitment": 221,
+            "PTU monthly discount": 0,
+            "PTU yearly discount": 0,
+            "configuration notes": [
+                "PTU sizing and Global Standard token prices verified on 2026-10-03: https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/provisioned-throughput-sizing#deployment-parameters-and-throughput-values-by-model",
+                "Cache reads and writes consume PTU capacity. Long-context output has weight 7.5.",
+                "Published latency target: 99% > 80 TPS. Select the applicable context tier explicitly.",
+                "PTU reservation prices follow the existing catalog assumptions, not a new reservation quote."
+            ]
+        },
+        {
             "model name": "azure openai gpt-6-astra (2026-09-03)",
             "provider": "Azure OpenAI",
             "output token multiple ratio": 5,
