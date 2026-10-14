@@ -7,6 +7,7 @@ import type {
   CostCurvePoint,
   DeploymentType,
   ModelConfig,
+  NormalizedTokenBucket,
   PtuConfigurationCurve,
   PtuMetrics,
   PtuInputTokenWeights,
@@ -225,6 +226,13 @@ function getScenarioModel(input: ScenarioInput): ModelConfig {
   return input.model;
 }
 
+export function calculateAutomaticCacheWriteTokens(
+  inputTokens: number,
+  cacheHitRate: number,
+): number {
+  return (inputTokens * (100 - cacheHitRate)) / 100;
+}
+
 function getInputTokenSplit(
   inputTokens: number,
   cacheHitRate: number,
@@ -234,12 +242,21 @@ function getInputTokenSplit(
     throw new Error("Cache hit rate must be between 0 and 100.");
   }
   requireNonNegative(cacheWriteTokens, "Cache write tokens");
-  const cachedTokens = inputTokens * (cacheHitRate / 100);
-  const uncachedTokens = inputTokens - cachedTokens - cacheWriteTokens;
+  const nonCachedTokens = calculateAutomaticCacheWriteTokens(inputTokens, cacheHitRate);
+  const cachedTokens = inputTokens - nonCachedTokens;
+  const uncachedTokens = nonCachedTokens - cacheWriteTokens;
   if (uncachedTokens < 0) {
     throw new Error("Cache reads and writes cannot exceed total input tokens.");
   }
   return { cachedTokens, uncachedTokens, cacheWriteTokens };
+}
+
+function normalizeTokenBucket(
+  category: NormalizedTokenBucket["category"],
+  tokens: number,
+  weight: number,
+): NormalizedTokenBucket {
+  return { category, tokens, weight, normalizedTokens: tokens * weight };
 }
 
 export function calculateProvisionedPtuNum(
@@ -270,17 +287,41 @@ export function calculateProvisionedPtuNum(
   if (tokens.cacheWriteTokens > 0 && !options.inputWeights) {
     throw new Error("Cache writes require configured PTU input token weights.");
   }
-  const effectiveTextInput = options.inputWeights
-    ? tokens.uncachedTokens * weights.uncached +
-      tokens.cachedTokens * weights.cached +
-      tokens.cacheWriteTokens * weights.cacheWrite
+  const imageInputRatio = requirePositive(options.imageInputRatio ?? 1, "Image input ratio");
+  const outputRatio = requirePositive(outputToInputRatio, "Output ratio");
+  const inputBuckets = options.inputWeights
+    ? [
+        normalizeTokenBucket("uncached", tokens.uncachedTokens, weights.uncached),
+        normalizeTokenBucket("cached", tokens.cachedTokens, weights.cached),
+        normalizeTokenBucket("cacheWrite", tokens.cacheWriteTokens, weights.cacheWrite),
+      ]
+    : undefined;
+  const effectiveTextInput = inputBuckets
+    ? inputBuckets.reduce((sum, bucket) => sum + bucket.normalizedTokens, 0)
     : inputTokens * (1 - cacheHitRate / 100);
   const totalInputTpm =
-    peakCallsPerMinute * (effectiveTextInput + imageInputTokens *
-      requirePositive(options.imageInputRatio ?? 1, "Image input ratio"));
+    peakCallsPerMinute * (effectiveTextInput + imageInputTokens * imageInputRatio);
   const totalOutputTpm = peakCallsPerMinute * outputTokens;
-  const normalizedTpm =
-    totalInputTpm + totalOutputTpm * requirePositive(outputToInputRatio, "Output ratio");
+  const buckets = inputBuckets
+    ? [
+        ...inputBuckets,
+        ...(imageInputTokens > 0
+          ? [normalizeTokenBucket("image", imageInputTokens, imageInputRatio)]
+          : []),
+        normalizeTokenBucket("output", outputTokens, outputRatio),
+      ]
+    : undefined;
+  const tokenNormalization = buckets
+    ? {
+        buckets,
+        normalizedTokensPerRequest: buckets.reduce(
+          (sum, bucket) => sum + bucket.normalizedTokens, 0,
+        ),
+      }
+    : undefined;
+  const normalizedTpm = tokenNormalization
+    ? peakCallsPerMinute * tokenNormalization.normalizedTokensPerRequest
+    : totalInputTpm + totalOutputTpm * outputRatio;
   const requiredPtus =
     normalizedTpm / requirePositive(inputTpmPerPtu, "Input TPM per PTU");
 
@@ -292,6 +333,7 @@ export function calculateProvisionedPtuNum(
       totalInputTpm,
       totalOutputTpm,
       normalizedTpm,
+      ...(tokenNormalization ? { tokenNormalization } : {}),
     },
   };
 }
@@ -538,9 +580,15 @@ function buildExplanation(args: {
   } = args;
   const model = getScenarioModel(input);
   const monthlyRequests = input.rpm * MINUTES_PER_MONTH;
-  const cachedTokens = input.inputTextTokens * (input.cacheHitRate / 100);
-  const cacheWriteTokens = input.cacheWriteTokens ?? 0;
-  const nonCachedTokens = input.inputTextTokens - cachedTokens - cacheWriteTokens;
+  const {
+    cachedTokens,
+    cacheWriteTokens,
+    uncachedTokens: nonCachedTokens,
+  } = getInputTokenSplit(
+    input.inputTextTokens,
+    input.cacheHitRate,
+    input.cacheWriteTokens ?? 0,
+  );
   const steps: CalculationStep[] = [
     {
       output: "Monthly requests",
@@ -988,6 +1036,7 @@ export function calculateScenario(input: ScenarioInput): ComparisonResult {
     ptuCostBeforeDiscount: ptuPricing.costBeforeDiscount,
     ptuDiscount: discount,
     normalizedTpm: ptuMetrics?.normalizedTpm,
+    tokenNormalization: ptuMetrics?.tokenNormalization,
     ...(input.model["PTU input token weights"] ? {
       contextMode: input.contextMode ?? "short",
       cacheWriteTokens: input.cacheWriteTokens ?? 0,

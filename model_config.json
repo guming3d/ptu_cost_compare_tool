@@ -24,7 +24,7 @@
             "output token price per 1k": 0.01,
             "PTU input token weights": {
                 "uncached": 1,
-                "cached": 0.1,
+                "cached": 0.05,
                 "cacheWrite": 1.25
             },
             "long context": {
@@ -49,9 +49,9 @@
             "PTU monthly discount": 0,
             "PTU yearly discount": 0,
             "configuration notes": [
-                "PTU sizing and Global Standard token prices verified on 2026-10-03: https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/provisioned-throughput-sizing#deployment-parameters-and-throughput-values-by-model",
-                "Short-context cached input currently consumes 0.1 normalized tokens due to a system limitation, not its 0.05 PayGO price ratio. Long-context cached input also has weight 0.1; long-context output has weight 7.5.",
-                "Published latency target: 99% > 80 TPS. Select the applicable context tier explicitly.",
+                "Normalized token weights verified on 2026-10-15: https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/provisioned-throughput-sizing#normalized-token-pricing-for-gpt-6-astra-and-newer-models",
+                "All weights use the short-context input price as the baseline. Cache-read weights are 0.05 for short context and 0.1 for long context; cache-write weights are 1.25 and 2.5.",
+                "Published latency target: 99% > 50 TPS. Select the applicable context tier explicitly.",
                 "PTU reservation prices follow the existing catalog assumptions, not a new reservation quote."
             ]
         },
@@ -90,7 +90,7 @@
             "PTU monthly discount": 0,
             "PTU yearly discount": 0,
             "configuration notes": [
-                "PTU sizing and Global Standard token prices verified on 2026-10-03: https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/provisioned-throughput-sizing#deployment-parameters-and-throughput-values-by-model",
+                "Normalized token weights verified on 2026-10-15: https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/provisioned-throughput-sizing#normalized-token-pricing-for-gpt-6-astra-and-newer-models",
                 "Cache reads and writes consume PTU capacity. Long-context output has weight 7.5.",
                 "Published latency target: 99% > 80 TPS. Select the applicable context tier explicitly.",
                 "PTU reservation prices follow the existing catalog assumptions, not a new reservation quote."
@@ -110,7 +110,7 @@
                 "cacheWrite": 1.25
             },
             "long context": {
-                "output token multiple ratio": 10,
+                "output token multiple ratio": 7.5,
                 "input token price per 1k": 0.02,
                 "input token price per 1k with cache hit": 0.002,
                 "cache write token price per 1k": 0.025,
@@ -131,8 +131,8 @@
             "PTU monthly discount": 0,
             "PTU yearly discount": 0,
             "configuration notes": [
-                "PTU sizing and token prices: supplied Microsoft Learn sizing guide updated 2026-09-11.",
-                "Long-context output currently consumes 10 normalized tokens, not the planned 7.5; PayGO output remains USD 75 per million.",
+                "Normalized token weights verified on 2026-10-15: https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/provisioned-throughput-sizing#normalized-token-pricing-for-gpt-6-astra-and-newer-models",
+                "All weights use the short-context input price as the baseline. Long-context output has weight 7.5; PayGO output remains USD 75 per million.",
                 "The yearly monthly-equivalent reservation price follows the existing catalog assumption."
             ]
         },

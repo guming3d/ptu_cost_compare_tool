@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { bundledCatalog, isCatalogDocument } from "../data/catalog";
 import type { ContextMode, DeploymentType, ModelConfig, ScenarioInput } from "../types";
 import {
+  calculateAutomaticCacheWriteTokens,
   calculateCostOptimization,
   calculateScenario,
   MINUTES_PER_MONTH,
@@ -34,6 +35,53 @@ function scenario(selectedModel: ModelConfig, changes: Partial<ScenarioInput> = 
   };
 }
 
+describe("automatic cache-write estimates", () => {
+  it.each([
+    [3500, 90, 350],
+    [3500, 0, 3500],
+    [3500, 100, 0],
+    [0, 90, 0],
+    [31, 90, 3.1],
+    [101, 67, 33.33],
+  ])("estimates %s input tokens at %s%% cache hit as %s writes", (inputTokens, cacheHitRate, expected) => {
+    expect(calculateAutomaticCacheWriteTokens(inputTokens, cacheHitRate)).toBe(expected);
+  });
+
+  it.each(["gpt-6-astra", "gpt-6-sol", "gpt-6.1-sol"])(
+    "uses disjoint cache buckets for automatic writes on %s at every cache-hit rate",
+    (name) => {
+      const selectedModel = model(name);
+      for (const contextMode of ["short", "long"] satisfies ContextMode[]) {
+        for (let cacheHitRate = 0; cacheHitRate <= 100; cacheHitRate += 1) {
+          const cacheWriteTokens = calculateAutomaticCacheWriteTokens(101, cacheHitRate);
+          const result = calculateScenario(scenario(selectedModel, {
+            inputTextTokens: 101,
+            cacheHitRate,
+            cacheWriteTokens,
+            contextMode,
+            outputTokens: 0,
+            rpm: 1,
+          }));
+          const tier = contextMode === "long" ? selectedModel["long context"]! : selectedModel;
+          const weights = tier["PTU input token weights"]!;
+          const cachedTokens = 101 - cacheWriteTokens;
+          expect(result.cacheWriteTokens).toBe(cacheWriteTokens);
+          expect(result.paygoBreakdown.nonCachedInputCost).toBe(0);
+          expect(result.normalizedTpm).toBeCloseTo(
+            cachedTokens * weights.cached + cacheWriteTokens * weights.cacheWrite,
+          );
+          expect(result.paygoBreakdown.cacheWriteCost).toBeCloseTo(
+            cacheWriteTokens / 1000 * MINUTES_PER_MONTH * tier["cache write token price per 1k"]!,
+          );
+          expect(result.explanation.inputs.cacheWriteTokens).toBe(cacheWriteTokens);
+          expect(result.explanation.steps.find((step) => step.output === "Monthly PayGO input cost")?.substitution)
+            .toMatch(/^\(0 x /);
+        }
+      }
+    },
+  );
+});
+
 describe("GPT-6 Astra normalized token accounting", () => {
   it.each([
     ["short", 0, 0, 0, 1000],
@@ -43,7 +91,7 @@ describe("GPT-6 Astra normalized token accounting", () => {
     ["long", 0, 0, 0, 2000],
     ["long", 100, 0, 0, 200],
     ["long", 0, 1000, 0, 2500],
-    ["long", 0, 0, 1000, 12000],
+    ["long", 0, 0, 1000, 9500],
   ] satisfies [ContextMode, number, number, number, number][])(
     "weights %s-context tokens at cache rate %s, writes %s, output %s",
     (contextMode, cacheHitRate, cacheWriteTokens, outputTokens, normalizedTpm) => {
@@ -61,7 +109,7 @@ describe("GPT-6 Astra normalized token accounting", () => {
 
   it.each([
     ["short", 11000, 20, 0.011, 0.0025, 5],
-    ["long", 22000, 40, 0.0195, 0.005, 10],
+    ["long", 19500, 35, 0.0195, 0.005, 7.5],
   ] satisfies [ContextMode, number, number, number, number, number][])(
     "sizes and prices disjoint read/write/input buckets for %s context",
     (contextMode, normalizedTpm, deployedPtus, costPerRequest, writeCostPerRequest, outputWeight) => {
@@ -228,9 +276,9 @@ describe("GPT-image-2 normalized token accounting", () => {
 });
 
 describe.each([
-  { name: "gpt-6-sol", version: "2026-09-22", selectedModel: sol, shortCachePrice: 0.0002, longCachePrice: 0.0004, longCacheWeight: 0.2 },
-  { name: "gpt-6.1-sol", version: "2026-09-29", selectedModel: sol61, shortCachePrice: 0.0001, longCachePrice: 0.0002, longCacheWeight: 0.1 },
-])("$name published normalized sizing", ({ name, version, selectedModel, shortCachePrice, longCachePrice, longCacheWeight }) => {
+  { name: "gpt-6-sol", version: "2026-09-22", selectedModel: sol, shortCachePrice: 0.0002, shortCacheWeight: 0.1, longCachePrice: 0.0004, longCacheWeight: 0.2 },
+  { name: "gpt-6.1-sol", version: "2026-09-29", selectedModel: sol61, shortCachePrice: 0.0001, shortCacheWeight: 0.05, longCachePrice: 0.0002, longCacheWeight: 0.1 },
+])("$name published normalized sizing", ({ name, version, selectedModel, shortCachePrice, shortCacheWeight, longCachePrice, longCacheWeight }) => {
   it("loads the dated model with published pricing and deployment limits", () => {
     expect(selectedModel).toMatchObject({
       "model name": `azure openai ${name} (${version})`,
@@ -245,7 +293,7 @@ describe.each([
       "cache write token price per 1k": 0.0025,
       "output token price per 1k": 0.01,
       "output token multiple ratio": 5,
-      "PTU input token weights": { uncached: 1, cached: 0.1, cacheWrite: 1.25 },
+      "PTU input token weights": { uncached: 1, cached: shortCacheWeight, cacheWrite: 1.25 },
       "long context": {
         "input token price per 1k": 0.004,
         "input token price per 1k with cache hit": longCachePrice,
@@ -263,7 +311,7 @@ describe.each([
 
   it.each([
     ["short", 1000, 0, 0, 0, 1000],
-    ["short", 1000, 100, 0, 0, 100],
+    ["short", 1000, 100, 0, 0, 1000 * shortCacheWeight],
     ["short", 1000, 0, 1000, 0, 1250],
     ["short", 0, 0, 0, 1000, 5000],
     ["long", 1000, 0, 0, 0, 2000],
@@ -286,7 +334,8 @@ describe.each([
     const input = scenario(selectedModel, { contextMode, cacheWriteTokens: 200, rpm: 100 });
     const result = calculateScenario(input);
     const isLong = contextMode === "long";
-    const normalizedPerRequest = isLong ? 1850 + 500 * longCacheWeight : 1100;
+    const normalizedPerRequest = isLong
+      ? 1850 + 500 * longCacheWeight : 1050 + 500 * shortCacheWeight;
     const costPerRequest = isLong
       ? (300 * 0.004 + 500 * longCachePrice + 200 * 0.005 + 100 * 0.015) / 1000
       : (300 * 0.002 + 500 * shortCachePrice + 200 * 0.0025 + 100 * 0.01) / 1000;
@@ -301,7 +350,7 @@ describe.each([
     expect(result.explanation.inputs).toMatchObject({
       contextMode,
       cacheWriteTokens: 200,
-      cachedInputWeight: isLong ? longCacheWeight : 0.1,
+      cachedInputWeight: isLong ? longCacheWeight : shortCacheWeight,
       cachedInputPricePer1k: isLong ? longCachePrice : shortCachePrice,
       outputWeight: isLong ? 7.5 : 5,
     });
@@ -316,7 +365,7 @@ describe.each([
   it("retains cache capacity consumption at a 100% cache-hit rate", () => {
     const result = calculateScenario(scenario(selectedModel, { cacheHitRate: 100, outputTokens: 0 }));
     expect(result.contextMode).toBe("short");
-    expect(result.normalizedTpm).toBe(1000);
+    expect(result.normalizedTpm).toBe(10000 * shortCacheWeight);
     expect(result.paygoBreakdown.cachedInputCost).toBeCloseTo(shortCachePrice * 10 * MINUTES_PER_MONTH);
     expect(result.paygoBreakdown.nonCachedInputCost).toBe(0);
   });
@@ -349,7 +398,7 @@ describe("normalized model catalog configuration", () => {
     expect(image["model name"]).toBe("azure openai gpt-image-2 (2026-04-21)");
     expect(bundledCatalog.metadata["verified date"]).toBe("2026-09-29");
     expect(astra["input TPM per PTU"]).toBe(600);
-    expect(astra["long context"]?.["output token multiple ratio"]).toBe(10);
+    expect(astra["long context"]?.["output token multiple ratio"]).toBe(7.5);
     expect(image["input TPM per PTU"]).toBe(1200);
     expect(image["image input TPM per PTU"]).toBe(750);
     expect(image["image output-to-input ratio"]).toBe(3.75);
@@ -391,6 +440,82 @@ describe("normalized model catalog configuration", () => {
     }));
     expect(result.normalizedTpm).toBe(0);
     expect(result.contextMode).toBeUndefined();
+    expect(result.tokenNormalization).toBeUndefined();
     expect(result.paygoBreakdown.cacheWriteCost).toBeUndefined();
+  });
+
+  describe("shared normalization breakdown", () => {
+    it.each(["gpt-6-astra", "gpt-6-sol", "gpt-6.1-sol"])(
+      "matches the guide's short-context price baseline for every %s category",
+      (name) => {
+        const selectedModel = model(name);
+        for (const contextMode of ["short", "long"] satisfies ContextMode[]) {
+          const tier = contextMode === "long" ? selectedModel["long context"] : selectedModel;
+          const weights = tier?.["PTU input token weights"];
+          if (!tier || !weights || tier["cache write token price per 1k"] === undefined) {
+            throw new Error(`Missing normalized pricing tier: ${name} ${contextMode}`);
+          }
+          const baseline = selectedModel["input token price per 1k"];
+          expect(weights.uncached).toBeCloseTo(tier["input token price per 1k"] / baseline, 10);
+          expect(weights.cached).toBeCloseTo(tier["input token price per 1k with cache hit"] / baseline, 10);
+          expect(weights.cacheWrite).toBeCloseTo(tier["cache write token price per 1k"] / baseline, 10);
+          expect(tier["output token multiple ratio"]).toBeCloseTo(tier["output token price per 1k"] / baseline, 10);
+        }
+      },
+    );
+
+    it("reproduces the GPT-6.1 short-context 90%-cache conversion without double counting", () => {
+      const result = calculateScenario(scenario(sol61, {
+        inputTextTokens: 3500,
+        cacheHitRate: 90,
+        cacheWriteTokens: 350,
+        outputTokens: 300,
+        rpm: 60,
+      }));
+      expect(result.tokenNormalization).toEqual({
+        buckets: [
+          { category: "uncached", tokens: 0, weight: 1, normalizedTokens: 0 },
+          { category: "cached", tokens: 3150, weight: 0.05, normalizedTokens: 157.5 },
+          { category: "cacheWrite", tokens: 350, weight: 1.25, normalizedTokens: 437.5 },
+          { category: "output", tokens: 300, weight: 5, normalizedTokens: 1500 },
+        ],
+        normalizedTokensPerRequest: 2095,
+      });
+      expect(result.normalizedTpm).toBe(125700);
+      expect(result.requiredPtus).toBe(41.9);
+      expect(result.deployedPtus).toBe(45);
+      expect(result.explanation.inputs.cachedInputWeight).toBe(0.05);
+    });
+
+    it.each(["gpt-6-astra", "gpt-6-sol", "gpt-6.1-sol"])(
+      "keeps the %s visualization and PTU calculation consistent with manual writes and zero RPM",
+      (name) => {
+        for (const contextMode of ["short", "long"] satisfies ContextMode[]) {
+          for (const rpm of [0, 60]) {
+            const result = calculateScenario(scenario(model(name), {
+              inputTextTokens: 3500,
+              cacheHitRate: 90,
+              cacheWriteTokens: 100,
+              outputTokens: 300,
+              rpm,
+              contextMode,
+            }));
+            const breakdown = result.tokenNormalization;
+            if (!breakdown) {
+              throw new Error("Missing normalization breakdown");
+            }
+            expect(breakdown.buckets.slice(0, 3).map((bucket) => bucket.tokens))
+              .toEqual([250, 3150, 100]);
+            const weightedTotal = breakdown.buckets.reduce(
+              (sum, bucket) => sum + bucket.tokens * bucket.weight, 0,
+            );
+            expect(breakdown.normalizedTokensPerRequest).toBe(weightedTotal);
+            expect(result.normalizedTpm).toBe(weightedTotal * rpm);
+            expect(result.explanation.steps.find((step) => step.output === "Normalized TPM")?.result)
+              .toBe(result.normalizedTpm);
+          }
+        }
+      },
+    );
   });
 });

@@ -1,14 +1,17 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import App from "../App";
 import { bundledCatalog } from "../data/catalog";
 import { getUiText } from "../i18n";
 import type { Language } from "../i18n";
 import { CalculatorForm } from "./CalculatorForm";
+import { NumberField } from "./NumberField";
 
 function renderForm(
   modelName: string,
   language: Language = "en",
   ptuOverride = false,
+  cacheWriteOverride = false,
 ) {
   const selectedModel = bundledCatalog.models.find((model) => model["model name"].includes(modelName));
   if (!selectedModel) {
@@ -31,6 +34,8 @@ function renderForm(
       onCacheHitRateChange={onChange}
       cacheWriteTokens={0}
       onCacheWriteTokensChange={onChange}
+      cacheWriteOverride={cacheWriteOverride}
+      onUseAutomaticCacheWriteTokens={onChange}
       contextMode="long"
       onContextModeChange={onChange}
       imageInputTokens={1229}
@@ -56,17 +61,50 @@ function renderForm(
 }
 
 describe("model-specific workload controls", () => {
+  it("defaults the app to automatically calculated cache writes", () => {
+    const text = getUiText("en").calculator;
+    const html = renderToStaticMarkup(<App />);
+    expect(html).toContain(renderToStaticMarkup(
+      <NumberField
+        label={text.cacheWriteTokens}
+        value={3500}
+        onChange={() => {}}
+        step={0.01}
+        hint={text.cacheWriteHint}
+      />,
+    ));
+    expect(html).not.toContain(text.useAutomaticCacheWrites);
+  });
+
+  it.each(["en", "zh-CN"] satisfies Language[])(
+    "offers automatic cache writes only after a manual override in %s",
+    (language) => {
+      const text = getUiText(language).calculator;
+      for (const name of ["gpt-6-astra", "gpt-6-sol", "gpt-6.1-sol"]) {
+        expect(renderForm(name, language)).toContain(renderToStaticMarkup(
+          <span className="field-hint">{text.cacheWriteHint}</span>,
+        ));
+        expect(renderForm(name, language)).not.toContain(text.useAutomaticCacheWrites);
+        expect(renderForm(name, language, false, true)).toContain(text.useAutomaticCacheWrites);
+      }
+      expect(renderForm("GPT-4o-mini", language, false, true))
+        .not.toContain(text.useAutomaticCacheWrites);
+    },
+  );
+
   it.each(["en", "zh-CN"] satisfies Language[])("shows Astra cache and context controls in %s", (language) => {
     const html = renderForm("gpt-6-astra", language);
     const text = getUiText(language).calculator;
     expect(html).toContain(text.contextMode);
     expect(html).toContain(text.cacheWriteTokens);
-    expect(html).toContain(text.astraHint);
+    expect(html).toContain(renderToStaticMarkup(
+      <span className="field-hint">{text.normalizedContextHint}</span>,
+    ));
     expect(html).toContain('value="long" selected=""');
     expect(html).not.toContain(text.imageInputTokens);
   });
 
-  it.each(["en", "zh-CN"] satisfies Language[])("shows Sol context controls and the cache exception in %s", (language) => {
+  it.each(["en", "zh-CN"] satisfies Language[])("shows Sol context controls with the shared price baseline in %s", (language) => {
     const text = getUiText(language).calculator;
     for (const name of ["gpt-6-sol", "gpt-6.1-sol"]) {
       const html = renderForm(name, language);
@@ -76,13 +114,7 @@ describe("model-specific workload controls", () => {
         <span className="field-hint">{text.normalizedContextHint}</span>,
       ));
       expect(html).toContain('value="long" selected=""');
-      expect(html).not.toContain(text.astraHint);
       expect(html).not.toContain(text.overridePtus);
-      if (name === "gpt-6.1-sol") {
-        expect(html).toContain(text.sol61CacheHint);
-      } else {
-        expect(html).not.toContain(text.sol61CacheHint);
-      }
     }
   });
 

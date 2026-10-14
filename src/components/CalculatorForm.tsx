@@ -23,6 +23,8 @@ interface CalculatorFormProps {
   onContextModeChange: (value: ContextMode) => void;
   cacheWriteTokens: number;
   onCacheWriteTokensChange: (value: number) => void;
+  cacheWriteOverride: boolean;
+  onUseAutomaticCacheWriteTokens: () => void;
   imageInputTokens: number;
   onImageInputTokensChange: (value: number) => void;
   outputTokens: number;
@@ -73,6 +75,8 @@ export function CalculatorForm({
   onContextModeChange,
   cacheWriteTokens,
   onCacheWriteTokensChange,
+  cacheWriteOverride,
+  onUseAutomaticCacheWriteTokens,
   imageInputTokens,
   onImageInputTokensChange,
   outputTokens,
@@ -169,23 +173,30 @@ export function CalculatorForm({
             <option value="long">{text.longContext}</option>
           </select>
           <span className="field-hint">
-            {selectedModelName.includes("gpt-6-astra")
-              ? text.astraHint
-              : text.normalizedContextHint}
+            {text.normalizedContextHint}
           </span>
-          {selectedModelName.includes("gpt-6.1-sol") ? (
-            <span className="field-hint">{text.sol61CacheHint}</span>
-          ) : null}
         </label>
       ) : null}
 
       {selectedModel["PTU input token weights"] ? (
-        <NumberField
-          label={text.cacheWriteTokens}
-          value={cacheWriteTokens}
-          onChange={onCacheWriteTokensChange}
-          hint={text.cacheWriteHint}
-        />
+        <>
+          <NumberField
+            label={text.cacheWriteTokens}
+            value={cacheWriteTokens}
+            onChange={onCacheWriteTokensChange}
+            step={0.01}
+            hint={text.cacheWriteHint}
+          />
+          {cacheWriteOverride ? (
+            <button
+              className="button button-secondary button-small"
+              type="button"
+              onClick={onUseAutomaticCacheWriteTokens}
+            >
+              {text.useAutomaticCacheWrites}
+            </button>
+          ) : null}
+        </>
       ) : null}
 
       <NumberField

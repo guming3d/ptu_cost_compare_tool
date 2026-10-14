@@ -6,6 +6,7 @@ import { ExplanationPanel } from "./components/ExplanationPanel";
 import { MetricBars } from "./components/MetricBars";
 import { ReferenceInfo } from "./components/ReferenceInfo";
 import { ResultsTable } from "./components/ResultsTable";
+import { TokenNormalizationPanel } from "./components/TokenNormalizationPanel";
 import { readStoredCatalog } from "./data/catalog";
 import {
   DEFAULT_LANGUAGE,
@@ -14,6 +15,7 @@ import {
   languageOptions,
 } from "./i18n";
 import {
+  calculateAutomaticCacheWriteTokens,
   calculateCostOptimization,
   calculateScenario,
   usesImageTokenSizing,
@@ -42,7 +44,8 @@ function App() {
   const [rpm, setRpm] = useState(60);
   const [cacheHitRate, setCacheHitRate] = useState(0);
   const [contextMode, setContextMode] = useState<ContextMode>("short");
-  const [cacheWriteTokens, setCacheWriteTokens] = useState(0);
+  const [cacheWriteTokensOverride, setCacheWriteTokensOverride] =
+    useState<number | null>(null);
   const [imageInputTokens, setImageInputTokens] = useState(0);
   const [images, setImages] = useState<WorkloadImage[]>([]);
   const [deploymentType, setDeploymentType] =
@@ -72,6 +75,9 @@ function App() {
     catalog.models.find(
       (model) => model["model name"] === selectedModelName,
     ) ?? catalog.models[0];
+  const cacheWriteTokens =
+    cacheWriteTokensOverride ??
+    calculateAutomaticCacheWriteTokens(inputTextTokens, cacheHitRate);
 
   useEffect(() => {
     const selectedStillExists = catalog.models.some(
@@ -135,14 +141,7 @@ function App() {
     try {
       const result = calculateScenario(scenarioInput);
       return {
-        value: {
-          requiredPtus: result.requiredPtus,
-          deployedPtus: result.deployedPtus,
-          normalizedTpm: result.normalizedTpm,
-          paygoCost: result.paygoCost,
-          ptuCost: result.ptuCost,
-          savings: result.costSavingPercentage,
-        },
+        value: result,
         error: null,
       };
     } catch (error) {
@@ -262,7 +261,9 @@ function App() {
             contextMode={contextMode}
             onContextModeChange={setContextMode}
             cacheWriteTokens={cacheWriteTokens}
-            onCacheWriteTokensChange={setCacheWriteTokens}
+            onCacheWriteTokensChange={setCacheWriteTokensOverride}
+            cacheWriteOverride={cacheWriteTokensOverride !== null}
+            onUseAutomaticCacheWriteTokens={() => setCacheWriteTokensOverride(null)}
             imageInputTokens={imageInputTokens}
             onImageInputTokensChange={setImageInputTokens}
             outputTokens={outputTokens}
@@ -310,16 +311,26 @@ function App() {
                 <span>{text.summary.estimatedSavings}</span>
                 <strong
                   className={
-                    preview && preview.savings >= 0
+                    preview && preview.costSavingPercentage >= 0
                       ? "positive-text"
                       : "negative-text"
                   }
                 >
-                  {preview ? `${preview.savings.toFixed(2)}%` : "--"}
+                  {preview ? `${preview.costSavingPercentage.toFixed(2)}%` : "--"}
                 </strong>
                 <small>{text.summary.ptuVersusPaygo}</small>
               </article>
             </section>
+
+            {selectedModel["PTU input token weights"] ? (
+              <TokenNormalizationPanel
+                model={selectedModel}
+                result={preview}
+                cacheWriteOverride={cacheWriteTokensOverride !== null}
+                sourceUrl={catalog.metadata["ptu sizing source"]}
+                language={language}
+              />
+            ) : null}
 
             {optimization ? (
               <CostOptimizer

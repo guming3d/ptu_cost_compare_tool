@@ -82,11 +82,24 @@ export interface ScenarioInput {
   imageInputTokens?: number;
 }
 
+export interface NormalizedTokenBucket {
+  category: "uncached" | "cached" | "cacheWrite" | "image" | "output";
+  tokens: number;
+  weight: number;
+  normalizedTokens: number;
+}
+
+export interface TokenNormalization {
+  buckets: NormalizedTokenBucket[];
+  normalizedTokensPerRequest: number;
+}
+
 export interface PtuMetrics {
   effectiveTextInput: number;
   totalInputTpm: number;
   totalOutputTpm: number;
   normalizedTpm: number;
+  tokenNormalization?: TokenNormalization;
 }
 
 export interface CalculationStep {
@@ -140,6 +153,7 @@ export interface ComparisonResult {
   ptuCostBeforeDiscount: number;
   ptuDiscount: number;
   normalizedTpm?: number;
+  tokenNormalization?: TokenNormalization;
   contextMode?: ContextMode;
   cacheWriteTokens?: number;
   explanation: CalculationExplanation;
