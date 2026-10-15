@@ -6,6 +6,8 @@ The bundled catalog includes Azure OpenAI, Fireworks on Microsoft Foundry, and G
 
 ## UI preview
 
+The main page opens directly on the workload calculator and live cost estimates, without an introductory banner or catalog-summary card.
+
 ![English Azure Foundry PTU Cost Planner interface](docs/images/ptu-cost-planner-english.png)
 
 ## Development
@@ -56,6 +58,8 @@ For GPT-6 models with cache-write pricing, cache write tokens per request defaul
 **Weight = token-category price / the model's short-context input price**, including for long-context requests. Short-context cache reads therefore count as 10% for GPT-6 Sol/Astra or 5% for GPT-6.1 Sol; writes count as 125%. Long-context reads count as 20% or 10%, writes as 250%, and output as 750%. The current guide no longer lists the old GPT-6.1 short-cache 0.1 and Astra long-output 10 exceptions, so the bundled catalog now uses 0.05 and 7.5 respectively.
 
 The right-hand live normalization panel visualizes the disjoint input buckets, each category's token count and weight, its normalized contribution, and the full conversion from weighted tokens per request through RPM to raw and rounded PTUs. It uses the same bucket breakdown as the sizing calculation, including manual cache-write overrides and context changes. For GPT-6.1 Sol short context with 3,500 input tokens, 90% cache hit, 350 automatic cache writes, 300 output tokens, and 60 RPM: `(0 x 1 + 3150 x 0.05 + 350 x 1.25 + 300 x 5) x 60 = 125,700 normalized TPM`, or 41.9 raw PTUs and **45 Global / Data Zone PTUs**.
+
+The split-input diagram shows the prompt from left to right: **cache read (green)** at the input prefix, followed by **cache write (red)** and **remaining uncached input (grey)**. Boundary markers follow the actual token counts, including manual cache-write changes. Each category uses the exact same fill color in the diagram, legend, and normalized-contribution table, in both light and dark themes; the visual ordering does not change PTU or cost calculations.
 
 Browser-saved catalogs are preserved. If their configured weights differ from their price ratios, the panel warns that an old override may be in use; **Restore bundled catalog** loads the updated defaults without silently replacing intentional custom weights.
 

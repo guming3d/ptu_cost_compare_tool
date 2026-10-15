@@ -23,11 +23,18 @@ export function TokenNormalizationPanel({
   const format = (value: number) =>
     value.toLocaleString(locale, { maximumFractionDigits: 4 });
   const normalization = result?.tokenNormalization;
+  const inputBucketOrder: NormalizedTokenBucket["category"][] = [
+    "cached", "cacheWrite", "uncached",
+  ];
   const inputBuckets = normalization?.buckets.filter((bucket) =>
-    ["uncached", "cached", "cacheWrite"].includes(bucket.category),
+    inputBucketOrder.includes(bucket.category),
+  ).sort((left, right) =>
+    inputBucketOrder.indexOf(left.category) - inputBucketOrder.indexOf(right.category),
   );
   const cachedBucket = inputBuckets?.find((bucket) => bucket.category === "cached");
   const cacheWriteBucket = inputBuckets?.find((bucket) => bucket.category === "cacheWrite");
+  const inputPercentage = (tokens: number) =>
+    result && result.inputTextTokens > 0 ? tokens / result.inputTextTokens * 100 : 0;
   const normalizedTpm = result?.normalizedTpm;
   const capacity = model["input TPM per PTU"];
   const tier = result?.contextMode === "long" ? model["long context"] : model;
@@ -72,33 +79,67 @@ export function TokenNormalizationPanel({
             </span>
           </div>
           <h3>{text.inputSplit}</h3>
-          <div className="normalization-input-summary">
-            <span>{text.inputTokens}: <strong>{format(result.inputTextTokens)}</strong></span>
-            <span>{text.cacheHitRate}: <strong>{format(result.cacheHitRate)}%</strong></span>
-          </div>
-          <div className="normalization-split-bar" aria-hidden="true">
-            {inputBuckets.map((bucket) => (
-              <span
-                key={bucket.category}
-                className={`normalization-color-${bucket.category}`}
-                style={{
-                  width: `${result.inputTextTokens > 0
-                    ? bucket.tokens / result.inputTextTokens * 100 : 0}%`,
-                }}
-              />
-            ))}
-          </div>
-          <dl className="normalization-split-legend">
-            {inputBuckets.map((bucket) => (
-              <div key={bucket.category}>
-                <dt>
-                  <span className={`normalization-swatch normalization-color-${bucket.category}`} />
-                  {text.buckets[bucket.category]}
-                </dt>
-                <dd>{format(bucket.tokens)}</dd>
+          <figure className="normalization-input-diagram">
+            <figcaption className="normalization-input-summary">
+              <strong>{text.requestInput}</strong>
+              <span>{text.inputTokens}: <strong>{format(result.inputTextTokens)}</strong></span>
+            </figcaption>
+            <div className="normalization-prefix-summary">
+              <span>{text.cachedPrefix}</span>
+              <span>{text.cacheHitRate}: <strong>{format(result.cacheHitRate)}%</strong></span>
+            </div>
+            <div className="normalization-split-track" aria-hidden="true">
+              <div className="normalization-split-bar">
+                {inputBuckets.filter((bucket) => bucket.tokens > 0).map((bucket) => (
+                  <span
+                    key={bucket.category}
+                    data-category={bucket.category}
+                    className={`normalization-split-segment normalization-color-${bucket.category}`}
+                    style={{ width: `${inputPercentage(bucket.tokens)}%` }}
+                  >
+                    {inputPercentage(bucket.tokens) >= 25 ? (
+                      <strong className="normalization-segment-count">{format(bucket.tokens)}</strong>
+                    ) : null}
+                  </span>
+                ))}
               </div>
-            ))}
-          </dl>
+              {cachedBucket.tokens > 0 && cachedBucket.tokens < result.inputTextTokens ? (
+                <span
+                  className="normalization-split-boundary normalization-prefix-boundary"
+                  style={{ left: `${inputPercentage(cachedBucket.tokens)}%` }}
+                >
+                  <span className="normalization-boundary-handle" />
+                </span>
+              ) : null}
+              {cacheWriteBucket.tokens > 0 &&
+                cachedBucket.tokens + cacheWriteBucket.tokens < result.inputTextTokens ? (
+                  <span
+                    className="normalization-split-boundary"
+                    style={{
+                      left: `${inputPercentage(cachedBucket.tokens + cacheWriteBucket.tokens)}%`,
+                    }}
+                  >
+                    <span className="normalization-boundary-handle" />
+                  </span>
+                ) : null}
+            </div>
+            <div className="normalization-input-axis" aria-hidden="true">
+              <span>{text.inputStart}</span>
+              <span>{text.inputEnd}</span>
+            </div>
+            <dl className="normalization-split-legend">
+              {inputBuckets.map((bucket) => (
+                <div key={bucket.category}>
+                  <dt>
+                    <span className={`normalization-swatch normalization-color-${bucket.category}`} />
+                    {text.buckets[bucket.category]}
+                  </dt>
+                  <dd>{format(bucket.tokens)}</dd>
+                </div>
+              ))}
+            </dl>
+            <p className="normalization-note">{text.prefixOrder}</p>
+          </figure>
           <p className="normalization-note">
             {format(result.inputTextTokens)} = {inputBuckets.map((bucket) => format(bucket.tokens)).join(" + ")}.
             {" "}{text.noDoubleCounting}

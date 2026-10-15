@@ -49,6 +49,7 @@ describe("live token normalization panel", () => {
     for (const label of [
       text.title, text.inputSplit, text.conversion, text.buckets.cached,
       text.buckets.cacheWrite, text.noDoubleCounting, text.automaticWrites,
+      text.requestInput, text.cachedPrefix, text.inputStart, text.inputEnd, text.prefixOrder,
       text.sum, text.multiplyRpm, text.divideCapacity, text.roundDeployment,
     ]) {
       expect(html).toContain(label);
@@ -88,9 +89,58 @@ describe("live token normalization panel", () => {
   it("shows the remaining uncached input after manual writes", () => {
     const html = renderPanel("gpt-6.1-sol", { cacheWriteTokens: 100 }, "en", true);
     const text = getUiText("en").normalization;
-    expect(html).toContain("3,500 = 250 + 3,150 + 100");
+    expect(html).toContain("3,500 = 3,150 + 100 + 250");
     expect(html).toContain(text.manualWrites);
     expect(html).not.toContain(text.automaticWrites);
+  });
+
+  it.each([0, 100, 350])(
+    "keeps the cached prefix first when manual cache writes change to %s",
+    (cacheWriteTokens) => {
+      const html = renderPanel("gpt-6.1-sol", { cacheWriteTokens }, "en", true);
+      const bar = html.match(/<div class="normalization-split-bar">(.*?)<\/div>/)?.[1];
+      expect(bar).toBeDefined();
+      const segments = [...bar!.matchAll(/data-category="([^"]+)"[^>]*style="width:([^"]+)"/g)];
+      expect(segments.map((segment) => segment[1])).toEqual([
+        "cached",
+        ...(cacheWriteTokens > 0 ? ["cacheWrite"] : []),
+        ...(cacheWriteTokens < 350 ? ["uncached"] : []),
+      ]);
+      expect(segments[0][2]).toBe("90%");
+      expect(segments.reduce((sum, segment) => sum + Number.parseFloat(segment[2]), 0))
+        .toBeCloseTo(100);
+      expect(html).toContain(
+        'class="normalization-split-boundary normalization-prefix-boundary" style="left:90%"',
+      );
+      if (cacheWriteTokens > 0 && cacheWriteTokens < 350) {
+        expect(html).toContain(
+          `class="normalization-split-boundary" style="left:${(3150 + cacheWriteTokens) / 3500 * 100}%"`,
+        );
+      }
+    },
+  );
+
+  it.each([
+    [0, 0, ["uncached"]],
+    [0, 3500, ["cacheWrite"]],
+    [100, 0, ["cached"]],
+  ])(
+    "renders only nonempty segments at %s%% cache hit with %s writes",
+    (cacheHitRate, cacheWriteTokens, categories) => {
+      const html = renderPanel("gpt-6.1-sol", { cacheHitRate, cacheWriteTokens }, "en", true);
+      const bar = html.match(/<div class="normalization-split-bar">(.*?)<\/div>/)?.[1];
+      expect(bar).toBeDefined();
+      expect([...bar!.matchAll(/data-category="([^"]+)"/g)].map((segment) => segment[1]))
+        .toEqual(categories);
+      expect(bar).toContain("width:100%");
+      expect(html).not.toContain('class="normalization-split-boundary');
+    },
+  );
+
+  it("renders an empty input track without cache boundary markers", () => {
+    const html = renderPanel("gpt-6.1-sol", { inputTextTokens: 0, cacheWriteTokens: 0 });
+    expect(html).toContain('<div class="normalization-split-bar"></div>');
+    expect(html).not.toContain('class="normalization-split-boundary');
   });
 
   it.each([

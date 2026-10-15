@@ -227,27 +227,6 @@ function App() {
       </header>
 
       <main id="top">
-        <section className="hero">
-          <div>
-            <h1>{text.hero.title}</h1>
-            <p>{text.hero.description}</p>
-          </div>
-          <dl className="catalog-summary">
-            <div>
-              <dt>{text.hero.models}</dt>
-              <dd>{catalog.models.length}</dd>
-            </div>
-            <div>
-              <dt>{text.hero.catalogVerified}</dt>
-              <dd>{catalog.metadata["verified date"]}</dd>
-            </div>
-            <div>
-              <dt>{text.hero.currency}</dt>
-              <dd>{catalog.metadata.currency}</dd>
-            </div>
-          </dl>
-        </section>
-
         <section className="calculator-layout" id="calculator">
           <CalculatorForm
             models={catalog.models}

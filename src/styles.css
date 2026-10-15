@@ -181,15 +181,7 @@ a {
 main {
   width: min(1500px, 92vw);
   margin: 0 auto;
-  padding: 68px 0 80px;
-}
-
-.hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(420px, 0.8fr);
-  gap: 64px;
-  align-items: end;
-  margin-bottom: 52px;
+  padding: 24px 0 80px;
 }
 
 .eyebrow {
@@ -199,59 +191,6 @@ main {
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-}
-
-.hero h1 {
-  max-width: 840px;
-  margin: 0;
-  font-size: clamp(2.55rem, 5vw, 5.2rem);
-  line-height: 0.98;
-  letter-spacing: -0.055em;
-}
-
-.hero > div > p:last-child {
-  max-width: 700px;
-  margin: 24px 0 0;
-  color: var(--muted);
-  font-size: 1.05rem;
-  line-height: 1.7;
-}
-
-.catalog-summary {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  margin: 0;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: var(--surface);
-  box-shadow: var(--shadow);
-}
-
-.catalog-summary div {
-  min-width: 0;
-  padding: 22px;
-}
-
-.catalog-summary div + div {
-  border-left: 1px solid var(--border);
-}
-
-.catalog-summary dt {
-  margin-bottom: 10px;
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.catalog-summary dd {
-  margin: 0;
-  overflow: hidden;
-  font-size: 1.05rem;
-  font-weight: 750;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .calculator-layout {
@@ -511,6 +450,9 @@ textarea:focus {
 }
 
 .normalization-panel {
+  --normalization-uncached: color-mix(in srgb, var(--cp-text-soft) 17%, var(--cp-surface));
+  --normalization-cached: color-mix(in srgb, var(--cp-success) 17%, var(--cp-surface));
+  --normalization-cache-write: color-mix(in srgb, var(--cp-danger) 17%, var(--cp-surface));
   color-scheme: light;
   min-width: 0;
   padding: 24px;
@@ -580,32 +522,131 @@ html[data-theme="dark"] .normalization-panel {
   font-size: 0.85rem;
 }
 
-.normalization-input-summary {
+.normalization-input-diagram {
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--cp-border);
+  border-radius: 12px;
+  background: var(--cp-surface);
+}
+
+.normalization-input-summary,
+.normalization-prefix-summary,
+.normalization-input-axis {
   display: flex;
-  gap: 16px;
+  gap: 8px 16px;
+  align-items: baseline;
+  justify-content: space-between;
   flex-wrap: wrap;
+}
+
+.normalization-input-summary {
+  font-size: 0.8rem;
+}
+
+.normalization-input-summary > span {
+  color: var(--cp-text-muted);
+}
+
+.normalization-prefix-summary {
+  margin-top: 14px;
+  color: var(--cp-text-muted);
   font-size: 0.75rem;
+}
+
+.normalization-split-track {
+  position: relative;
+  margin-top: 20px;
 }
 
 .normalization-split-bar {
   display: flex;
-  height: 16px;
+  height: 72px;
   overflow: hidden;
-  margin-top: 12px;
-  border-radius: 0.625rem;
-  background: var(--cp-surface-soft);
+  border: 1px solid var(--cp-border);
+  border-radius: 14px;
+  background: var(--normalization-uncached);
+}
+
+.normalization-split-segment {
+  display: flex;
+  flex-shrink: 0;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.normalization-segment-count {
+  padding: 0 10px;
+  overflow: hidden;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.normalization-split-boundary {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--cp-border-strong);
+  pointer-events: none;
+}
+
+.normalization-prefix-boundary::before {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-top: 8px solid var(--cp-text);
+  border-right: 5px solid transparent;
+  border-left: 5px solid transparent;
+  content: "";
+}
+
+.normalization-boundary-handle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 14px;
+  height: 30px;
+  transform: translate(-50%, -50%);
+  border: 1px solid var(--cp-border);
+  border-radius: 7px;
+  background: var(--cp-surface);
+}
+
+.normalization-boundary-handle::before {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3px;
+  height: 3px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: var(--cp-text);
+  box-shadow: 0 -5px var(--cp-text), 0 5px var(--cp-text);
+  content: "";
+}
+
+.normalization-input-axis {
+  margin-top: 8px;
+  color: var(--cp-text-muted);
+  font-size: 0.65rem;
 }
 
 .normalization-color-uncached {
-  background: var(--cp-border-strong);
+  background: var(--normalization-uncached);
 }
 
 .normalization-color-cached {
-  background: var(--cp-accent);
+  background: var(--normalization-cached);
 }
 
 .normalization-color-cacheWrite {
-  background: var(--cp-text-soft);
+  background: var(--normalization-cache-write);
 }
 
 .normalization-color-image,
@@ -614,10 +655,10 @@ html[data-theme="dark"] .normalization-panel {
 }
 
 .normalization-split-legend {
-  display: flex;
-  gap: 24px;
-  flex-wrap: wrap;
-  margin: 12px 0 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 16px 0 0;
   font-size: 0.75rem;
 }
 
@@ -631,6 +672,7 @@ html[data-theme="dark"] .normalization-panel {
 .normalization-split-legend dd {
   margin: 4px 0 0 20px;
   font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .normalization-swatch {
@@ -638,6 +680,7 @@ html[data-theme="dark"] .normalization-panel {
   flex-shrink: 0;
   width: 12px;
   height: 12px;
+  border: 1px solid var(--cp-border);
   border-radius: 4px;
 }
 
@@ -764,6 +807,14 @@ html[data-theme="dark"] .normalization-panel {
   .normalization-heading {
     flex-direction: column;
     gap: 8px;
+  }
+
+  .normalization-input-diagram {
+    padding: 12px;
+  }
+
+  .normalization-split-bar {
+    height: 64px;
   }
 
   .normalization-table {
@@ -1589,15 +1640,6 @@ footer span:first-child {
 }
 
 @media (max-width: 1180px) {
-  .hero {
-    grid-template-columns: 1fr;
-    gap: 32px;
-  }
-
-  .catalog-summary {
-    max-width: 680px;
-  }
-
   .formula-grid {
     grid-template-columns: 1fr 1fr;
   }
@@ -1632,18 +1674,9 @@ footer span:first-child {
 
   main {
     width: min(100% - 28px, 1500px);
-    padding-top: 44px;
+    padding-top: 20px;
   }
 
-  .hero {
-    margin-bottom: 34px;
-  }
-
-  .hero h1 {
-    font-size: clamp(2.4rem, 13vw, 3.8rem);
-  }
-
-  .catalog-summary,
   .summary-grid,
   .chart-grid,
   .formula-grid {
@@ -1652,11 +1685,6 @@ footer span:first-child {
 
   .optimizer-heading {
     grid-template-columns: 1fr;
-  }
-
-  .catalog-summary div + div {
-    border-top: 1px solid var(--border);
-    border-left: 0;
   }
 
   .results-toolbar {
