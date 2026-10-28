@@ -80,6 +80,12 @@ function isModelConfig(value: unknown): value is ModelConfig {
   ) {
     return false;
   }
+  if (
+    "global provisioned only" in value &&
+    typeof value["global provisioned only"] !== "boolean"
+  ) {
+    return false;
+  }
 
   return (
     requiredStrings.every((key) => typeof value[key] === "string") &&

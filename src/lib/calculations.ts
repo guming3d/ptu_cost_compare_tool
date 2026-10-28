@@ -470,9 +470,11 @@ function getDeploymentCapacity(input: ScenarioInput): {
       "PTU scale increment",
     ),
     deploymentLabel:
-      model.provider === "Azure OpenAI"
-        ? "Global / Data Zone"
-        : "Configured default",
+      model["global provisioned only"]
+        ? "Global"
+        : model.provider === "Azure OpenAI"
+          ? "Global / Data Zone"
+          : "Configured default",
   };
 }
 
@@ -1241,10 +1243,7 @@ export function calculateCostOptimization(
       return {
         id: `${deploymentType}-${commitmentType}`,
         commitmentType,
-        deploymentType:
-          input.model.provider === "Azure OpenAI"
-            ? deploymentType
-            : "Configured default",
+        deploymentType: getDeploymentCapacity(configurationInput).deploymentLabel,
         points,
         current: {
           ...currentPoint,

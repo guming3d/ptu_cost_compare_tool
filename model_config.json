@@ -555,6 +555,30 @@
             "PTU yearly discount": 0
         },
         {
+            "model name": "fireworks DeepSeek V4.1 Flash",
+            "provider": "Fireworks on Microsoft Foundry",
+            "input token price per 1k": 0.000375,
+            "input token price per 1k with cache hit": 0.000008,
+            "output token price per 1k": 0.0015,
+            "PTU minumum deployment unit": 5,
+            "PTU scale increment": 1,
+            "input TPM per PTU": 11000,
+            "output token multiple ratio": 4,
+            "PTU sizing mode": "automatic",
+            "global provisioned only": true,
+            "PTU price of monthly commitment": 260,
+            "PTU price of yearly commitment": 221,
+            "PTU monthly discount": 0,
+            "PTU yearly discount": 0,
+            "configuration notes": [
+                "PTU sizing from the supplied Microsoft sizing-table screenshot on 2026-10-20: FW-DeepSeek-V4.1-Flash, minimum 5 PTUs, increment 1 PTU, 11,000 input TPM per PTU.",
+                "The supplied table marks Global Provisioned support only; Data Zone Provisioned is not supported.",
+                "Token prices supplied by the user on 2026-10-20: USD 0.375/M input, 0.008/M cached input, and 1.50/M output.",
+                "Automatic sizing retains the catalog's estimated 4:1 DeepSeek output-to-input weight and excludes cache hits from PTU input capacity; this is not a published Fireworks PTU output weight.",
+                "PTU reservation prices follow the existing catalog assumptions, not a new reservation quote."
+            ]
+        },
+        {
             "model name": "fireworks DeepSeek V4 Flash 0731",
             "provider": "Fireworks on Microsoft Foundry",
             "input token price per 1k": 0.000484,

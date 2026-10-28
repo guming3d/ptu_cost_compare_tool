@@ -239,6 +239,10 @@ export function CalculatorForm({
         </label>
       ) : null}
 
+      {selectedModel["global provisioned only"] ? (
+        <span className="field-hint">{text.globalProvisionedOnly}</span>
+      ) : null}
+
       {canOverridePtus ? (
         <label className="checkbox-field">
           <input

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bundledCatalog } from "../data/catalog";
+import { bundledCatalog, isCatalogDocument } from "../data/catalog";
 import type { ModelConfig } from "../types";
 import {
   calculateAzureImageTokens,
@@ -438,6 +438,159 @@ describe("PTU calculations", () => {
     expect(result.normalizedTpm).toBeCloseTo(12_000_000);
     expect(result.requiredPtus).toBeCloseTo(4285.714, 3);
     expect(result.deployedPtus).toBe(4300);
+  });
+
+  it("ships DeepSeek V4.1 Flash with supplied capacity and token prices", () => {
+    const flash = model("fireworks DeepSeek V4.1 Flash");
+
+    expect(isCatalogDocument(bundledCatalog)).toBe(true);
+    expect(flash).toMatchObject({
+      provider: "Fireworks on Microsoft Foundry",
+      "input token price per 1k": 0.000375,
+      "input token price per 1k with cache hit": 0.000008,
+      "output token price per 1k": 0.0015,
+      "PTU minumum deployment unit": 5,
+      "PTU scale increment": 1,
+      "input TPM per PTU": 11_000,
+      "output token multiple ratio": 4,
+      "PTU sizing mode": "automatic",
+      "global provisioned only": true,
+      "PTU price of monthly commitment": 260,
+      "PTU price of yearly commitment": 221,
+    });
+  });
+
+  it("rejects a non-boolean Global-only catalog setting", () => {
+    expect(isCatalogDocument({
+      ...bundledCatalog,
+      models: [{
+        ...model("fireworks DeepSeek V4.1 Flash"),
+        "global provisioned only": "true",
+      }],
+    })).toBe(false);
+  });
+
+  it.each([
+    [0, 5],
+    [1, 5],
+    [54_999, 5],
+    [55_000, 5],
+    [55_001, 6],
+    [66_000, 6],
+    [66_001, 7],
+  ])("sizes V4.1 Flash input demand of %i TPM to %i PTUs", (inputTpm, deployedPtus) => {
+    const result = calculateScenario({
+      model: model("fireworks DeepSeek V4.1 Flash"),
+      inputTextTokens: inputTpm,
+      outputTokens: 0,
+      rpm: 1,
+      cacheHitRate: 0,
+      images: [],
+      commitmentType: "Monthly",
+      deploymentType: "Global / Data Zone",
+    });
+
+    expect(result.normalizedTpm).toBe(inputTpm);
+    expect(result.requiredPtus).toBeCloseTo(inputTpm / 11_000);
+    expect(result.deployedPtus).toBe(deployedPtus);
+    expect(result.ptuCost).toBe(deployedPtus * 260);
+    expect(result.deploymentType).toBe("Global");
+  });
+
+  it.each([
+    [0, 282_000, 26],
+    [10, 261_000, 24],
+    [100, 72_000, 7],
+  ])("applies V4.1 Flash caching and output weighting at %i%% cache hit", (cacheHitRate, normalizedTpm, deployedPtus) => {
+    const result = calculateScenario({
+      model: model("fireworks DeepSeek V4.1 Flash"),
+      inputTextTokens: 3500,
+      outputTokens: 300,
+      rpm: 60,
+      cacheHitRate,
+      images: [],
+      commitmentType: "Monthly",
+      deploymentType: "Global / Data Zone",
+    });
+
+    expect(result.normalizedTpm).toBeCloseTo(normalizedTpm);
+    expect(result.requiredPtus).toBeCloseTo(normalizedTpm / 11_000);
+    expect(result.deployedPtus).toBe(deployedPtus);
+  });
+
+  it.each([
+    ["Monthly", 6240],
+    ["Yearly", 5304],
+  ] as const)("prices V4.1 Flash with %s commitment and explains Global capacity", (commitmentType, ptuCost) => {
+    const result = calculateScenario({
+      model: model("fireworks DeepSeek V4.1 Flash"),
+      inputTextTokens: 3500,
+      outputTokens: 300,
+      rpm: 60,
+      cacheHitRate: 10,
+      images: [],
+      commitmentType,
+      deploymentType: "Global / Data Zone",
+    });
+    const monthlyRequests = 60 * MINUTES_PER_MONTH;
+
+    expect(result.paygoBreakdown.nonCachedInputCost).toBeCloseTo(monthlyRequests * 3150 * 0.375 / 1_000_000);
+    expect(result.paygoBreakdown.cachedInputCost).toBeCloseTo(monthlyRequests * 350 * 0.008 / 1_000_000);
+    expect(result.paygoBreakdown.outputCost).toBeCloseTo(monthlyRequests * 300 * 1.50 / 1_000_000);
+    expect(result.paygoCost).toBeCloseTo(4294.7540064);
+    expect(result.ptuCost).toBe(ptuCost);
+    expect(result.explanation.deploymentType).toBe("Global");
+    expect(result.explanation.inputs).toMatchObject({
+      minimumPtus: 5,
+      scaleIncrement: 1,
+      inputPricePer1k: 0.000375,
+      cachedInputPricePer1k: 0.000008,
+      outputPricePer1k: 0.0015,
+    });
+    expect(result.explanation.steps.find((step) => step.output === "Required PTU Num")?.substitution)
+      .toBe("261000.00 / 11000 = 23.7273");
+    expect(result.explanation.steps.find((step) => step.output === "PTU cost")?.note)
+      .toBe(`${commitmentType} commitment; Global.`);
+  });
+
+  it("keeps V4.1 Flash overrides and optimization on the Global one-PTU tiers", () => {
+    const input = {
+      model: model("fireworks DeepSeek V4.1 Flash"),
+      inputTextTokens: 3500,
+      outputTokens: 300,
+      rpm: 60,
+      cacheHitRate: 10,
+      images: [],
+      commitmentType: "Monthly" as const,
+      deploymentType: "Global / Data Zone" as const,
+    };
+    const optimization = calculateCostOptimization(input);
+
+    expect(optimization.configurations).toHaveLength(2);
+    expect(optimization.bestConfiguration.commitmentType).toBe("Yearly");
+    for (const configuration of optimization.configurations) {
+      const result = calculateScenario({ ...input, commitmentType: configuration.commitmentType });
+      expect(configuration.deploymentType).toBe("Global");
+      expect(configuration.current).toMatchObject({
+        requiredPtus: result.requiredPtus,
+        deployedPtus: 24,
+        paygoCost: result.paygoCost,
+        ptuCost: result.ptuCost,
+      });
+      expect(configuration.points[0].deployedPtus).toBe(5);
+      expect(configuration.points.every((point) => Number.isInteger(point.deployedPtus))).toBe(true);
+    }
+
+    const overrideInput = { ...input, ptuOverride: true, manualRequiredPtus: 5.1 };
+    const override = calculateScenario(overrideInput);
+    expect(override.requiredPtus).toBe(5.1);
+    expect(override.deployedPtus).toBe(6);
+    expect(override.normalizedTpm).toBeCloseTo(261_000);
+    expect(override.ptuCost).toBe(1560);
+    for (const configuration of calculateCostOptimization(overrideInput).configurations) {
+      expect(configuration.deploymentType).toBe("Global");
+      expect(configuration.points.every((point) => point.deployedPtus === 6)).toBe(true);
+    }
   });
 
   it("sizes every bundled Fireworks model automatically", () => {

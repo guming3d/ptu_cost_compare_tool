@@ -41,6 +41,17 @@ Open `http://localhost:8501`.
 Pricing and throughput metadata remains in `model_config.json`. The in-app catalog editor validates updates and stores them in the browser's local storage. Restoring the bundled catalog clears that local override.
 
 GPT-5.4-mini (`2026-03-17`) uses an explicitly requested **8:1 PTU output-to-input ratio override**, rather than the 6:1 ratio in Microsoft's sizing guide. Token prices, cached-input treatment, and deployment increments are unchanged. For 14,001 input tokens, 79 output tokens, 7,350 RPM, and a 97% cache-hit rate, this gives **978.79 raw PTUs**, rounded to **980 Global / Data Zone PTUs** or **1,000 Regional PTUs**. The override does not establish why the portal screenshot reports 978.00 raw PTUs.
+
+### DeepSeek V4.1 Flash (October 20, 2026)
+
+`fireworks DeepSeek V4.1 Flash` (`FW-DeepSeek-V4.1-Flash`) uses the supplied sizing-table screenshot: **5 PTUs minimum**, **1-PTU increments**, and **11,000 input TPM per PTU**. It is **Global Provisioned only**, with no Data Zone support. The calculator, optimizer, saved comparisons, and exports identify its deployment as Global.
+
+User-supplied PayGO prices are **$0.375/M input**, **$0.008/M cached input**, and **$1.50/M output**. PTU pricing retains the catalog assumptions of $260 per PTU/month for monthly commitment or $221 per PTU/month for annual commitment; these are not new model-specific reservation quotes.
+
+Automatic sizing reuses the existing DeepSeek **4:1 estimated output weight**, not a published Fireworks PTU weight: `normalized TPM = RPM x (input tokens x (1 - cache hit rate / 100) + 4 x output tokens)`. Raw PTUs are normalized TPM divided by 11,000; deployed PTUs are `max(5, ceil(raw PTUs))`. For 3,500 input tokens, 300 output tokens, 60 RPM, and a 10% cache-hit rate, this gives **261,000 normalized TPM**, **23.7273 raw PTUs**, and **24 deployed PTUs** ($6,240/month or $5,304/month with annual commitment). A benchmarked PTU override remains available.
+
+Existing DeepSeek entries and the catalog-wide verification date are unchanged. Browser-saved catalogs are preserved; use **Restore bundled catalog** to load the new entry if a saved override is active.
+
 ### GPT-6 normalized token accounting (October 15, 2026)
 
 `gpt-6.1-sol (2026-09-29)` and `gpt-6-sol (2026-09-22)` use the current [Microsoft sizing guide](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/provisioned-throughput-sizing#normalized-token-pricing-for-gpt-6-astra-and-newer-models). Both provide **3,000 normalized TPM per PTU**, with a Global / Data Zone minimum of 15 PTUs and increment of 5, or a Regional minimum and increment of 50. The published latency targets are 99% > 50 TPS for GPT-6.1 Sol and 99% > 80 TPS for GPT-6 Sol.

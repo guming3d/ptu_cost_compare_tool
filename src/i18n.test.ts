@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_LANGUAGE,
   getUiText,
+  localizeDeployment,
   localizeExplanationText,
 } from "./i18n";
 
@@ -17,5 +18,11 @@ describe("UI translations", () => {
     expect(localizeExplanationText("Required PTU Num", "zh-CN")).toBe(
       "所需 PTU 数",
     );
+  });
+
+  it("localizes Global-only results and commitment explanations", () => {
+    expect(localizeDeployment("Global", "en")).toBe("Global");
+    expect(localizeDeployment("Global", "zh-CN")).toBe("全局");
+    expect(localizeExplanationText("Monthly commitment; Global.", "zh-CN")).toBe("按月承诺；全局。");
   });
 });

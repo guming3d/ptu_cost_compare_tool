@@ -46,6 +46,7 @@ export interface ModelConfig extends TokenConfig {
   "regional PTU scale increment"?: number;
   "input TPM per PTU"?: number;
   "PTU sizing mode"?: string;
+  "global provisioned only"?: boolean;
   "chars per GSU"?: number;
   "price per image(<=128k input tokens)"?: number;
   "price per image(>128k input tokens)"?: number;

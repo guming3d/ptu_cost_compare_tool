@@ -145,14 +145,31 @@ describe("model-specific workload controls", () => {
     "sizes Fireworks models automatically with an optional override in %s",
     (language) => {
       const text = getUiText(language).calculator;
-      const automatic = renderForm("DeepSeek V4 Flash 0731", language);
-      expect(automatic).toContain(text.overridePtus);
-      expect(automatic).toContain(text.automaticFireworksHint);
-      expect(automatic).not.toContain(text.requiredPtus);
+      for (const name of ["DeepSeek V4 Flash 0731", "DeepSeek V4.1 Flash"]) {
+        const automatic = renderForm(name, language);
+        expect(automatic).toContain(text.overridePtus);
+        expect(automatic).toContain(text.automaticFireworksHint);
+        expect(automatic).not.toContain(text.requiredPtus);
 
-      const overridden = renderForm("DeepSeek V4 Flash 0731", language, true);
-      expect(overridden).toContain(text.requiredPtus);
-      expect(overridden).toContain('value="100"');
+        const overridden = renderForm(name, language, true);
+        expect(overridden).toContain(text.requiredPtus);
+        expect(overridden).toContain('value="100"');
+      }
+    },
+  );
+
+  it.each(["en", "zh-CN"] satisfies Language[])(
+    "shows V4.1 Flash as Global-only without changing existing deployment controls in %s",
+    (language) => {
+      const text = getUiText(language).calculator;
+      const html = renderForm("DeepSeek V4.1 Flash", language);
+      expect(html).toContain('value="fireworks DeepSeek V4.1 Flash" selected=""');
+      expect(html).toContain(text.globalProvisionedOnly);
+      expect(html).not.toContain(text.provisionedDeployment);
+      expect(html).not.toContain(text.contextMode);
+      expect(html).not.toContain(text.cacheWriteTokens);
+      expect(renderForm("DeepSeek V4 Flash 0731", language)).not.toContain(text.globalProvisionedOnly);
+      expect(renderForm("gpt-5.6-luna", language)).toContain(text.provisionedDeployment);
     },
   );
 
