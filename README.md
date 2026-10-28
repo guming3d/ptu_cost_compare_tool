@@ -2,7 +2,7 @@
 
 A React and TypeScript calculator for comparing monthly PayGO and provisioned throughput costs. The interface is a responsive Vite single-page application with no Streamlit or Python runtime. A live configuration optimizer recommends the lowest-cost commitment and deployment option for the selected model and charts PayGO against each PTU cost curve as traffic changes.
 
-The bundled catalog includes Azure OpenAI, Fireworks on Microsoft Foundry, and Google models. Azure OpenAI and Fireworks PTUs are estimated automatically with normalized TPM sizing. Microsoft doesn't publish a PTU output-token weight for Fireworks models, so DeepSeek models use a 4:1 ratio, GLM models use 1:1, and other Fireworks models use their PayGO output-to-input price ratio; users can override the Fireworks estimate with a benchmarked PTU value. Each saved comparison includes a complete calculation trace. The interface supports English and Simplified Chinese, with English displayed by default.
+The bundled catalog includes Azure OpenAI, Azure-sold Llama, and Fireworks on Microsoft Foundry models. Documented token weights drive automatic PTU sizing. Existing Fireworks automatic weights remain labeled assumptions; newly listed Fireworks models require benchmarked capacity because Microsoft does not publish their output weights. Each saved comparison includes a calculation trace. The interface supports English and Simplified Chinese, with English displayed by default.
 
 ## UI preview
 
@@ -39,6 +39,22 @@ Open `http://localhost:8501`.
 ## Catalog
 
 Pricing and throughput metadata remains in `model_config.json`. The in-app catalog editor validates updates and stores them in the browser's local storage. Restoring the bundled catalog clears that local override.
+
+### Official-document refresh (October 28, 2026)
+
+The catalog now contains **67 models**, including all **39 exact Fireworks PTU identities** in the [Fireworks catalog](https://learn.microsoft.com/en-us/azure/foundry/how-to/fireworks/fireworks-model-catalog) and the models in the [main sizing guide](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/provisioned-throughput-sizing). This refresh supersedes the older sizing snapshots below.
+
+Added `gpt-image-2.5-flare (2026-09-08)`, Azure-sold `Llama-3.3-70B-Instruct`, and the missing Fireworks PTU models. Removed native Gemini 1.5 Pro/Flash and Fireworks MiniMax M2.5 because the reviewed documents do not list them. Removed retired PayGO-only DeepSeek V4 Flash 0731 and added the separately documented `FW-DeepSeek-V4-Flash`; no identity mapping between them is assumed. PayGO-only GLM 5.2 Fast and GLM 5.3 Flash are excluded because no PTU parameters are listed.
+
+Updated the ten changed Fireworks minimums, increments, and TPM capacities. GLM 5.3 exposes **Global (5 / 1 / 1,645)**, **Data Zone (320 / 160 / 1,050)**, and the footnote's **Global standard capacity (320 / 160 / 1,050)**, ordered as minimum / increment / input TPM per PTU. New Fireworks entries require an explicitly entered positive benchmark estimate; switching deployment clears that estimate. Their optimizer compares monthly/yearly commitments for the selected deployment only, avoiding reuse of a benchmark across different capacities. Existing automatic Fireworks estimates and overrides remain available.
+
+PTU support is independent of PayGO retirement. Retired PayGO or unverified applicable token prices display **N/A** for PayGO, savings, and break-even in calculations, charts, comparisons, and exports; historical rates never become current savings. `null` catalog prices mean unverified, not zero. Each new verified price records its deployment scope. Global versus Data Zone GLM 5.3 prices are applied separately and charted separately when automatic sizing is configured with a user-supplied output weight.
+
+East US 2 USD retail meters were verified through the [Azure Retail Prices API](https://prices.azure.com/api/retail/prices) for DeepSeek V4.1 Flash, GLM 5.3, Kimi K3, Nemotron 3 Ultra, Nemotron Lightning 3.5, and Azure Llama. Llama's published **4:1 PTU output weight** is independent of its 1:1 Global PayGO price ratio; cached-input prices were not verified, so comparisons using cache hits are N/A. Flare reuses image-2 **sizing**, not its prices: 1,200 text TPM/PTU, 750 image TPM/PTU, image-input weight 1.6, output weight 6, and 100-PTU minimum/increment. Flare PayGO prices remain unverified. Existing Azure OpenAI rates are retained, not newly repriced.
+
+Provisioned prompts above **128,000 tokens** are rejected for GPT-5.4 and GPT-4.1/mini/nano, before deducting cached tokens; supported image-input tokens count toward this limit. Spillover routing is outside this calculator. PTU commitment prices remain **planning assumptions** ($260/month or $221/month annual equivalent), not current model-specific quotes.
+
+Browser-saved custom catalogs are preserved and show an older-catalog notice. Use **Restore bundled catalog** to adopt the refreshed model list and configurations.
 
 GPT-5.4-mini (`2026-03-17`) uses an explicitly requested **8:1 PTU output-to-input ratio override**, rather than the 6:1 ratio in Microsoft's sizing guide. Token prices, cached-input treatment, and deployment increments are unchanged. For 14,001 input tokens, 79 output tokens, 7,350 RPM, and a 97% cache-hit rate, this gives **978.79 raw PTUs**, rounded to **980 Global / Data Zone PTUs** or **1,000 Regional PTUs**. The override does not establish why the portal screenshot reports 978.00 raw PTUs.
 

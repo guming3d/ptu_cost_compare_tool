@@ -23,8 +23,8 @@ const DEFAULT_INPUT_WEIGHTS: PtuInputTokenWeights = {
   cacheWrite: 1,
 };
 
-function requirePositive(value: number | undefined, label: string): number {
-  if (value === undefined || !Number.isFinite(value) || value <= 0) {
+function requirePositive(value: number | null | undefined, label: string): number {
+  if (value == null || !Number.isFinite(value) || value <= 0) {
     throw new Error(`${label} must be a positive number.`);
   }
   return value;
@@ -217,13 +217,21 @@ function getOutputRatio(model: ModelConfig): number {
 }
 
 function getScenarioModel(input: ScenarioInput): ModelConfig {
+  const deployment = input.model["PTU deployments"]?.[input.deploymentType];
+  const model = deployment?.paygo
+    ? {
+        ...input.model,
+        ...deployment.paygo,
+        "PayGO pricing scope": deployment.paygoScope ?? input.model["PayGO pricing scope"],
+      }
+    : input.model;
   if (input.contextMode === "long") {
-    if (!input.model["long context"]) {
+    if (!model["long context"]) {
       throw new Error("This model has no long-context configuration.");
     }
-    return { ...input.model, ...input.model["long context"] };
+    return { ...model, ...model["long context"] };
   }
-  return input.model;
+  return model;
 }
 
 export function calculateAutomaticCacheWriteTokens(
@@ -347,7 +355,7 @@ export function calculatePaygoCost(
   imageInputTokens = 0,
   imageCount = 0,
   cacheWriteTokens = 0,
-): CostBreakdown {
+): CostBreakdown | null {
   if (cacheHitRate < 0 || cacheHitRate > 100) {
     throw new Error("Cache hit rate must be between 0 and 100.");
   }
@@ -357,24 +365,42 @@ export function calculatePaygoCost(
   const monthlyRequests = rpm * MINUTES_PER_MONTH;
   const { cachedTokens: cachedInputTokens, uncachedTokens: nonCachedInputTokens } =
     getInputTokenSplit(inputTokens, cacheHitRate, cacheWriteTokens);
+  const imagePrice = usesImageTokenSizing(model)
+    ? model["image input token price per 1k"]
+    : model["input token price per 1k"];
+  const applicablePrices = [
+    [nonCachedInputTokens, model["input token price per 1k"]],
+    [cachedInputTokens, model["input token price per 1k with cache hit"]],
+    [cacheWriteTokens, model["cache write token price per 1k"]],
+    [outputTokens, model["output token price per 1k"]],
+    [imageInputTokens, imagePrice],
+  ];
+  if (
+    model["PayGO status"] === "retired" ||
+    model["PayGO status"] === "unverified" ||
+    applicablePrices.some(([tokens, price]) =>
+      (tokens ?? 0) > 0 &&
+      (price == null || !Number.isFinite(price) || price < 0),
+    )
+  ) {
+    return null;
+  }
   const cacheWriteCost = cacheWriteTokens > 0
     ? ((cacheWriteTokens * monthlyRequests) / 1000) *
       requirePositive(model["cache write token price per 1k"], "Cache write price")
     : 0;
   const nonCachedInputCost =
     ((nonCachedInputTokens * monthlyRequests) / 1000) *
-    model["input token price per 1k"];
+    (model["input token price per 1k"] ?? 0);
   const cachedInputCost =
     ((cachedInputTokens * monthlyRequests) / 1000) *
-    model["input token price per 1k with cache hit"];
+    (model["input token price per 1k with cache hit"] ?? 0);
   const outputCost =
     ((outputTokens * monthlyRequests) / 1000) *
-    model["output token price per 1k"];
+    (model["output token price per 1k"] ?? 0);
   const imageTokenCost =
     ((imageInputTokens * monthlyRequests) / 1000) *
-    (usesImageTokenSizing(model)
-      ? requirePositive(model["image input token price per 1k"], "Image input price")
-      : model["input token price per 1k"]);
+    (imagePrice ?? 0);
   const imageUnitPrice =
     model.provider === "Google"
       ? inputTokens <= 128_000
@@ -439,14 +465,46 @@ export function calculateTpmPerDollar(
   );
 }
 
-function getDeploymentCapacity(input: ScenarioInput): {
+export function getAvailableDeployments(model: ModelConfig): DeploymentType[] {
+  if (model["PTU deployments"]) {
+    return Object.keys(model["PTU deployments"]) as DeploymentType[];
+  }
+  if (model["global provisioned only"]) {
+    return ["Global"];
+  }
+  const hasRegional =
+    (model["regional PTU minimum deployment unit"] ?? 0) > 0 &&
+    (model["regional PTU scale increment"] ?? 0) > 0;
+  return hasRegional
+    ? ["Global / Data Zone", "Regional"]
+    : ["Global / Data Zone"];
+}
+
+export function getDeploymentCapacity(input: Pick<ScenarioInput, "model" | "deploymentType">): {
   minimumPtus: number;
   scaleIncrement: number;
+  inputTpmPerPtu: number | undefined;
   deploymentLabel: string;
 } {
   const { model, deploymentType } = input;
+  const available = getAvailableDeployments(model);
+  const selected = model["global provisioned only"] && deploymentType === "Global / Data Zone"
+    ? "Global"
+    : deploymentType;
+  if (!available.includes(selected)) {
+    throw new Error("This model does not support the selected PTU deployment.");
+  }
+  const configured = model["PTU deployments"]?.[selected];
+  if (configured) {
+    return {
+      minimumPtus: requirePositive(configured.minimumPtus, "PTU minimum"),
+      scaleIncrement: requirePositive(configured.scaleIncrement, "PTU scale increment"),
+      inputTpmPerPtu: requirePositive(configured.inputTpmPerPtu, "Input TPM per PTU"),
+      deploymentLabel: selected,
+    };
+  }
 
-  if (model.provider === "Azure OpenAI" && deploymentType === "Regional") {
+  if (deploymentType === "Regional") {
     return {
       minimumPtus: requirePositive(
         model["regional PTU minimum deployment unit"],
@@ -456,6 +514,7 @@ function getDeploymentCapacity(input: ScenarioInput): {
         model["regional PTU scale increment"],
         "Regional PTU scale increment",
       ),
+      inputTpmPerPtu: model["input TPM per PTU"],
       deploymentLabel: "Regional",
     };
   }
@@ -469,12 +528,8 @@ function getDeploymentCapacity(input: ScenarioInput): {
       model["PTU scale increment"],
       "PTU scale increment",
     ),
-    deploymentLabel:
-      model["global provisioned only"]
-        ? "Global"
-        : model.provider === "Azure OpenAI"
-          ? "Global / Data Zone"
-          : "Configured default",
+    inputTpmPerPtu: model["input TPM per PTU"],
+    deploymentLabel: model["global provisioned only"] ? "Global" : "Global / Data Zone",
   };
 }
 
@@ -524,8 +579,9 @@ function calculateImageInputTokens(input: ScenarioInput): number {
 
 function usesAutomaticProvisionedSizing(model: ModelConfig): boolean {
   return (
-    model.provider === "Azure OpenAI" ||
-    model["PTU sizing mode"] === "automatic"
+    model["PTU sizing mode"] !== "manual" &&
+    (model.provider === "Azure OpenAI" ||
+      model["PTU sizing mode"] === "automatic")
   );
 }
 
@@ -541,6 +597,9 @@ function isAutomaticallySized(input: ScenarioInput): boolean {
 }
 
 function getManualRequiredPtus(input: ScenarioInput, minimumPtus: number): number {
+  if (input.model["PTU sizing mode"] === "manual") {
+    return requirePositive(input.manualRequiredPtus, "Benchmarked required PTUs");
+  }
   const requiredPtus = input.manualRequiredPtus ?? minimumPtus;
   requireNonNegative(requiredPtus, "Required PTUs");
   return requiredPtus;
@@ -557,11 +616,11 @@ function buildExplanation(args: {
   pricePerUnit: number;
   discount: number;
   ptuMetrics?: PtuMetrics;
-  paygo: CostBreakdown;
+  paygo: CostBreakdown | null;
   ptuCostBeforeDiscount: number;
   ptuCost: number;
   tpmPerDollar: number;
-  costSavingPercentage: number;
+  costSavingPercentage: number | null;
 }): CalculationExplanation {
   const {
     input,
@@ -599,65 +658,76 @@ function buildExplanation(args: {
       formula: "Monthly requests = RPM x 60 x 24 x 30.42",
       substitution: `${input.rpm} x 60 x 24 x 30.42 = ${monthlyRequests.toLocaleString("en-US")}`,
     },
-    {
+  ];
+
+  if (paygo) {
+    steps.push({
       output: "Monthly PayGO input cost",
       result: paygo.inputCost,
       unit: "USD/month",
       formula:
         "(non-cached tokens x monthly requests / 1,000 x input price) + (cached tokens x monthly requests / 1,000 x cached price)",
-      substitution: `(${nonCachedTokens.toLocaleString("en-US")} x ${monthlyRequests.toLocaleString("en-US")} / 1,000 x ${model["input token price per 1k"]}) + (${cachedTokens.toLocaleString("en-US")} x ${monthlyRequests.toLocaleString("en-US")} / 1,000 x ${model["input token price per 1k with cache hit"]}) = ${paygo.inputCost.toFixed(2)}`,
+      substitution: `${nonCachedTokens > 0 ? `(${nonCachedTokens.toLocaleString("en-US")} x ${monthlyRequests.toLocaleString("en-US")} / 1,000 x ${model["input token price per 1k"]})` : "0 (no uncached tokens)"} + ${cachedTokens > 0 ? `(${cachedTokens.toLocaleString("en-US")} x ${monthlyRequests.toLocaleString("en-US")} / 1,000 x ${model["input token price per 1k with cache hit"]})` : "0 (no cached tokens)"} = ${paygo.inputCost.toFixed(2)}`,
       note: `${input.inputTextTokens.toLocaleString("en-US")} input tokens per request at a ${input.cacheHitRate}% cache-hit rate.`,
-    },
-  ];
+    });
 
-  if (model["PTU input token weights"]) {
-    steps[1] = {
-      output: "Monthly PayGO input cost",
-      result: paygo.inputCost,
-      unit: "USD/month",
-      formula:
-        "(uncached tokens x input price + cached tokens x cached price + cache write tokens x write price) x monthly requests / 1,000",
-      substitution: `(${nonCachedTokens} x ${model["input token price per 1k"]} + ${cachedTokens} x ${model["input token price per 1k with cache hit"]} + ${cacheWriteTokens} x ${model["cache write token price per 1k"]}) x ${monthlyRequests} / 1,000 = ${paygo.inputCost.toFixed(2)}`,
-    };
-  }
+    if (model["PTU input token weights"]) {
+      steps[1] = {
+        output: "Monthly PayGO input cost",
+        result: paygo.inputCost,
+        unit: "USD/month",
+        formula:
+          "(uncached tokens x input price + cached tokens x cached price + cache write tokens x write price) x monthly requests / 1,000",
+        substitution: `(${nonCachedTokens} x ${model["input token price per 1k"]} + ${cachedTokens} x ${model["input token price per 1k with cache hit"]} + ${cacheWriteTokens} x ${model["cache write token price per 1k"]}) x ${monthlyRequests} / 1,000 = ${paygo.inputCost.toFixed(2)}`,
+      };
+    }
 
-  if (paygo.imageCost > 0) {
-    const googleImagePrice =
-      input.inputTextTokens <= 128_000
-        ? model["price per image(<=128k input tokens)"]
-        : model["price per image(>128k input tokens)"];
-    const usesPerImagePricing =
-      model.provider === "Google" && googleImagePrice !== undefined;
+    if (paygo.imageCost > 0) {
+      const googleImagePrice =
+        input.inputTextTokens <= 128_000
+          ? model["price per image(<=128k input tokens)"]
+          : model["price per image(>128k input tokens)"];
+      const usesPerImagePricing =
+        model.provider === "Google" && googleImagePrice !== undefined;
 
+      steps.push({
+        output: "Monthly PayGO image cost",
+        result: paygo.imageCost,
+        unit: "USD/month",
+        formula: usesPerImagePricing
+          ? "image count x monthly requests x image price"
+          : "image input tokens x monthly requests / 1,000 x input price",
+        substitution: usesPerImagePricing
+          ? `${input.images.length} x ${monthlyRequests.toLocaleString("en-US")} x ${googleImagePrice} = ${paygo.imageCost.toFixed(2)}`
+          : `${inputImageTokens.toLocaleString("en-US")} x ${monthlyRequests.toLocaleString("en-US")} / 1,000 x ${model["image input token price per 1k"] ?? model["input token price per 1k"]} = ${paygo.imageCost.toFixed(2)}`,
+      });
+    }
+
+    steps.push(
+      {
+        output: "Monthly PayGO output cost",
+        result: paygo.outputCost,
+        unit: "USD/month",
+        formula: "output tokens x monthly requests / 1,000 x output price",
+        substitution: `${input.outputTokens.toLocaleString("en-US")} x ${monthlyRequests.toLocaleString("en-US")} / 1,000 x ${model["output token price per 1k"]} = ${paygo.outputCost.toFixed(2)}`,
+      },
+      {
+        output: "PayGO cost",
+        result: paygo.totalCost,
+        unit: "USD/month",
+        formula: "PayGO cost = input cost + image cost + output cost",
+        substitution: `${paygo.inputCost.toFixed(2)} + ${paygo.imageCost.toFixed(2)} + ${paygo.outputCost.toFixed(2)} = ${paygo.totalCost.toFixed(2)}`,
+      },
+    );
+  } else {
     steps.push({
-      output: "Monthly PayGO image cost",
-      result: paygo.imageCost,
-      unit: "USD/month",
-      formula: usesPerImagePricing
-        ? "image count x monthly requests x image price"
-        : "image input tokens x monthly requests / 1,000 x input price",
-      substitution: usesPerImagePricing
-        ? `${input.images.length} x ${monthlyRequests.toLocaleString("en-US")} x ${googleImagePrice} = ${paygo.imageCost.toFixed(2)}`
-        : `${inputImageTokens.toLocaleString("en-US")} x ${monthlyRequests.toLocaleString("en-US")} / 1,000 x ${model["image input token price per 1k"] ?? model["input token price per 1k"]} = ${paygo.imageCost.toFixed(2)}`,
+      output: "PayGO cost",
+      result: "N/A",
+      unit: "",
+      formula: "PayGO comparison unavailable",
+      substitution: "PayGO is retired or applicable token prices are unverified.",
     });
   }
-
-  steps.push(
-    {
-      output: "Monthly PayGO output cost",
-      result: paygo.outputCost,
-      unit: "USD/month",
-      formula: "output tokens x monthly requests / 1,000 x output price",
-      substitution: `${input.outputTokens.toLocaleString("en-US")} x ${monthlyRequests.toLocaleString("en-US")} / 1,000 x ${model["output token price per 1k"]} = ${paygo.outputCost.toFixed(2)}`,
-    },
-    {
-      output: "PayGO cost",
-      result: paygo.totalCost,
-      unit: "USD/month",
-      formula: "PayGO cost = input cost + image cost + output cost",
-      substitution: `${paygo.inputCost.toFixed(2)} + ${paygo.imageCost.toFixed(2)} + ${paygo.outputCost.toFixed(2)} = ${paygo.totalCost.toFixed(2)}`,
-    },
-  );
 
   if (usesAutomaticProvisionedSizing(model)) {
     const metrics = ptuMetrics;
@@ -668,7 +738,7 @@ function buildExplanation(args: {
     const imageInputRatio = getImageInputRatio(model);
     const weights = model["PTU input token weights"];
     const inputTpmPerPtu = requirePositive(
-      model["input TPM per PTU"],
+      getDeploymentCapacity(input).inputTpmPerPtu,
       "Input TPM per PTU",
     );
     const estimatedPtus = metrics.normalizedTpm / inputTpmPerPtu;
@@ -797,13 +867,15 @@ function buildExplanation(args: {
     },
     {
       output: "PTU Cost Saving (%)",
-      result: costSavingPercentage,
+      result: costSavingPercentage ?? "N/A",
       unit: "%",
       formula: "(PayGO cost - PTU cost) / PayGO cost x 100",
       substitution:
-        paygo.totalCost > 0
-          ? `(${paygo.totalCost.toFixed(2)} - ${ptuCost.toFixed(2)}) / ${paygo.totalCost.toFixed(2)} x 100 = ${costSavingPercentage.toFixed(2)}%`
-          : "0% because PayGO cost is 0",
+        paygo && costSavingPercentage !== null
+          ? paygo.totalCost > 0
+            ? `(${paygo.totalCost.toFixed(2)} - ${ptuCost.toFixed(2)}) / ${paygo.totalCost.toFixed(2)} x 100 = ${costSavingPercentage.toFixed(2)}%`
+            : "0% because PayGO cost is 0"
+          : "PayGO comparison unavailable",
     },
   );
 
@@ -820,10 +892,15 @@ function buildExplanation(args: {
       cacheHitRate: input.cacheHitRate,
       minimumPtus,
       scaleIncrement,
-      inputPricePer1k: model["input token price per 1k"],
+      inputPricePer1k: model["input token price per 1k"] ?? "N/A",
       cachedInputPricePer1k:
-        model["input token price per 1k with cache hit"],
-      outputPricePer1k: model["output token price per 1k"],
+        model["input token price per 1k with cache hit"] ?? "N/A",
+      outputPricePer1k: model["output token price per 1k"] ?? "N/A",
+      paygoPricingScope: model["PayGO pricing scope"] ?? "Catalog PayGO rates",
+      paygoStatus: model["PayGO status"] ?? "available",
+      ...(model["PayGO retirement date"] ? { paygoRetirementDate: model["PayGO retirement date"] } : {}),
+      ...(getDeploymentCapacity(input).inputTpmPerPtu !== undefined
+        ? { inputTpmPerPtu: getDeploymentCapacity(input).inputTpmPerPtu! } : {}),
       ptuPricePerUnit: pricePerUnit,
       ptuDiscount: discount,
       ...(model["PTU input token weights"] ? {
@@ -836,7 +913,7 @@ function buildExplanation(args: {
         outputWeight: getOutputRatio(model),
       } : {}),
       ...(usesImageTokenSizing(model) ? {
-        imageInputPricePer1k: requirePositive(model["image input token price per 1k"], "Image input price"),
+        imageInputPricePer1k: model["image input token price per 1k"] ?? "N/A",
         imageInputWeight: getImageInputRatio(model),
         imageOutputWeight: getOutputRatio(model),
       } : {}),
@@ -854,7 +931,7 @@ interface ScenarioCalculation {
   inputImageTokens: number;
   requiredPtus: number;
   ptuMetrics?: PtuMetrics;
-  paygo: CostBreakdown;
+  paygo: CostBreakdown | null;
   ptuPricing: {
     deployedPtus: number;
     costBeforeDiscount: number;
@@ -862,7 +939,7 @@ interface ScenarioCalculation {
   };
   ptuUtilization: number;
   tpmPerDollar: number;
-  costSavingPercentage: number;
+  costSavingPercentage: number | null;
 }
 
 function calculateScenarioValues(input: ScenarioInput): ScenarioCalculation {
@@ -877,6 +954,10 @@ function calculateScenarioValues(input: ScenarioInput): ScenarioCalculation {
     requirePositive(image.height, `Image ${index + 1} height`);
   });
   const model = getScenarioModel(input);
+  const promptLimit = model["PTU maximum prompt tokens"];
+  if (promptLimit !== undefined && input.inputTextTokens + calculateImageInputTokens(input) > promptLimit) {
+    throw new Error(`Provisioned prompts above ${promptLimit.toLocaleString("en-US")} tokens are not supported for this model.`);
+  }
   if ((input.cacheWriteTokens ?? 0) !== 0 && !model["PTU input token weights"]) {
     throw new Error("This model has no cache-write PTU sizing configuration.");
   }
@@ -896,7 +977,7 @@ function calculateScenarioValues(input: ScenarioInput): ScenarioCalculation {
       input.rpm,
       minimumPtus,
       scaleIncrement,
-      requirePositive(model["input TPM per PTU"], "Input TPM per PTU"),
+      requirePositive(getDeploymentCapacity(input).inputTpmPerPtu, "Input TPM per PTU"),
       getOutputRatio(model),
       input.cacheHitRate,
       {
@@ -960,9 +1041,11 @@ function calculateScenarioValues(input: ScenarioInput): ScenarioCalculation {
     ptuPricing.discountedCost,
   );
   const costSavingPercentage =
-    paygo.totalCost === 0
-      ? 0
-      : ((paygo.totalCost - ptuPricing.discountedCost) / paygo.totalCost) * 100;
+    paygo === null
+      ? null
+      : paygo.totalCost === 0
+        ? 0
+        : ((paygo.totalCost - ptuPricing.discountedCost) / paygo.totalCost) * 100;
 
   return {
     minimumPtus,
@@ -1030,7 +1113,8 @@ export function calculateScenario(input: ScenarioInput): ComparisonResult {
     requiredPtus,
     deployedPtus: ptuPricing.deployedPtus,
     ptuUtilization,
-    paygoCost: paygo.totalCost,
+    paygoCost: paygo?.totalCost ?? null,
+    paygoPricingScope: getScenarioModel(input)["PayGO pricing scope"],
     ptuCost: ptuPricing.discountedCost,
     tpmPerDollar,
     costSavingPercentage,
@@ -1047,20 +1131,6 @@ export function calculateScenario(input: ScenarioInput): ComparisonResult {
   };
 }
 
-function getOptimizationDeployments(input: ScenarioInput): DeploymentType[] {
-  if (input.model.provider !== "Azure OpenAI") {
-    return ["Global / Data Zone"];
-  }
-
-  const hasRegionalConfiguration =
-    (input.model["regional PTU minimum deployment unit"] ?? 0) > 0 &&
-    (input.model["regional PTU scale increment"] ?? 0) > 0;
-
-  return hasRegionalConfiguration
-    ? ["Global / Data Zone", "Regional"]
-    : ["Global / Data Zone"];
-}
-
 function calculateCurvePoint(
   input: ScenarioInput,
   rpm: number,
@@ -1068,7 +1138,7 @@ function calculateCurvePoint(
   const result = calculateScenarioValues({ ...input, rpm });
   return {
     rpm,
-    paygoCost: result.paygo.totalCost,
+    paygoCost: result.paygo?.totalCost ?? null,
     ptuCost: result.ptuPricing.discountedCost,
     requiredPtus: result.requiredPtus,
     deployedPtus: result.ptuPricing.deployedPtus,
@@ -1077,7 +1147,7 @@ function calculateCurvePoint(
 
 function findBreakEvenRpm(input: ScenarioInput): number | undefined {
   const oneRpmPoint = calculateCurvePoint(input, 1);
-  if (oneRpmPoint.paygoCost <= 0) {
+  if (oneRpmPoint.paygoCost === null || oneRpmPoint.paygoCost <= 0) {
     return undefined;
   }
 
@@ -1175,7 +1245,9 @@ function getCapacityTransitionRpms(
 export function calculateCostOptimization(
   input: ScenarioInput,
 ): CostOptimization {
-  const deployments = getOptimizationDeployments(input);
+  const deployments = input.model["PTU sizing mode"] === "manual"
+    ? [input.deploymentType]
+    : getAvailableDeployments(input.model);
   const commitments = ["Monthly", "Yearly"] as const;
   const configurations = deployments.flatMap((deploymentType) =>
     commitments.map((commitmentType) => ({
@@ -1197,7 +1269,7 @@ export function calculateCostOptimization(
     ),
   );
   const estimatedBreakEven =
-    paygoAtOneRpm > 0 ? lowestMinimumPtuCost / paygoAtOneRpm : 0;
+    paygoAtOneRpm !== null && paygoAtOneRpm > 0 ? lowestMinimumPtuCost / paygoAtOneRpm : 0;
   const maxRpm = Math.max(
     100,
     Math.ceil(input.rpm * 2),
@@ -1238,20 +1310,23 @@ export function calculateCostOptimization(
         calculateCurvePoint(configurationInput, rpm),
       );
       const currentPoint = calculateCurvePoint(configurationInput, input.rpm);
-      const savings = currentPoint.paygoCost - currentPoint.ptuCost;
+      const savings = currentPoint.paygoCost === null ? null : currentPoint.paygoCost - currentPoint.ptuCost;
 
       return {
         id: `${deploymentType}-${commitmentType}`,
         commitmentType,
         deploymentType: getDeploymentCapacity(configurationInput).deploymentLabel,
+        paygoPricingScope: getScenarioModel(configurationInput)["PayGO pricing scope"],
         points,
         current: {
           ...currentPoint,
           savings,
           savingsPercentage:
-            currentPoint.paygoCost === 0
-              ? 0
-              : (savings / currentPoint.paygoCost) * 100,
+            savings === null || currentPoint.paygoCost === null
+              ? null
+              : currentPoint.paygoCost === 0
+                ? 0
+                : (savings / currentPoint.paygoCost) * 100,
         },
         breakEvenRpm,
       };

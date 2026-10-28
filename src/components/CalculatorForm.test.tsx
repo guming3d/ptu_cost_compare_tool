@@ -1,11 +1,16 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import App from "../App";
 import { bundledCatalog } from "../data/catalog";
 import { getUiText } from "../i18n";
 import type { Language } from "../i18n";
 import { CalculatorForm } from "./CalculatorForm";
 import { NumberField } from "./NumberField";
+import { CostOptimizer } from "./CostOptimizer";
+import { ResultsTable } from "./ResultsTable";
+import { CatalogEditor } from "./CatalogEditor";
+import { calculateCostOptimization, calculateScenario } from "../lib/calculations";
+import { exportResultsToExcel } from "../lib/exportExcel";
 
 function renderForm(
   modelName: string,
@@ -119,7 +124,7 @@ describe("model-specific workload controls", () => {
   });
 
   it.each(["en", "zh-CN"] satisfies Language[])("uses measured image token controls in %s", (language) => {
-    const html = renderForm("gpt-image-2", language);
+    const html = renderForm("gpt-image-2 (", language);
     const text = getUiText(language).calculator;
     expect(html).toContain(text.imageInputTokens);
     expect(html).toContain(text.imageOutputTokens);
@@ -145,7 +150,7 @@ describe("model-specific workload controls", () => {
     "sizes Fireworks models automatically with an optional override in %s",
     (language) => {
       const text = getUiText(language).calculator;
-      for (const name of ["DeepSeek V4 Flash 0731", "DeepSeek V4.1 Flash"]) {
+      for (const name of ["DeepSeek V4 Pro", "DeepSeek V4.1 Flash"]) {
         const automatic = renderForm(name, language);
         expect(automatic).toContain(text.overridePtus);
         expect(automatic).toContain(text.automaticFireworksHint);
@@ -168,7 +173,7 @@ describe("model-specific workload controls", () => {
       expect(html).not.toContain(text.provisionedDeployment);
       expect(html).not.toContain(text.contextMode);
       expect(html).not.toContain(text.cacheWriteTokens);
-      expect(renderForm("DeepSeek V4 Flash 0731", language)).not.toContain(text.globalProvisionedOnly);
+      expect(renderForm("DeepSeek V4 Pro", language)).not.toContain(text.globalProvisionedOnly);
       expect(renderForm("gpt-5.6-luna", language)).toContain(text.provisionedDeployment);
     },
   );
@@ -178,5 +183,91 @@ describe("model-specific workload controls", () => {
     const html = renderForm("gpt-5.6-luna", "en", true);
     expect(html).not.toContain(text.overridePtus);
     expect(html).not.toContain(text.requiredPtus);
+  });
+
+  it.each(["en", "zh-CN"] satisfies Language[])("exposes exact deployment choices and manual benchmark requirements in %s", (language) => {
+    const text = getUiText(language).calculator;
+    const glm = renderForm("FW-GLM-5.3", language);
+    expect(glm).toContain('value="Global"');
+    expect(glm).toContain('value="Data Zone"');
+    expect(glm).toContain('value="Global (standard capacity)"');
+    expect(glm).not.toContain('value="Regional"');
+    expect(glm).toContain(text.manualDeploymentHint);
+    expect(glm).toContain(text.requiredPtus);
+    expect(glm).not.toContain(text.overridePtus);
+    expect(renderForm("azure Llama-3.3", language)).not.toContain('value="Regional"');
+    const flare = renderForm("gpt-image-2.5-flare", language);
+    expect(flare).toContain(text.imageInputTokens);
+    expect(flare).toContain(text.paygoUnavailable);
+    expect(renderForm("DeepSeek v3.2", language)).toContain(text.paygoRetired);
+    expect(renderForm("gpt-4.1 (", language)).toContain(text.promptLimit);
+  });
+
+  it.each(["en", "zh-CN"] satisfies Language[])("renders unavailable comparisons without fake savings or invalid chart values in %s", (language) => {
+    const selectedModel = bundledCatalog.models.find((entry) => entry["model name"] === "fireworks DeepSeek v3.2")!;
+    const input = {
+      model: selectedModel,
+      inputTextTokens: 2000, outputTokens: 100, rpm: 10, cacheHitRate: 0,
+      images: [], commitmentType: "Monthly" as const, deploymentType: "Global / Data Zone" as const,
+    };
+    const result = calculateScenario(input);
+    const optimizer = renderToStaticMarkup(
+      <CostOptimizer optimization={calculateCostOptimization(input)} currentRpm={10} language={language} />,
+    );
+    const table = renderToStaticMarkup(<ResultsTable results={[result]} onRemove={() => {}} language={language} />);
+    expect(optimizer).toContain(getUiText(language).optimizer.paygoUnavailable);
+    expect(optimizer).not.toContain('class="paygo-line"');
+    expect(optimizer).not.toContain("NaN");
+    expect(optimizer).not.toContain("Infinity");
+    expect(table.match(/N\/A/g)).toHaveLength(2);
+    expect(table).not.toContain("$0.00");
+  });
+
+  it("renders all six custom automatic deployment curves with separately scoped PayGO lines", () => {
+    const selectedModel = bundledCatalog.models.find((entry) => entry["model name"] === "FW-GLM-5.3")!;
+    const optimization = calculateCostOptimization({
+      model: { ...selectedModel, "PTU sizing mode": "automatic", "output token multiple ratio": 1 },
+      inputTextTokens: 2000, outputTokens: 100, rpm: 10, cacheHitRate: 0,
+      images: [], commitmentType: "Monthly", deploymentType: "Global",
+    });
+    const html = renderToStaticMarkup(<CostOptimizer optimization={optimization} currentRpm={10} language="en" />);
+    expect(html.match(/class="ptu-line"/g)).toHaveLength(6);
+    expect(html.match(/class="paygo-line"/g)).toHaveLength(2);
+    expect(html).toContain("US Data Zone Standard");
+    expect(html).toContain("Global Standard");
+    expect(html).not.toContain("NaN");
+  });
+
+  it("warns about an older browser catalog without replacing customizations", () => {
+    const html = renderToStaticMarkup(<CatalogEditor
+      catalog={{ ...bundledCatalog, metadata: { ...bundledCatalog.metadata, "verified date": "2026-09-29" } }}
+      onCatalogChange={() => {}} language="en"
+    />);
+    expect(html).toContain(getUiText("en").catalog.outdated);
+  });
+
+  it("exports unavailable costs as N/A with the pricing scope", async () => {
+    const selectedModel = bundledCatalog.models.find((entry) => entry["model name"] === "fireworks DeepSeek v3.2")!;
+    const result = calculateScenario({
+      model: selectedModel,
+      inputTextTokens: 2000, outputTokens: 100, rpm: 10, cacheHitRate: 0,
+      images: [], commitmentType: "Monthly", deploymentType: "Global / Data Zone",
+    });
+    const createObjectURL = vi.fn((_blob: Blob) => "blob:test");
+    const link = { href: "", download: "", click: vi.fn(), remove: vi.fn() };
+    vi.stubGlobal("document", { createElement: () => link, body: { append: vi.fn() } });
+    vi.stubGlobal("URL", { createObjectURL, revokeObjectURL: vi.fn() });
+    try {
+      exportResultsToExcel([result], "en");
+      const blob = createObjectURL.mock.calls[0][0] as unknown as Blob;
+      const workbook = await blob.text();
+      expect(workbook.match(/<td>N\/A<\/td>/g)).toHaveLength(2);
+      expect(workbook).toContain(result.paygoPricingScope);
+      expect(workbook).toContain("PayGO pricing scope");
+      expect(workbook).not.toContain("null");
+      expect(link.click).toHaveBeenCalledOnce();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

@@ -75,6 +75,9 @@ export function CatalogEditor({
             {catalog.models.length} {text.models} &middot; {text.verified}{" "}
             {catalog.metadata["verified date"]}
           </small>
+          {catalog.metadata["verified date"] < bundledCatalog.metadata["verified date"] ? (
+            <small>{text.outdated}</small>
+          ) : null}
         </span>
         <span className="summary-chevron" aria-hidden="true">
           +

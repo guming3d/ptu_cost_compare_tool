@@ -51,10 +51,15 @@ const UI_TEXT = {
       provisionedDeployment: "Provisioned deployment",
       globalDataZone: "Global / Data Zone",
       globalProvisionedOnly: "Global Provisioned only. Data Zone is not supported.",
+      paygoRetired: "PayGO retired; PTU remains supported. PayGO and savings are N/A. Retirement date:",
+      paygoUnavailable: "PayGO or applicable token prices are unverified; PayGO and savings are N/A.",
+      promptLimit: "Maximum provisioned prompt tokens (including cached input):",
       regional: "Regional",
       requiredPtus: "Required PTUs",
       publishedCapacity: "Published capacity",
       benchmarkHint: "input TPM/PTU. Enter a benchmarked capacity estimate.",
+      manualDeploymentHint: "Benchmark each deployment separately. The optimizer compares commitments for the selected deployment only.",
+      ptuPricingAssumption: "PTU commitment rates are catalog planning assumptions, not a current model-specific quote.",
       overridePtus: "Override automatic PTU estimate",
       automaticFireworksHint:
         "Automatic estimate. Microsoft does not publish a Fireworks output-token weight, so the catalog output-to-input ratio is used:",
@@ -122,6 +127,7 @@ const UI_TEXT = {
     summary: {
       ariaLabel: "Current cost estimate",
       paygoEstimate: "PayGO estimate",
+      paygoUnavailable: "Current PayGO comparison unavailable",
       ptuEstimate: "PTU estimate",
       estimatedSavings: "Estimated savings",
       perMonth: "per month",
@@ -138,6 +144,7 @@ const UI_TEXT = {
       perMonthAt: "per month at",
       breakEven: "Estimated first break-even",
       breakEvenNotReached: "No break-even is shown in this traffic range.",
+      paygoUnavailable: "PayGO and savings are N/A. PTU costs remain planning estimates.",
       chartAriaLabel:
         "Monthly PayGO and PTU cost lines by requests per minute and configuration",
       rpmAxis: "Requests per minute (RPM)",
@@ -206,7 +213,8 @@ const UI_TEXT = {
       save: "Save catalog",
       restore: "Restore bundled catalog",
       invalid:
-        "The catalog must contain metadata and at least one model with all required pricing fields.",
+        "The catalog must contain metadata and valid model pricing (number or null), sizing, and deployment fields.",
+      outdated: "This browser is using an older catalog. Restore bundled catalog to adopt the current model set and sizing; saved customizations are not replaced automatically.",
       invalidJson: "Invalid catalog JSON.",
       saved: "Catalog saved in this browser.",
       restored: "Bundled catalog restored.",
@@ -227,6 +235,7 @@ const UI_TEXT = {
       deployedPtus: "Deployed PTUs",
       utilization: "PTU Utilization (%)",
       paygoCost: "PayGO cost",
+      paygoScope: "PayGO pricing scope",
       ptuCost: "PTU cost",
       efficiency: "TPM per dollar (in millions)",
       savings: "PTU Cost Saving (%)",
@@ -278,10 +287,15 @@ const UI_TEXT = {
       provisionedDeployment: "预配部署类型",
       globalDataZone: "全局 / 数据区域",
       globalProvisionedOnly: "仅支持全局预配，不支持数据区域预配。",
+      paygoRetired: "PayGO 已退役，PTU 仍受支持。PayGO 和节省显示为 N/A。退役日期：",
+      paygoUnavailable: "PayGO 或适用令牌价格未经验证，PayGO 和节省显示为 N/A。",
+      promptLimit: "预配提示词令牌上限（包含缓存输入）：",
       regional: "区域",
       requiredPtus: "所需 PTU",
       publishedCapacity: "已发布容量",
       benchmarkHint: "输入 TPM/PTU。请输入经过基准测试的容量估算值。",
+      manualDeploymentHint: "请对每种部署单独进行基准测试。优化器仅比较所选部署的承诺周期。",
+      ptuPricingAssumption: "PTU 承诺价格为目录中的规划假设，并非当前模型的专属报价。",
       overridePtus: "手动覆盖自动 PTU 估算",
       automaticFireworksHint:
         "自动估算。Microsoft 未发布 Fireworks 模型的输出令牌权重，因此使用目录中的输出/输入比率：",
@@ -349,6 +363,7 @@ const UI_TEXT = {
     summary: {
       ariaLabel: "当前成本估算",
       paygoEstimate: "PayGO 估算",
+      paygoUnavailable: "无法进行当前 PayGO 对比",
       ptuEstimate: "PTU 估算",
       estimatedSavings: "预计节省",
       perMonth: "每月",
@@ -364,6 +379,7 @@ const UI_TEXT = {
       perMonthAt: "，当前流量",
       breakEven: "预计首次盈亏平衡点",
       breakEvenNotReached: "当前流量范围内未显示盈亏平衡点。",
+      paygoUnavailable: "PayGO 和节省显示为 N/A。PTU 成本仍为规划估算。",
       chartAriaLabel: "按每分钟请求数和配置展示的 PayGO 与 PTU 月度成本曲线",
       rpmAxis: "每分钟请求数（RPM）",
       currentTraffic: "当前流量",
@@ -428,7 +444,8 @@ const UI_TEXT = {
       jsonLabel: "模型目录 JSON",
       save: "保存目录",
       restore: "恢复内置目录",
-      invalid: "目录必须包含元数据，以及至少一个具备全部必需价格字段的模型。",
+      invalid: "目录必须包含元数据，以及有效的模型价格（数值或 null）、容量和部署字段。",
+      outdated: "此浏览器正在使用旧目录。请恢复内置目录以采用最新模型列表和容量；不会自动替换已保存的自定义配置。",
       invalidJson: "目录 JSON 无效。",
       saved: "目录已保存到此浏览器。",
       restored: "已恢复内置目录。",
@@ -449,6 +466,7 @@ const UI_TEXT = {
       deployedPtus: "已部署 PTU",
       utilization: "PTU 利用率（%）",
       paygoCost: "PayGO 成本",
+      paygoScope: "PayGO 价格范围",
       ptuCost: "PTU 成本",
       efficiency: "每美元 TPM（百万）",
       savings: "PTU 成本节省（%）",
@@ -464,6 +482,18 @@ const UI_TEXT = {
 } as const;
 
 const ZH_EXPLANATION_TEXT: Record<string, string> = {
+  "PayGO comparison unavailable": "无法比较 PayGO",
+  "PayGO is retired or applicable token prices are unverified.": "PayGO 已退役或适用的令牌价格未经验证。",
+  "Catalog PayGO rates": "目录中的 PayGO 价格",
+  paygoPricingScope: "PayGO 价格范围",
+  paygoStatus: "PayGO 状态",
+  paygoRetirementDate: "PayGO 退役日期",
+  inputTpmPerPtu: "每 PTU 输入 TPM",
+  available: "可用",
+  retired: "已退役",
+  unverified: "未经验证",
+  "Data Zone": "数据区域",
+  "Global (standard capacity)": "全局（标准容量）",
   contextMode: "上下文价格档位",
   short: "短上下文",
   long: "长上下文",
@@ -628,6 +658,13 @@ export function localizeExplanationText(
 
   if (value.startsWith("Required PTUs = ")) {
     return value.replace("Required PTUs = ", "所需 PTU = ");
+  }
+  if (value === "Benchmarked required PTUs must be a positive number.") {
+    return "请输入经过基准测试的正数 PTU 容量。";
+  }
+  const promptLimit = value.match(/^Provisioned prompts above ([\d,]+) tokens are not supported for this model\.$/);
+  if (promptLimit) {
+    return `此模型不支持超过 ${promptLimit[1]} 个令牌的预配提示词。`;
   }
 
   return value;

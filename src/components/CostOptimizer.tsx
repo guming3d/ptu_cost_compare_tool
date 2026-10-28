@@ -20,9 +20,9 @@ interface CostOptimizerProps {
 const CHART_WIDTH = 960;
 const CHART_HEIGHT = 360;
 const CHART_MARGIN = { top: 24, right: 24, bottom: 54, left: 82 };
-const CONFIGURATION_COLORS = ["#1677c8", "#7047a8", "#bd641d", "#168463"];
-const CONFIGURATION_DASHES = [undefined, "9 5", "2 4", "10 4 2 4"];
-const LEGEND_STYLES = ["solid", "dashed", "dotted", "double"] as const;
+const CONFIGURATION_COLORS = ["#1677c8", "#7047a8", "#bd641d", "#168463", "#b73960", "#536478"];
+const CONFIGURATION_DASHES = [undefined, "9 5", "2 4", "10 4 2 4", "5 3", "12 3 2 3"];
+const LEGEND_STYLES = ["solid", "dashed", "dotted", "double", "dashed", "dotted"] as const;
 
 function linePath(
   points: CostCurvePoint[],
@@ -73,7 +73,7 @@ export function CostOptimizer({
   const allCosts = optimization.configurations.flatMap((configuration) =>
     configuration.points.flatMap((point) => [point.paygoCost, point.ptuCost]),
   );
-  const maximumCost = Math.max(...allCosts, 1);
+  const maximumCost = Math.max(...allCosts.filter((cost): cost is number => cost !== null), 1);
   const x = (rpm: number) =>
     CHART_MARGIN.left + (rpm / optimization.maxRpm) * plotWidth;
   const y = (cost: number) =>
@@ -92,6 +92,15 @@ export function CostOptimizer({
   const yTicks = Array.from({ length: 5 }, (_, index) => index / 4);
   const xTicks = Array.from({ length: 5 }, (_, index) => index / 4);
   const paygoPoints = best.points;
+  const paygoCurves = optimization.configurations.filter((configuration, index, all) =>
+    all.findIndex((other) =>
+      other.current.paygoCost === configuration.current.paygoCost &&
+      other.paygoPricingScope === configuration.paygoPricingScope,
+    ) === index,
+  );
+  const paygoLabel = (configuration: PtuConfigurationCurve) =>
+    `PayGO${configuration.paygoPricingScope ? ` · ${configuration.paygoPricingScope}` : ""}`;
+  const formatCurrency = (cost: number | null) => cost === null ? "N/A" : currency.format(cost);
   const tablePointIndexes = Array.from(
     new Set([
       ...Array.from(
@@ -115,7 +124,7 @@ export function CostOptimizer({
     .filter((index) => index >= 0)
     .sort((left, right) => left - right);
   const currentMarkerX = x(Math.min(currentRpm, optimization.maxRpm));
-  const savingsAmount = Math.abs(best.current.savings);
+  const savingsAmount = Math.abs(best.current.savings ?? 0);
 
   return (
     <section className="content-card optimizer-card" aria-label={text.ariaLabel}>
@@ -126,7 +135,7 @@ export function CostOptimizer({
         </div>
         <div
           className={
-            best.current.savings >= 0
+            best.current.savings !== null && best.current.savings >= 0
               ? "recommendation positive"
               : "recommendation"
           }
@@ -134,17 +143,21 @@ export function CostOptimizer({
           <span>{text.bestConfiguration}</span>
           <strong>{configurationLabel(best, language)}</strong>
           <p>
-            {best.current.savings >= 0
-              ? `${text.saves} ${currency.format(savingsAmount)} (${best.current.savingsPercentage.toFixed(1)}%)`
-              : `${text.paygoLowerBy} ${currency.format(savingsAmount)}`}{" "}
-            {text.perMonthAt} {currentRpm.toLocaleString(locale)} RPM.
+            {best.current.savings === null
+              ? text.paygoUnavailable
+              : <>
+                  {best.current.savings >= 0
+                    ? `${text.saves} ${currency.format(savingsAmount)} (${best.current.savingsPercentage?.toFixed(1)}%)`
+                    : `${text.paygoLowerBy} ${currency.format(savingsAmount)}`}{" "}
+                  {text.perMonthAt} {currentRpm.toLocaleString(locale)} RPM.
+                </>}
           </p>
           <small>
             {best.breakEvenRpm !== undefined
               ? `${text.breakEven}: ${best.breakEvenRpm.toLocaleString(locale, {
                   maximumFractionDigits: 1,
                 })} RPM`
-              : text.breakEvenNotReached}
+              : best.current.paygoCost === null ? "N/A" : text.breakEvenNotReached}
           </small>
         </div>
       </div>
@@ -218,35 +231,41 @@ export function CostOptimizer({
           >
             {text.currentTraffic}
           </text>
-          <path
-            className="paygo-line"
-            d={linePath(paygoPoints, (point) => point.paygoCost, x, y)}
-          />
+          {paygoCurves.filter((configuration) => configuration.current.paygoCost !== null).map((configuration, index) => (
+            <path
+              key={`paygo-${configuration.id}`}
+              className="paygo-line"
+              strokeDasharray={CONFIGURATION_DASHES[index % CONFIGURATION_DASHES.length]}
+              d={linePath(configuration.points, (point) => point.paygoCost!, x, y)}
+            />
+          ))}
           {optimization.configurations.map((configuration, index) => (
             <path
               className="ptu-line"
               d={stepPath(configuration.points, x, y)}
               key={configuration.id}
-              stroke={CONFIGURATION_COLORS[index]}
-              strokeDasharray={CONFIGURATION_DASHES[index]}
+              stroke={CONFIGURATION_COLORS[index % CONFIGURATION_COLORS.length]}
+              strokeDasharray={CONFIGURATION_DASHES[index % CONFIGURATION_DASHES.length]}
             />
           ))}
         </svg>
       </div>
 
       <div className="chart-legend" aria-label={text.legend}>
-        <div>
-          <span className="legend-line paygo" aria-hidden="true" />
-          <strong>PayGO</strong>
-          <small>{currency.format(best.current.paygoCost)}</small>
-        </div>
+        {paygoCurves.map((configuration, index) => (
+          <div key={`paygo-${configuration.id}`}>
+            <span className="legend-line paygo" style={{ borderTopStyle: LEGEND_STYLES[index % LEGEND_STYLES.length] }} aria-hidden="true" />
+            <strong>{paygoLabel(configuration)}</strong>
+            <small>{formatCurrency(configuration.current.paygoCost)}</small>
+          </div>
+        ))}
         {optimization.configurations.map((configuration, index) => (
           <div key={configuration.id}>
             <span
               className="legend-line"
               style={{
-                borderColor: CONFIGURATION_COLORS[index],
-                borderTopStyle: LEGEND_STYLES[index],
+                borderColor: CONFIGURATION_COLORS[index % CONFIGURATION_COLORS.length],
+                borderTopStyle: LEGEND_STYLES[index % LEGEND_STYLES.length],
               }}
               aria-hidden="true"
             />
@@ -265,7 +284,9 @@ export function CostOptimizer({
             <thead>
               <tr>
                 <th>{text.rpm}</th>
-                <th>PayGO</th>
+                {paygoCurves.map((configuration) => (
+                  <th key={`paygo-${configuration.id}`}>{paygoLabel(configuration)}</th>
+                ))}
                 {optimization.configurations.map((configuration) => (
                   <th key={configuration.id}>
                     {configurationLabel(configuration, language)}
@@ -283,7 +304,9 @@ export function CostOptimizer({
                         maximumFractionDigits: 1,
                       })}
                     </td>
-                    <td>{currency.format(point.paygoCost)}</td>
+                    {paygoCurves.map((configuration) => (
+                      <td key={`paygo-${configuration.id}`}>{formatCurrency(configuration.points[pointIndex].paygoCost)}</td>
+                    ))}
                     {optimization.configurations.map((configuration) => (
                       <td key={configuration.id}>
                         {currency.format(

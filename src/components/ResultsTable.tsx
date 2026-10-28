@@ -75,17 +75,20 @@ export function ResultsTable({
                 {result.requiredPtus.toFixed(2)} / {result.deployedPtus}
               </td>
               <td>{result.ptuUtilization.toFixed(2)}%</td>
-              <td>{currencyFormatter.format(result.paygoCost)}</td>
+              <td>
+                {result.paygoCost === null ? "N/A" : currencyFormatter.format(result.paygoCost)}
+                {result.paygoPricingScope ? <span className="table-subtext">{result.paygoPricingScope}</span> : null}
+              </td>
               <td>{currencyFormatter.format(result.ptuCost)}</td>
               <td>
                 <span
                   className={
-                    result.costSavingPercentage >= 0
-                      ? "saving-badge positive"
-                      : "saving-badge negative"
+                    result.costSavingPercentage === null
+                      ? "saving-badge"
+                      : result.costSavingPercentage >= 0 ? "saving-badge positive" : "saving-badge negative"
                   }
                 >
-                  {result.costSavingPercentage.toFixed(2)}%
+                  {result.costSavingPercentage === null ? "N/A" : `${result.costSavingPercentage.toFixed(2)}%`}
                 </span>
               </td>
               <td>

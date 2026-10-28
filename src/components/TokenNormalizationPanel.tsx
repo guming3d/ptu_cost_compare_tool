@@ -38,7 +38,7 @@ export function TokenNormalizationPanel({
   const normalizedTpm = result?.normalizedTpm;
   const capacity = model["input TPM per PTU"];
   const tier = result?.contextMode === "long" ? model["long context"] : model;
-  const prices: Partial<Record<NormalizedTokenBucket["category"], number>> = {
+  const prices: Partial<Record<NormalizedTokenBucket["category"], number | null>> = {
     uncached: tier?.["input token price per 1k"],
     cached: tier?.["input token price per 1k with cache hit"],
     cacheWrite: tier?.["cache write token price per 1k"],
@@ -47,7 +47,7 @@ export function TokenNormalizationPanel({
   const baselinePrice = model["input token price per 1k"];
   const hasCatalogOverride = normalization?.buckets.some((bucket) => {
     const price = prices[bucket.category];
-    return price !== undefined &&
+    return price != null && baselinePrice !== null &&
       Math.abs(bucket.weight - price / baselinePrice) > 1e-9;
   });
   const isRegional = result?.deploymentType === "Regional";
@@ -70,7 +70,7 @@ export function TokenNormalizationPanel({
 
       {result && normalization && inputBuckets && cachedBucket && cacheWriteBucket &&
         normalizedTpm !== undefined && capacity !== undefined &&
-        minimum !== undefined && increment !== undefined ? (
+        minimum !== undefined && increment !== undefined && baselinePrice !== null ? (
         <>
           <div className="normalization-context">
             <strong>{model["model name"]}</strong>

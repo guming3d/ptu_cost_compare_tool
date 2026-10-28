@@ -1,5 +1,5 @@
 export type CommitmentType = "Monthly" | "Yearly";
-export type DeploymentType = "Global / Data Zone" | "Regional";
+export type DeploymentType = "Global / Data Zone" | "Regional" | "Global" | "Data Zone" | "Global (standard capacity)";
 export type ImageQuality = "low" | "high";
 export type ContextMode = "short" | "long";
 
@@ -10,10 +10,10 @@ export interface PtuInputTokenWeights {
 }
 
 export interface TokenConfig {
-  "input token price per 1k": number;
-  "input token price per 1k with cache hit": number;
+  "input token price per 1k": number | null;
+  "input token price per 1k with cache hit": number | null;
   "cache write token price per 1k"?: number;
-  "output token price per 1k": number;
+  "output token price per 1k": number | null;
   "output token multiple ratio"?: number;
   "PTU input token weights"?: PtuInputTokenWeights;
 }
@@ -30,11 +30,23 @@ export interface CatalogMetadata {
 
 export interface ModelConfig extends TokenConfig {
   "model name": string;
+  "catalog model id"?: string;
   provider: string;
+  "PayGO status"?: "available" | "retired" | "unverified";
+  "PayGO retirement date"?: string;
+  "PayGO pricing scope"?: string;
+  "PTU maximum prompt tokens"?: number;
+  "PTU deployments"?: Partial<Record<DeploymentType, {
+    minimumPtus: number;
+    scaleIncrement: number;
+    inputTpmPerPtu: number;
+    paygo?: TokenConfig;
+    paygoScope?: string;
+  }>>;
   "long context"?: TokenConfig;
   "image input TPM per PTU"?: number;
   "image output-to-input ratio"?: number;
-  "image input token price per 1k"?: number;
+  "image input token price per 1k"?: number | null;
   "configuration notes"?: string[];
   "PTU minumum deployment unit": number;
   "PTU scale increment": number;
@@ -146,11 +158,12 @@ export interface ComparisonResult {
   requiredPtus: number;
   deployedPtus: number;
   ptuUtilization: number;
-  paygoCost: number;
+  paygoCost: number | null;
+  paygoPricingScope?: string;
   ptuCost: number;
   tpmPerDollar: number;
-  costSavingPercentage: number;
-  paygoBreakdown: CostBreakdown;
+  costSavingPercentage: number | null;
+  paygoBreakdown: CostBreakdown | null;
   ptuCostBeforeDiscount: number;
   ptuDiscount: number;
   normalizedTpm?: number;
@@ -162,7 +175,7 @@ export interface ComparisonResult {
 
 export interface CostCurvePoint {
   rpm: number;
-  paygoCost: number;
+  paygoCost: number | null;
   ptuCost: number;
   requiredPtus: number;
   deployedPtus: number;
@@ -172,10 +185,11 @@ export interface PtuConfigurationCurve {
   id: string;
   commitmentType: CommitmentType;
   deploymentType: string;
+  paygoPricingScope?: string;
   points: CostCurvePoint[];
   current: CostCurvePoint & {
-    savings: number;
-    savingsPercentage: number;
+    savings: number | null;
+    savingsPercentage: number | null;
   };
   breakEvenRpm?: number;
 }

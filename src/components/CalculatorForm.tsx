@@ -5,9 +5,9 @@ import type {
   ModelConfig,
   WorkloadImage,
 } from "../types";
-import { getLocale, getUiText } from "../i18n";
+import { getLocale, getUiText, localizeDeployment, localizeExplanationText } from "../i18n";
 import type { Language } from "../i18n";
-import { supportsAzureImageInput, usesImageTokenSizing } from "../lib/calculations";
+import { getAvailableDeployments, supportsAzureImageInput, usesImageTokenSizing } from "../lib/calculations";
 import { NumberField } from "./NumberField";
 
 interface CalculatorFormProps {
@@ -102,7 +102,8 @@ export function CalculatorForm({
 }: CalculatorFormProps) {
   const text = getUiText(language).calculator;
   const locale = getLocale(language);
-  const isAzure = selectedModel.provider === "Azure OpenAI";
+  const deployments = getAvailableDeployments(selectedModel);
+  const capacity = selectedModel["PTU deployments"]?.[deploymentType]?.inputTpmPerPtu ?? selectedModel["input TPM per PTU"];
   const isManual = selectedModel["PTU sizing mode"] === "manual";
   const canOverridePtus =
     !isManual &&
@@ -145,6 +146,14 @@ export function CalculatorForm({
           ))}
         </select>
         <span className="field-hint">{selectedModel.provider}</span>
+        {selectedModel["PayGO status"] === "retired" ? (
+          <span className="field-hint">{text.paygoRetired} {selectedModel["PayGO retirement date"]}</span>
+        ) : selectedModel["PayGO status"] === "unverified" ? (
+          <span className="field-hint">{text.paygoUnavailable}</span>
+        ) : null}
+        {selectedModel["PTU maximum prompt tokens"] ? (
+          <span className="field-hint">{text.promptLimit} {selectedModel["PTU maximum prompt tokens"].toLocaleString(locale)}</span>
+        ) : null}
       </label>
 
       <div className="field-grid">
@@ -224,17 +233,21 @@ export function CalculatorForm({
         </span>
       </label>
 
-      {isAzure ? (
+      {deployments.length > 1 || deployments[0] !== "Global" ? (
         <label className="field">
           <span className="field-label">{text.provisionedDeployment}</span>
           <select
             value={deploymentType}
-            onChange={(event) =>
-              onDeploymentTypeChange(event.target.value as DeploymentType)
-            }
+            onChange={(event) => {
+              if (isManual) {
+                onManualRequiredPtusChange(0);
+              }
+              onDeploymentTypeChange(event.target.value as DeploymentType);
+            }}
           >
-            <option value="Global / Data Zone">{text.globalDataZone}</option>
-            <option value="Regional">{text.regional}</option>
+            {deployments.map((deployment) => (
+              <option key={deployment} value={deployment}>{localizeDeployment(deployment, language)}</option>
+            ))}
           </select>
         </label>
       ) : null}
@@ -269,8 +282,8 @@ export function CalculatorForm({
           min={1}
           step={1}
           hint={`${text.publishedCapacity}: ${
-            selectedModel["input TPM per PTU"]?.toLocaleString(locale) ?? "N/A"
-          } ${text.benchmarkHint}`}
+            capacity?.toLocaleString(locale) ?? "N/A"
+          } ${text.benchmarkHint}${isManual ? ` ${text.manualDeploymentHint}` : ""}`}
         />
       ) : null}
 
@@ -286,6 +299,8 @@ export function CalculatorForm({
           <option value="Yearly">{text.yearly}</option>
         </select>
       </label>
+
+      <span className="field-hint">{text.ptuPricingAssumption}</span>
 
       {isImageModel ? (
         <NumberField
@@ -391,7 +406,7 @@ export function CalculatorForm({
         ) : null}
       </div>
 
-      {error ? <p className="form-error">{error}</p> : null}
+      {error ? <p className="form-error">{localizeExplanationText(error, language)}</p> : null}
 
       <div className="button-row">
         <button className="button button-primary" type="button" onClick={onAdd}>

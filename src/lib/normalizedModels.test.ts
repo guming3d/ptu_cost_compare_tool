@@ -17,7 +17,7 @@ function model(name: string): ModelConfig {
 }
 
 const astra = model("gpt-6-astra");
-const image = model("gpt-image-2");
+const image = model("gpt-image-2 (");
 const sol = model("gpt-6-sol");
 const sol61 = model("gpt-6.1-sol");
 
@@ -66,11 +66,11 @@ describe("automatic cache-write estimates", () => {
           const weights = tier["PTU input token weights"]!;
           const cachedTokens = 101 - cacheWriteTokens;
           expect(result.cacheWriteTokens).toBe(cacheWriteTokens);
-          expect(result.paygoBreakdown.nonCachedInputCost).toBe(0);
+          expect(result.paygoBreakdown?.nonCachedInputCost).toBe(0);
           expect(result.normalizedTpm).toBeCloseTo(
             cachedTokens * weights.cached + cacheWriteTokens * weights.cacheWrite,
           );
-          expect(result.paygoBreakdown.cacheWriteCost).toBeCloseTo(
+          expect(result.paygoBreakdown?.cacheWriteCost).toBeCloseTo(
             cacheWriteTokens / 1000 * MINUTES_PER_MONTH * tier["cache write token price per 1k"]!,
           );
           expect(result.explanation.inputs.cacheWriteTokens).toBe(cacheWriteTokens);
@@ -122,7 +122,7 @@ describe("GPT-6 Astra normalized token accounting", () => {
       expect(result.deployedPtus).toBe(deployedPtus);
       expect(result.ptuCost).toBe(deployedPtus * 260);
       expect(result.paygoCost).toBeCloseTo(costPerRequest * 10 * MINUTES_PER_MONTH);
-      expect(result.paygoBreakdown.cacheWriteCost).toBeCloseTo(
+      expect(result.paygoBreakdown?.cacheWriteCost).toBeCloseTo(
         writeCostPerRequest * 10 * MINUTES_PER_MONTH,
       );
       expect(result.contextMode).toBe(contextMode);
@@ -135,7 +135,7 @@ describe("GPT-6 Astra normalized token accounting", () => {
       });
       const inputStep = result.explanation.steps.find((step) => step.output === "Monthly PayGO input cost");
       expect(inputStep?.formula).toContain("cache write tokens");
-      expect(inputStep?.result).toBe(result.paygoBreakdown.inputCost);
+      expect(inputStep?.result).toBe(result.paygoBreakdown?.inputCost);
       expect(result.explanation.steps.find((step) => step.output === "Normalized TPM")?.result)
         .toBe(result.normalizedTpm);
     },
@@ -168,7 +168,7 @@ describe("GPT-6 Astra normalized token accounting", () => {
       rpm: 1,
     }));
     expect(result.normalizedTpm).toBe(675);
-    expect(result.paygoBreakdown.nonCachedInputCost).toBe(0);
+    expect(result.paygoBreakdown?.nonCachedInputCost).toBe(0);
   });
 
   it("keeps optimizer points consistent with long-context scenario results", () => {
@@ -211,7 +211,7 @@ describe("GPT-image-2 normalized token accounting", () => {
       });
       expect(result.explanation.steps.find((step) => step.output === "Normalized TPM")?.substitution)
         .toContain("3.75 x 1.6");
-      expect(result.paygoBreakdown.imageCost).toBeCloseTo(
+      expect(result.paygoBreakdown?.imageCost).toBeCloseTo(
         (1229 * 0.008 / 1000) * 10 * MINUTES_PER_MONTH,
       );
       expect(result.paygoCost).toBeCloseTo(
@@ -243,10 +243,10 @@ describe("GPT-image-2 normalized token accounting", () => {
   it("only deducts cached text, not image tokens", () => {
     const result = calculateScenario({ ...documentedWorkload, cacheHitRate: 100 });
     expect(result.normalizedTpm).toBeCloseTo(441104);
-    expect(result.paygoBreakdown.cachedInputCost).toBeCloseTo(
+    expect(result.paygoBreakdown?.cachedInputCost).toBeCloseTo(
       (2000 * 0.00125 / 1000) * 10 * MINUTES_PER_MONTH,
     );
-    expect(result.paygoBreakdown.nonCachedInputCost).toBe(0);
+    expect(result.paygoBreakdown?.nonCachedInputCost).toBe(0);
     expect(result.inputImageTokens).toBe(1229);
   });
 
@@ -344,7 +344,7 @@ describe.each([
     expect(result.deployedPtus).toBe(isLong ? 65 : 40);
     expect(result.ptuCost).toBe((isLong ? 65 : 40) * 260);
     expect(result.paygoCost).toBeCloseTo(costPerRequest * 100 * MINUTES_PER_MONTH);
-    expect(result.paygoBreakdown.cacheWriteCost).toBeCloseTo(
+    expect(result.paygoBreakdown?.cacheWriteCost).toBeCloseTo(
       200 * (isLong ? 0.005 : 0.0025) / 1000 * 100 * MINUTES_PER_MONTH,
     );
     expect(result.explanation.inputs).toMatchObject({
@@ -366,8 +366,8 @@ describe.each([
     const result = calculateScenario(scenario(selectedModel, { cacheHitRate: 100, outputTokens: 0 }));
     expect(result.contextMode).toBe("short");
     expect(result.normalizedTpm).toBe(10000 * shortCacheWeight);
-    expect(result.paygoBreakdown.cachedInputCost).toBeCloseTo(shortCachePrice * 10 * MINUTES_PER_MONTH);
-    expect(result.paygoBreakdown.nonCachedInputCost).toBe(0);
+    expect(result.paygoBreakdown?.cachedInputCost).toBeCloseTo(shortCachePrice * 10 * MINUTES_PER_MONTH);
+    expect(result.paygoBreakdown?.nonCachedInputCost).toBe(0);
   });
 
   it("supports the existing optimizer without treating cache writes as ordinary input", () => {
@@ -396,7 +396,7 @@ describe("normalized model catalog configuration", () => {
     expect(isCatalogDocument(bundledCatalog)).toBe(true);
     expect(astra["model name"]).toBe("azure openai gpt-6-astra (2026-09-03)");
     expect(image["model name"]).toBe("azure openai gpt-image-2 (2026-04-21)");
-    expect(bundledCatalog.metadata["verified date"]).toBe("2026-09-29");
+    expect(bundledCatalog.metadata["verified date"]).toBe("2026-10-28");
     expect(astra["input TPM per PTU"]).toBe(600);
     expect(astra["long context"]?.["output token multiple ratio"]).toBe(7.5);
     expect(image["input TPM per PTU"]).toBe(1200);
@@ -429,7 +429,7 @@ describe("normalized model catalog configuration", () => {
   });
 
   it("does not enable normalized cache accounting for existing models", () => {
-    for (const entry of bundledCatalog.models.filter((item) => ![astra, image, sol, sol61].includes(item))) {
+    for (const entry of bundledCatalog.models.filter((item) => ![astra, image, sol, sol61].includes(item) && !item["model name"].includes("gpt-image-2.5-flare"))) {
       expect(entry["PTU input token weights"]).toBeUndefined();
       expect(entry["long context"]).toBeUndefined();
       expect(entry["image input TPM per PTU"]).toBeUndefined();
@@ -441,7 +441,8 @@ describe("normalized model catalog configuration", () => {
     expect(result.normalizedTpm).toBe(0);
     expect(result.contextMode).toBeUndefined();
     expect(result.tokenNormalization).toBeUndefined();
-    expect(result.paygoBreakdown.cacheWriteCost).toBeUndefined();
+    expect(result.paygoBreakdown).not.toBeNull();
+    expect(result.paygoBreakdown?.cacheWriteCost).toBeUndefined();
   });
 
   describe("shared normalization breakdown", () => {
@@ -452,10 +453,16 @@ describe("normalized model catalog configuration", () => {
         for (const contextMode of ["short", "long"] satisfies ContextMode[]) {
           const tier = contextMode === "long" ? selectedModel["long context"] : selectedModel;
           const weights = tier?.["PTU input token weights"];
-          if (!tier || !weights || tier["cache write token price per 1k"] === undefined) {
+          if (!tier || !weights || tier["cache write token price per 1k"] === undefined ||
+              tier["input token price per 1k"] === null ||
+              tier["input token price per 1k with cache hit"] === null ||
+              tier["output token price per 1k"] === null) {
             throw new Error(`Missing normalized pricing tier: ${name} ${contextMode}`);
           }
           const baseline = selectedModel["input token price per 1k"];
+          if (baseline === null) {
+            throw new Error(`Missing baseline price: ${name}`);
+          }
           expect(weights.uncached).toBeCloseTo(tier["input token price per 1k"] / baseline, 10);
           expect(weights.cached).toBeCloseTo(tier["input token price per 1k with cache hit"] / baseline, 10);
           expect(weights.cacheWrite).toBeCloseTo(tier["cache write token price per 1k"] / baseline, 10);

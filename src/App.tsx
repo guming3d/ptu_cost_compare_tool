@@ -18,6 +18,7 @@ import {
   calculateAutomaticCacheWriteTokens,
   calculateCostOptimization,
   calculateScenario,
+  getAvailableDeployments,
   usesImageTokenSizing,
 } from "./lib/calculations";
 import { exportResultsToExcel } from "./lib/exportExcel";
@@ -89,11 +90,10 @@ function App() {
   }, [catalog, selectedModelName]);
 
   useEffect(() => {
-    setManualRequiredPtus(selectedModel["PTU minumum deployment unit"]);
+    setManualRequiredPtus(selectedModel["PTU sizing mode"] === "manual" ? 0 : selectedModel["PTU minumum deployment unit"]);
     setPtuOverride(false);
-    if (selectedModel.provider !== "Azure OpenAI") {
-      setDeploymentType("Global / Data Zone");
-    }
+    const deployments = getAvailableDeployments(selectedModel);
+    setDeploymentType((current) => deployments.includes(current) ? current : deployments[0]);
   }, [selectedModel]);
 
   useEffect(() => {
@@ -275,9 +275,10 @@ function App() {
               <article>
                 <span>{text.summary.paygoEstimate}</span>
                 <strong>
-                  {preview ? currencyFormatter.format(preview.paygoCost) : "--"}
+                  {preview ? preview.paygoCost === null ? "N/A" : currencyFormatter.format(preview.paygoCost) : "--"}
                 </strong>
-                <small>{text.summary.perMonth}</small>
+                <small>{preview?.paygoCost === null ? text.summary.paygoUnavailable : text.summary.perMonth}</small>
+                {preview?.paygoPricingScope ? <small>{preview.paygoPricingScope}</small> : null}
               </article>
               <article>
                 <span>{text.summary.ptuEstimate}</span>
@@ -290,12 +291,12 @@ function App() {
                 <span>{text.summary.estimatedSavings}</span>
                 <strong
                   className={
-                    preview && preview.costSavingPercentage >= 0
-                      ? "positive-text"
-                      : "negative-text"
+                    preview?.costSavingPercentage == null
+                      ? ""
+                      : preview.costSavingPercentage >= 0 ? "positive-text" : "negative-text"
                   }
                 >
-                  {preview ? `${preview.costSavingPercentage.toFixed(2)}%` : "--"}
+                  {preview ? preview.costSavingPercentage === null ? "N/A" : `${preview.costSavingPercentage.toFixed(2)}%` : "--"}
                 </strong>
                 <small>{text.summary.ptuVersusPaygo}</small>
               </article>

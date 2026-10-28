@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { bundledCatalog, isCatalogDocument } from "../data/catalog";
-import type { ModelConfig } from "../types";
+import type { ModelConfig, ScenarioInput } from "../types";
 import {
   calculateAzureImageTokens,
   calculateCostOptimization,
@@ -161,27 +161,10 @@ describe("PTU calculations", () => {
     });
 
     expect(result.inputImageTokens).toBe(2833);
-    expect(result.paygoBreakdown.imageCost).toBeCloseTo(
+    expect(result.paygoBreakdown?.imageCost).toBeCloseTo(
       (2833 * MINUTES_PER_MONTH * 0.00015) / 1000,
     );
-    expect(result.paygoCost).toBe(result.paygoBreakdown.imageCost);
-  });
-
-  it("includes Google per-image charges in PayGO cost", () => {
-    const result = calculateScenario({
-      model: model("google gemini-1.5 pro"),
-      inputTextTokens: 1000,
-      outputTokens: 0,
-      rpm: 1,
-      cacheHitRate: 0,
-      images: [{ id: "image", width: 1024, height: 768, quality: "low" }],
-      commitmentType: "Monthly",
-      deploymentType: "Global / Data Zone",
-    });
-
-    expect(result.paygoBreakdown.imageCost).toBeCloseTo(
-      MINUTES_PER_MONTH * 0.00032875,
-    );
+    expect(result.paygoCost).toBe(result.paygoBreakdown?.imageCost);
   });
 
   it("estimates Fireworks GLM sizing with a 1:1 token ratio", () => {
@@ -196,8 +179,8 @@ describe("PTU calculations", () => {
       deploymentType: "Global / Data Zone",
     });
 
-    expect(result.requiredPtus).toBeCloseTo(4171);
-    expect(result.deployedPtus).toBe(4200);
+    expect(result.requiredPtus).toBeCloseTo(3850.153846);
+    expect(result.deployedPtus).toBe(4000);
     expect(result.normalizedTpm).toBeCloseTo(1_251_300);
     expect(
       result.explanation.steps.find(
@@ -219,10 +202,10 @@ describe("PTU calculations", () => {
       manualRequiredPtus: 401,
     });
 
-    // 60 x 3,150 + 4 x 60 x 300 = 261,000 normalized TPM / 200 per PTU.
+    // 60 x 3,150 + 4 x 60 x 300 = 261,000 normalized TPM / 100 per PTU.
     expect(result.normalizedTpm).toBeCloseTo(261_000);
-    expect(result.requiredPtus).toBeCloseTo(1305);
-    expect(result.deployedPtus).toBe(1400);
+    expect(result.requiredPtus).toBeCloseTo(2610);
+    expect(result.deployedPtus).toBe(2800);
     expect(
       result.explanation.steps.find((step) => step.output === "Normalized TPM")
         ?.note,
@@ -247,12 +230,12 @@ describe("PTU calculations", () => {
     );
 
     expect(result.requiredPtus).toBe(401);
-    expect(result.deployedPtus).toBe(600);
+    expect(result.deployedPtus).toBe(800);
     expect(result.normalizedTpm).toBeCloseTo(261_000);
     expect(requiredStep?.formula).toBe(
       "Required PTUs = user supplied PTU override",
     );
-    expect(requiredStep?.substitution).toContain("1305.0000");
+    expect(requiredStep?.substitution).toContain("2610.0000");
   });
 
   it("keeps catalog-manual Fireworks sizing manual", () => {
@@ -269,7 +252,7 @@ describe("PTU calculations", () => {
     });
 
     expect(result.requiredPtus).toBe(401);
-    expect(result.deployedPtus).toBe(600);
+    expect(result.deployedPtus).toBe(800);
   });
 
   it("finds the lowest-cost PTU configuration and builds comparable curves", () => {
@@ -387,7 +370,7 @@ describe("PTU calculations", () => {
     const gpt56Sol = model("azure openai gpt-5.6-sol (2026-07-09)");
     const glm52 = model("fireworks GLM 5.2");
 
-    expect(bundledCatalog.metadata["verified date"]).toBe("2026-09-29");
+    expect(bundledCatalog.metadata["verified date"]).toBe("2026-10-28");
     expect(modelNames.has("azure openai gpt-5.6-luna (2026-07-09)")).toBe(true);
     expect(modelNames.has("azure openai o4-mini (2025-04-16)")).toBe(true);
     expect(modelNames.has("fireworks DeepSeek v3.2")).toBe(true);
@@ -408,36 +391,6 @@ describe("PTU calculations", () => {
     expect(gpt56Sol["output token price per 1k"]).toBe(0.02);
     expect(glm52["PTU price of monthly commitment"]).toBe(260);
     expect(glm52["PTU price of yearly commitment"]).toBe(221);
-  });
-
-  it("ships DeepSeek V4 Flash 0731 with published PTU parameters", () => {
-    const flash = model("fireworks DeepSeek V4 Flash 0731");
-
-    expect(flash.provider).toBe("Fireworks on Microsoft Foundry");
-    expect(flash["input token price per 1k"]).toBe(0.000484);
-    expect(flash["input token price per 1k with cache hit"]).toBe(0.000015);
-    expect(flash["output token price per 1k"]).toBe(0.001452);
-    expect(flash["PTU minumum deployment unit"]).toBe(100);
-    expect(flash["PTU scale increment"]).toBe(50);
-    expect(flash["input TPM per PTU"]).toBe(2_800);
-    expect(flash["PTU sizing mode"]).toBe("automatic");
-    expect(flash["output token multiple ratio"]).toBe(4);
-
-    // Customer workload: 200M input TPM with a 94% prompt-cache hit rate.
-    const result = calculateScenario({
-      model: flash,
-      inputTextTokens: 200_000,
-      outputTokens: 0,
-      rpm: 1_000,
-      cacheHitRate: 94,
-      images: [],
-      commitmentType: "Monthly",
-      deploymentType: "Global / Data Zone",
-    });
-
-    expect(result.normalizedTpm).toBeCloseTo(12_000_000);
-    expect(result.requiredPtus).toBeCloseTo(4285.714, 3);
-    expect(result.deployedPtus).toBe(4300);
   });
 
   it("ships DeepSeek V4.1 Flash with supplied capacity and token prices", () => {
@@ -534,9 +487,9 @@ describe("PTU calculations", () => {
     });
     const monthlyRequests = 60 * MINUTES_PER_MONTH;
 
-    expect(result.paygoBreakdown.nonCachedInputCost).toBeCloseTo(monthlyRequests * 3150 * 0.375 / 1_000_000);
-    expect(result.paygoBreakdown.cachedInputCost).toBeCloseTo(monthlyRequests * 350 * 0.008 / 1_000_000);
-    expect(result.paygoBreakdown.outputCost).toBeCloseTo(monthlyRequests * 300 * 1.50 / 1_000_000);
+    expect(result.paygoBreakdown?.nonCachedInputCost).toBeCloseTo(monthlyRequests * 3150 * 0.375 / 1_000_000);
+    expect(result.paygoBreakdown?.cachedInputCost).toBeCloseTo(monthlyRequests * 350 * 0.008 / 1_000_000);
+    expect(result.paygoBreakdown?.outputCost).toBeCloseTo(monthlyRequests * 300 * 1.50 / 1_000_000);
     expect(result.paygoCost).toBeCloseTo(4294.7540064);
     expect(result.ptuCost).toBe(ptuCost);
     expect(result.explanation.deploymentType).toBe("Global");
@@ -593,26 +546,174 @@ describe("PTU calculations", () => {
     }
   });
 
-  it("sizes every bundled Fireworks model automatically", () => {
+  it("does not invent output weights for newly documented Fireworks models", () => {
     const fireworks = bundledCatalog.models.filter((item) =>
       item.provider.startsWith("Fireworks"),
     );
 
     expect(fireworks.length).toBeGreaterThan(0);
     for (const item of fireworks) {
-      const expectedRatio = item["model name"].includes("DeepSeek")
-        ? 4
-        : item["model name"].includes("GLM")
-          ? 1
-          : Math.round(
-            (item["output token price per 1k"] /
-              item["input token price per 1k"]) *
-              100,
-            ) / 100;
-      expect(item["PTU sizing mode"], item["model name"]).toBe("automatic");
-      expect(item["output token multiple ratio"], item["model name"]).toBe(
-        expectedRatio,
-      );
+      if (item["model name"].startsWith("FW-")) {
+        expect(item["PTU sizing mode"], item["model name"]).toBe("manual");
+        expect(item["output token multiple ratio"], item["model name"]).toBeUndefined();
+      } else {
+        expect(item["PTU sizing mode"], item["model name"]).toBe("automatic");
+        expect(item["output token multiple ratio"]).toBeGreaterThan(0);
+      }
     }
+  });
+});
+
+describe("October official catalog refresh", () => {
+  function workload(name: string, changes: Partial<ScenarioInput> = {}): ScenarioInput {
+    return {
+      model: model(name),
+      inputTextTokens: 2000,
+      outputTokens: 100,
+      rpm: 10,
+      cacheHitRate: 0,
+      images: [],
+      commitmentType: "Monthly",
+      deploymentType: "Global / Data Zone",
+      ...changes,
+    };
+  }
+
+  it("removes unlisted models and keeps exact PTU identities separate from retired PayGO", () => {
+    const names = bundledCatalog.models.map((entry) => entry["model name"]);
+    expect(names).not.toContain("google gemini-1.5 pro");
+    expect(names).not.toContain("google gemini-1.5 flash");
+    expect(names).not.toContain("fireworks MiniMax M2.5");
+    expect(names).not.toContain("fireworks DeepSeek V4 Flash 0731");
+    const fireworks = bundledCatalog.models.filter((entry) => entry.provider.startsWith("Fireworks"));
+    expect(new Set(fireworks.map((entry) => entry["catalog model id"])).size).toBe(39);
+    const flash = calculateScenario(workload("FW-DeepSeek-V4-Flash", { manualRequiredPtus: 201 }));
+    expect(flash.deployedPtus).toBe(300);
+    expect(flash.explanation.inputs.inputTpmPerPtu).toBe(1400);
+    expect(flash.paygoCost).toBeNull();
+  });
+
+  it.each([
+    ["fireworks DeepSeek v3.2", 1080, 540, 833],
+    ["fireworks DeepSeek V4 Pro", 800, 400, 100],
+    ["fireworks MiniMax M3", 800, 400, 2650],
+    ["fireworks Kimi K2.5", 720, 360, 294],
+    ["fireworks Kimi K2.6", 400, 200, 2000],
+    ["fireworks Kimi K2.7 Code", 400, 200, 1000],
+    ["fireworks gpt-oss-120b", 50, 25, 10800],
+    ["fireworks GLM 5", 1080, 540, 167],
+    ["fireworks GLM 5.1", 720, 360, 500],
+    ["fireworks GLM 5.2", 800, 400, 325],
+  ] as const)("uses updated throughput and rounding for %s", (name, minimum, increment, tpm) => {
+    const result = calculateScenario(workload(name, {
+      inputTextTokens: (minimum + 1) * tpm,
+      outputTokens: 0,
+      rpm: 1,
+    }));
+    expect(result.requiredPtus).toBeCloseTo(minimum + 1);
+    expect(result.deployedPtus).toBe(minimum + increment);
+  });
+
+  it("retains PTU calculations without current PayGO savings for retired offerings", () => {
+    const input = workload("fireworks DeepSeek v3.2");
+    const result = calculateScenario(input);
+    expect(result.ptuCost).toBeGreaterThan(0);
+    expect(result.paygoCost).toBeNull();
+    expect(result.paygoBreakdown).toBeNull();
+    expect(result.costSavingPercentage).toBeNull();
+    expect(result.explanation.inputs.paygoRetirementDate).toBe("2026-06-01");
+    expect(result.explanation.steps.find((step) => step.output === "PayGO cost")?.result).toBe("N/A");
+    for (const curve of calculateCostOptimization(input).configurations) {
+      expect(curve.current.savings).toBeNull();
+      expect(curve.current.savingsPercentage).toBeNull();
+      expect(curve.breakEvenRpm).toBeUndefined();
+      expect(curve.points.every((point) => point.paygoCost === null)).toBe(true);
+    }
+  });
+
+  it.each([undefined, 0, -1, Number.NaN])("requires a real benchmark instead of defaulting to minimum PTUs (%s)", (manualRequiredPtus) => {
+    expect(() => calculateScenario(workload("FW-Gemma-4-31B-IT", { manualRequiredPtus })))
+      .toThrow(/Benchmarked required PTUs/);
+  });
+
+  it.each([
+    ["Global", 5, 1, 1645, 6, 0.00175],
+    ["Data Zone", 320, 160, 1050, 480, 0.0021],
+    ["Global (standard capacity)", 320, 160, 1050, 480, 0.00175],
+  ] as const)("uses GLM 5.3 %s capacity and pricing independently", (deploymentType, minimum, increment, tpm, deployed, price) => {
+    const input = workload("FW-GLM-5.3", { deploymentType, manualRequiredPtus: minimum + 0.1, outputTokens: 0 });
+    const result = calculateScenario(input);
+    expect(result.deploymentType).toBe(deploymentType);
+    expect(result.deployedPtus).toBe(deployed);
+    expect(result.explanation.inputs).toMatchObject({ minimumPtus: minimum, scaleIncrement: increment, inputTpmPerPtu: tpm });
+    expect(result.paygoCost).toBeCloseTo(2000 / 1000 * price * 10 * MINUTES_PER_MONTH);
+    const optimization = calculateCostOptimization(input);
+    expect(optimization.configurations).toHaveLength(2);
+    expect(optimization.configurations.every((curve) => curve.deploymentType === deploymentType)).toBe(true);
+    expect(optimization.configurations[0].current.ptuCost).toBe(result.ptuCost);
+  });
+
+  it("uses configured TPM when a custom benchmark supplies a GLM 5.3 output weight", () => {
+    const selectedModel = { ...model("FW-GLM-5.3"), "PTU sizing mode": "automatic", "output token multiple ratio": 1 };
+    const input = workload("FW-GLM-5.3", { model: selectedModel, deploymentType: "Global" });
+    const optimization = calculateCostOptimization(input);
+    expect(optimization.configurations).toHaveLength(6);
+    expect(optimization.configurations.find((curve) => curve.deploymentType === "Data Zone")?.current.requiredPtus).toBe(20);
+    expect(optimization.configurations.find((curve) => curve.deploymentType === "Global")?.current.requiredPtus).toBeCloseTo(21000 / 1645);
+  });
+
+  it("sizes Flare with measured image tokens without copying image-2 prices", () => {
+    const result = calculateScenario(workload("azure openai gpt-image-2.5-flare (2026-09-08)", {
+      imageInputTokens: 1229,
+      outputTokens: 7024,
+    }));
+    expect(result.normalizedTpm).toBeCloseTo(461104);
+    expect(result.requiredPtus).toBeCloseTo(384.253333);
+    expect(result.deployedPtus).toBe(400);
+    expect(result.paygoCost).toBeNull();
+    expect(result.costSavingPercentage).toBeNull();
+    expect(result.explanation.inputs.imageInputPricePer1k).toBe("N/A");
+  });
+
+  it("uses Azure Llama's documented 4:1 output weight, not its 1:1 PayGO price ratio", () => {
+    const input = workload("azure Llama-3.3-70B-Instruct", { inputTextTokens: 8450, outputTokens: 8450, rpm: 1 });
+    const result = calculateScenario(input);
+    expect(result.requiredPtus).toBe(5);
+    expect(result.deployedPtus).toBe(100);
+    expect(result.paygoCost).toBeCloseTo(16900 / 1000 * 0.00071 * MINUTES_PER_MONTH);
+    expect(calculateScenario({ ...input, cacheHitRate: 50 }).paygoCost).toBeNull();
+    expect(() => calculateScenario({ ...input, deploymentType: "Regional" })).toThrow(/does not support/);
+  });
+
+  it.each(["fireworks DeepSeek V4.1 Flash", "FW-Kimi-K3"])("rejects unsupported Data Zone capacity for %s", (name) => {
+    expect(() => calculateScenario(workload(name, { deploymentType: "Data Zone", manualRequiredPtus: 5 })))
+      .toThrow(/does not support/);
+  });
+
+  it.each([
+    "azure openai gpt-5.4 (2026-03-05)",
+    "azure openai gpt-4.1 (2025-04-14)",
+    "azure openai gpt-4.1-mini (2025-04-14)",
+    "azure openai gpt-4.1-nano (2025-04-14)",
+  ])("enforces the provisioned 128K prompt limit before cache deductions for %s", (name) => {
+    const input = workload(name, { inputTextTokens: 128000, cacheHitRate: 100 });
+    expect(() => calculateScenario(input)).not.toThrow();
+    expect(() => calculateScenario({ ...input, inputTextTokens: 128001 })).toThrow(/128,000/);
+  });
+
+  it.each([
+    { "PayGO status": "unknown" },
+    { "PayGO status": ["retired"] },
+    { "PTU sizing mode": ["manual"] },
+    { "input token price per 1k": -1 },
+    { "PTU maximum prompt tokens": 0 },
+    { "PTU deployments": {} },
+    { "PTU deployments": { "Data Zone": { minimumPtus: 320, scaleIncrement: 160, inputTpmPerPtu: 0 } } },
+    { "PTU deployments": { "Data Zone": { minimumPtus: 320, scaleIncrement: 160, inputTpmPerPtu: 1050, paygo: {} } } },
+  ])("rejects malformed availability and variant configuration (%j)", (changes) => {
+    expect(isCatalogDocument({
+      ...bundledCatalog,
+      models: [{ ...model("FW-GLM-5.3"), ...changes }],
+    })).toBe(false);
   });
 });

@@ -3,7 +3,7 @@ import type { CatalogDocument, ModelConfig } from "../types";
 
 export const CATALOG_STORAGE_KEY = "ptu-cost-planner-catalog-v2";
 
-export const bundledCatalog: CatalogDocument = modelConfigDocument;
+export const bundledCatalog = modelConfigDocument as CatalogDocument;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -11,6 +11,17 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isPositive(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
+function hasValidTokenPrices(value: Record<string, unknown>): boolean {
+  return [
+    "input token price per 1k",
+    "input token price per 1k with cache hit",
+    "output token price per 1k",
+  ].every((key) =>
+    value[key] === null ||
+    (typeof value[key] === "number" && Number.isFinite(value[key]) && value[key] >= 0),
+  );
 }
 
 function hasValidNormalizedTextConfig(value: Record<string, unknown>): boolean {
@@ -37,9 +48,6 @@ function isModelConfig(value: unknown): value is ModelConfig {
 
   const requiredStrings = ["model name", "provider"];
   const requiredNumbers = [
-    "input token price per 1k",
-    "input token price per 1k with cache hit",
-    "output token price per 1k",
     "PTU minumum deployment unit",
     "PTU scale increment",
     "PTU price of monthly commitment",
@@ -48,6 +56,9 @@ function isModelConfig(value: unknown): value is ModelConfig {
     "PTU yearly discount",
   ];
 
+  if (!hasValidTokenPrices(value)) {
+    return false;
+  }
   if ("PTU input token weights" in value && !hasValidNormalizedTextConfig(value)) {
     return false;
   }
@@ -69,7 +80,10 @@ function isModelConfig(value: unknown): value is ModelConfig {
   if (
     imageFields.some((key) => key in value) &&
     (!isPositive(value["input TPM per PTU"]) ||
-      !imageFields.every((key) => isPositive(value[key])))
+      !imageFields.every((key) =>
+        isPositive(value[key]) ||
+        (key === "image input token price per 1k" && value[key] === null),
+      ))
   ) {
     return false;
   }
@@ -79,6 +93,39 @@ function isModelConfig(value: unknown): value is ModelConfig {
       !value["configuration notes"].every((note) => typeof note === "string"))
   ) {
     return false;
+  }
+  if (
+    ("PayGO status" in value &&
+      (typeof value["PayGO status"] !== "string" ||
+        !["available", "retired", "unverified"].includes(value["PayGO status"]))) ||
+    ("PTU sizing mode" in value &&
+      (typeof value["PTU sizing mode"] !== "string" ||
+        !["manual", "automatic"].includes(value["PTU sizing mode"]))) ||
+    ("PTU maximum prompt tokens" in value && !isPositive(value["PTU maximum prompt tokens"])) ||
+    ["catalog model id", "PayGO pricing scope", "PayGO retirement date"].some((key) =>
+      key in value && typeof value[key] !== "string",
+    )
+  ) {
+    return false;
+  }
+  if ("PTU deployments" in value) {
+    const deployments = value["PTU deployments"];
+    if (
+      !isRecord(deployments) ||
+      Object.keys(deployments).length === 0 ||
+      !Object.entries(deployments).every(([name, config]) =>
+        ["Global / Data Zone", "Regional", "Global", "Data Zone", "Global (standard capacity)"].includes(name) &&
+        !(value["global provisioned only"] && name !== "Global") &&
+        isRecord(config) &&
+        isPositive(config.minimumPtus) &&
+        isPositive(config.scaleIncrement) &&
+        isPositive(config.inputTpmPerPtu) &&
+        (!("paygo" in config) || (isRecord(config.paygo) && hasValidTokenPrices(config.paygo))) &&
+        (!("paygoScope" in config) || typeof config.paygoScope === "string"),
+      )
+    ) {
+      return false;
+    }
   }
   if (
     "global provisioned only" in value &&

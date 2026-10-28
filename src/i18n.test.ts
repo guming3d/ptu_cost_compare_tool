@@ -25,4 +25,14 @@ describe("UI translations", () => {
     expect(localizeDeployment("Global", "zh-CN")).toBe("全局");
     expect(localizeExplanationText("Monthly commitment; Global.", "zh-CN")).toBe("按月承诺；全局。");
   });
+
+  it("localizes deployment variants and actionable benchmark/prompt-limit errors", () => {
+    expect(localizeDeployment("Data Zone", "zh-CN")).toBe("数据区域");
+    expect(localizeDeployment("Global (standard capacity)", "zh-CN")).toBe("全局（标准容量）");
+    expect(localizeExplanationText("Benchmarked required PTUs must be a positive number.", "zh-CN"))
+      .toBe("请输入经过基准测试的正数 PTU 容量。");
+    expect(localizeExplanationText("Provisioned prompts above 128,000 tokens are not supported for this model.", "zh-CN"))
+      .toBe("此模型不支持超过 128,000 个令牌的预配提示词。");
+    expect(localizeExplanationText("PayGO comparison unavailable", "zh-CN")).toBe("无法比较 PayGO");
+  });
 });
