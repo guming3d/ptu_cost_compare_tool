@@ -1,0 +1,72 @@
+name: Validate PTU documentation update
+run-name: 'Validate PTU documentation update PR #${{ inputs.pr_number || github.event.pull_request.number }}'
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'Same-repository PTU monitor PR number'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ptu-docs-validation-${{ inputs.pr_number || github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  resolve:
+    if: >-
+      github.repository == 'guming3d/ptu_cost_compare_tool' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (startsWith(github.head_ref, 'copilot/ptu-docs-') &&
+        github.event.pull_request.head.repo.full_name == github.repository))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      head_sha: ${{ steps.pr.outputs.head_sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: master
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+      - name: Resolve monitored PR head
+        id: pr
+        run: node .github/scripts/ptu-docs.mjs resolve-pr
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr_number || github.event.pull_request.number }}
+
+  validate:
+    name: Validate proposed catalog
+    needs: resolve
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.resolve.outputs.head_sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install application dependencies
+        run: npm ci
+      - name: Automation regressions
+        run: node --test .github/scripts/ptu-docs.node-test.mjs
+      - name: Application regressions
+        run: npm test
+      - name: TypeScript and production build
+        run: npm run build
+      - name: 'Validated SHA ${{ needs.resolve.outputs.head_sha }}'
+        run: git diff --check

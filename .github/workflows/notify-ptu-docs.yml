@@ -1,0 +1,50 @@
+name: PTU documentation update notifications
+
+on:
+  workflow_run:
+    workflows:
+      - Copilot cloud agent
+      - Running Copilot cloud agent
+      - Validate PTU documentation update
+    types: [completed]
+  pull_request:
+    types: [closed]
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ptu-docs-completion-notifications
+  cancel-in-progress: false
+
+jobs:
+  report:
+    if: >-
+      github.repository == 'guming3d/ptu_cost_compare_tool' &&
+      ((github.event_name == 'workflow_run' &&
+        (startsWith(github.event.workflow_run.head_branch, 'copilot/ptu-docs-') ||
+         github.event.workflow_run.name == 'Validate PTU documentation update')) ||
+       (github.event_name == 'pull_request' &&
+        startsWith(github.event.pull_request.head.ref, 'copilot/ptu-docs-') &&
+        github.event.pull_request.head.repo.full_name == github.repository))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+      actions: write
+    steps:
+      - name: Check out trusted notification code, never the PR branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: master
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+      - name: Report Copilot completion, validation or merge
+        run: node .github/scripts/ptu-docs.mjs follow-up
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

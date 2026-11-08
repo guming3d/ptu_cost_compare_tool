@@ -1,0 +1,83 @@
+name: Weekly PTU documentation update
+
+on:
+  schedule:
+    - cron: '17 1 * * 1'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Fetch and compare only; do not create a PR or start Copilot'
+        type: boolean
+        default: false
+      force_review:
+        description: 'Explicitly start a new Copilot review, including retrying a previous attempt'
+        type: boolean
+        default: false
+      test_failure:
+        description: 'Test the failure email path without fetching documents or starting Copilot'
+        type: boolean
+        default: false
+
+concurrency:
+  group: weekly-ptu-docs
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  monitor:
+    if: github.repository == 'guming3d/ptu_cost_compare_tool'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Check out trusted monitor
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: master
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+
+      - name: Test monitor behavior
+        run: node --test .github/scripts/ptu-docs.node-test.mjs
+
+      - name: Check official documents and prepare draft PR
+        id: check
+        run: node .github/scripts/ptu-docs.mjs check
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          DRY_RUN: ${{ inputs.dry_run || false }}
+          FORCE_REVIEW: ${{ inputs.force_review || false }}
+          TEST_FAILURE: ${{ inputs.test_failure || false }}
+
+      - name: Start GitHub Copilot cloud agent on the draft PR
+        if: steps.check.outputs.needs_agent == 'true'
+        run: node .github/scripts/ptu-docs.mjs trigger
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PTU_COPILOT_AGENT_TOKEN: ${{ secrets.PTU_COPILOT_AGENT_TOKEN }}
+
+      - name: Preserve document evidence and result
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ptu-document-check
+          path: .ptu-docs-run
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Publish email notification thread and summary
+        if: always()
+        run: node .github/scripts/ptu-docs.mjs notify
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          WORKFLOW_STATUS: ${{ job.status }}

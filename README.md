@@ -40,6 +40,51 @@ Open `http://localhost:8501`.
 
 Pricing and throughput metadata remains in `model_config.json`. The in-app catalog editor validates updates and stores them in the browser's local storage. Restoring the bundled catalog clears that local override.
 
+### Weekly GitHub-hosted documentation updates
+
+**Weekly PTU documentation update** runs on GitHub-hosted Ubuntu every Monday at
+01:17 UTC (09:17 UTC+8), with manual runs available in the repository's Actions tab.
+It monitors the [main PTU sizing guide](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/provisioned-throughput-sizing)
+and [Fireworks catalog](https://learn.microsoft.com/en-us/azure/foundry/how-to/fireworks/fireworks-model-catalog)
+independently. Nothing needs to run on a laptop.
+
+The first run creates a draft baseline PR. Subsequent content changes create a draft
+update PR and start GitHub Copilot cloud agent on that same branch. Copilot reviews
+model/configuration/calculation changes under `.github/ptu-docs-agent.md`. Unchanged
+documents do not start an agent. A matching existing or rejected PR is not resubmitted
+automatically; the manual `force_review` option explicitly authorizes another attempt.
+Fetch/parser failures preserve the accepted baseline and raise an alert, rather than
+removing models.
+
+Versioned `.github/ptu-docs/*.json` snapshots retain published model facts, formulas
+and section hashes, including hashes of prose/footnotes; article metadata and line-ending
+noise do not trigger updates. Source URLs provide attribution. Snapshots become the
+accepted baseline only after the PR is merged.
+
+Copilot completion triggers independent GitHub-hosted automation tests, application
+tests and a TypeScript/production build against the exact PR head. Passing validation
+marks the PR ready for human review. The workflows never merge or deploy it and do
+not use Azure credentials.
+
+Repository setup requires an Actions secret named `PTU_COPILOT_AGENT_TOKEN`: a
+fine-grained user PAT scoped to this repository with **Agent tasks: read/write**.
+The cloud task API is preview and its documented start endpoint requires a Copilot
+Business/Enterprise subscription. Expired/unauthorized tokens produce an alert.
+Never commit the token or an email address.
+
+Each check, failure, Copilot completion and validation result is posted to the
+**Weekly PTU documentation updates and alerts** issue with an owner mention and
+run/PR links. Enable email for participating/watching notifications at
+<https://github.com/settings/notifications>, choose a verified notification address,
+and enable Actions email without the failed-only restriction. GitHub sends the emails;
+no SMTP password or email-service credential is needed. Native Actions failure emails
+also cover failures before the scripted reporter can run.
+
+Use `dry_run` to check without a PR/agent, or `test_failure` to verify failure alerts.
+GitHub schedules are best-effort, and public-repository schedules can be disabled
+after 60 days without activity; inspect the Actions tab if a weekly result is missing.
+No workflow can email about its own run being omitted or disabled by GitHub.
+
 ### Official-document refresh (October 28, 2026)
 
 The catalog now contains **67 models**, including all **39 exact Fireworks PTU identities** in the [Fireworks catalog](https://learn.microsoft.com/en-us/azure/foundry/how-to/fireworks/fireworks-model-catalog) and the models in the [main sizing guide](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/provisioned-throughput-sizing). This refresh supersedes the older sizing snapshots below.
