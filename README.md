@@ -66,6 +66,16 @@ tests and a TypeScript/production build against the exact PR head. Passing valid
 marks the PR ready for human review. The workflows never merge or deploy it and do
 not use Azure credentials.
 
+For unattended completion, enable Copilot-triggered Actions in repository
+**Settings > Copilot > Cloud agent > Policies** by turning off **Require approval
+for workflow runs**. Otherwise GitHub pauses downstream workflows until the owner
+approves them. This setting allows unreviewed Copilot changes to run Actions:
+keep validation read-only, keep privileged reporting on trusted `master`, and
+review workflow changes carefully. See [GitHub's workflow approval guidance](https://docs.github.com/en/copilot/how-tos/use-copilot-agents/cloud-agent/configuring-agent-settings#allowing-github-actions-workflows-to-run-automatically-when-copilot-pushes).
+Native cloud-agent PR commits retain GitHub's signed Copilot attribution;
+snapshot commits use guming3d. Squash-merge manually as guming3d and remove
+Copilot trailers if owner-only attribution is required on `master`.
+
 Repository setup requires an Actions secret named `PTU_COPILOT_AGENT_TOKEN`: a
 fine-grained user PAT scoped to this repository with **Agent tasks: read/write**.
 The cloud task API is preview and its documented start endpoint requires a Copilot

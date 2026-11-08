@@ -51,7 +51,8 @@ Work on the existing draft PR and branch identified in the task. Do not open a s
 - Record results and uncertainties in the existing PR. Do not claim unrun tests passed.
 - Do not modify workflow files, this trusted task, repository secrets/settings or Azure infrastructure.
   Do not merge, enable auto-merge, deploy, provision resources or use production credentials.
-- Use guming3d as commit author with `2245949+guming3d@users.noreply.github.com`;
-  do not add Copilot co-author or session trailers.
+- Preserve GitHub's native signed attribution on cloud-agent PR commits. Do not rewrite
+  commit history or attempt to override the platform's author metadata.
+  The owner will squash-merge as guming3d without Copilot trailers after review.
 - Stop after proposing the update. GitHub's follow-up workflow independently validates the PR
   and notifies its owner. Human review is required before merge.
