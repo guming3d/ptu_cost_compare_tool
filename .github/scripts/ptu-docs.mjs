@@ -480,6 +480,10 @@ export function assertPublishedSnapshot(proposed, published, source) {
   }
 }
 
+export function isValidationRun(run) {
+  return run?.path?.split('@')[0] === '.github/workflows/validate-ptu-docs.yml';
+}
+
 async function statusIssue(github) {
   const issues = await github.list('/issues?state=open');
   const existing = issues.find((issue) => !issue.pull_request &&
@@ -523,11 +527,35 @@ async function pullForRun(github, run) {
   return pulls.find((pr) => monitoredPull(pr, github.repository)) ?? null;
 }
 
+export async function waitForValidation(github, number, previousIds, delay = pause) {
+  let runId;
+  for (let attempt = 0; attempt < 180; attempt++) {
+    if (!runId) {
+      const result = await github.repo('/actions/workflows/validate-ptu-docs.yml/runs?event=workflow_dispatch&per_page=10');
+      const run = result.workflow_runs.find((item) => !previousIds.has(item.id) &&
+        item.display_title === `Validate PTU documentation update PR #${number}`);
+      if (run) runId = run.id;
+      else if (attempt >= 12) throw new Error('Validation dispatch did not produce a visible run; inspect GitHub Actions.');
+    }
+    if (runId) {
+      const run = await github.repo(`/actions/runs/${runId}`);
+      if (run.status === 'completed') return run;
+    }
+    await delay(10000);
+  }
+  throw new Error('Validation did not finish within 30 minutes; inspect its queued/running status on GitHub.');
+}
+
 async function followUp(github, event) {
   const run = event.workflow_run;
+  if (run && !isValidationRun(run) && run.path !== 'dynamic/copilot-swe-agent/copilot') return null;
   const pr = event.pull_request ?? (run ? await pullForRun(github, run) : null);
   if (!monitoredPull(pr, github.repository)) return null;
   const report = { status: 'success', pr: { number: pr.number, url: pr.html_url } };
+  if (isValidationRun(run)) {
+    report.validationRunId = run.id;
+    report.validationAttempt = run.run_attempt ?? 1;
+  }
   if (event.pull_request) {
     report.message = pr.merged
       ? 'Update PR merged. Its documentation snapshots are now the accepted baseline. No deployment was triggered.'
@@ -539,7 +567,7 @@ async function followUp(github, event) {
     report.message = `${run.name} ended with ${run.conclusion}. The update is not validated: ${run.html_url}`;
     return report;
   }
-  if (run.name === 'Validate PTU documentation update') {
+  if (isValidationRun(run)) {
     const latestRun = await github.repo(`/actions/runs/${run.id}`);
     const jobs = await github.repo(`/actions/runs/${run.id}/jobs?per_page=100`);
     const validationJob = jobs.jobs.find((job) => job.name === 'Validate proposed catalog');
@@ -562,11 +590,15 @@ async function followUp(github, event) {
       report.message = 'Copilot completed, but the update PR is no longer open.';
       return report;
     }
+    const previous = await github.repo('/actions/workflows/validate-ptu-docs.yml/runs?event=workflow_dispatch&per_page=10');
     await github.repo('/actions/workflows/validate-ptu-docs.yml/dispatches', 'POST', {
       ref: BASE_BRANCH,
       inputs: { pr_number: String(pr.number) },
     });
-    report.message = 'Copilot finished its update. GitHub-hosted tests/build have been queued; their final result will be emailed separately.';
+    // Wait here as well: Actions event-chain limits must not suppress the final email.
+    const validation = await waitForValidation(github, pr.number,
+      new Set(previous.workflow_runs.map((item) => item.id)));
+    return followUp(github, { workflow_run: validation });
   }
   return report;
 }
@@ -605,8 +637,13 @@ async function main() {
       const event = await readJson(process.env.GITHUB_EVENT_PATH);
       const report = await followUp(github, event);
       if (report) {
+        const eventKey = report.validationRunId
+          ? `validation:${report.validationRunId}:${report.validationAttempt}`
+          : event.workflow_run
+            ? `follow-up:${event.workflow_run.id}:${event.workflow_run.run_attempt ?? 1}`
+            : `pr:${event.pull_request.number}:closed:${event.pull_request.merged_at ?? event.pull_request.closed_at}`;
         await publishReport(github, report, runUrl,
-          `follow-up:${event.workflow_run?.id ?? `pr-${event.pull_request.number}-${event.action}`}:${event.workflow_run?.run_attempt ?? 1}`);
+          eventKey);
         if (report.status === 'failure') process.exitCode = 1;
       }
     } else if (mode === 'resolve-pr') {

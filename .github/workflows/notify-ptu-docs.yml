@@ -5,7 +5,8 @@ on:
     workflows:
       - Copilot cloud agent
       - Running Copilot cloud agent
-      - Validate PTU documentation update
+      - 'Addressing comment on PR #*'
+      - 'Validate PTU documentation update*'
     types: [completed]
   pull_request:
     types: [closed]
@@ -23,13 +24,15 @@ jobs:
     if: >-
       github.repository == 'guming3d/ptu_cost_compare_tool' &&
       ((github.event_name == 'workflow_run' &&
-        (startsWith(github.event.workflow_run.head_branch, 'copilot/ptu-docs-') ||
-         github.event.workflow_run.name == 'Validate PTU documentation update')) ||
+        ((github.event.workflow_run.path == 'dynamic/copilot-swe-agent/copilot' &&
+          startsWith(github.event.workflow_run.head_branch, 'copilot/ptu-docs-')) ||
+         github.event.workflow_run.path == '.github/workflows/validate-ptu-docs.yml' ||
+         startsWith(github.event.workflow_run.path, '.github/workflows/validate-ptu-docs.yml@'))) ||
        (github.event_name == 'pull_request' &&
         startsWith(github.event.pull_request.head.ref, 'copilot/ptu-docs-') &&
         github.event.pull_request.head.repo.full_name == github.repository))
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 40
     permissions:
       contents: read
       issues: write

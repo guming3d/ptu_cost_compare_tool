@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   normalizeMarkdown, snapshotDocument, validateSnapshot, compareSnapshots,
   fetchDocument, fingerprint, GitHub, agentRecord, startAgent, monitoredPull, publishReport,
-  assertPublishedSnapshot,
+  assertPublishedSnapshot, isValidationRun, waitForValidation,
 } from './ptu-docs.mjs';
 
 const source = {
@@ -168,6 +168,47 @@ test('completion automation rejects foreign, spoofed or unrelated pull requests'
   assert.equal(monitoredPull(pr, 'guming3d/ptu_cost_compare_tool'), true);
   assert.equal(monitoredPull({ ...pr, user: { login: 'someone-else' } }, 'guming3d/ptu_cost_compare_tool'), false);
   assert.equal(monitoredPull(pr, 'someone-else/repo'), false);
+});
+
+test('validation completion uses its workflow path, not a dynamic PR display name', () => {
+  assert.equal(isValidationRun({
+    name: 'Validate PTU documentation update PR #3',
+    path: '.github/workflows/validate-ptu-docs.yml',
+  }), true);
+  assert.equal(isValidationRun({
+    path: '.github/workflows/validate-ptu-docs.yml@refs/heads/master',
+  }), true);
+  assert.equal(isValidationRun({
+    name: 'Validate PTU documentation update',
+    path: 'dynamic/copilot-swe-agent/copilot',
+  }), false);
+});
+
+test('completion waits for a fresh validation of the correct PR, not an old or unrelated run', async () => {
+  let polls = 0;
+  const github = {
+    repo: async (path) => {
+      if (path.includes('/workflows/')) {
+        return { workflow_runs: [
+          { id: 1, display_title: 'Validate PTU documentation update PR #3' },
+          { id: 2, display_title: 'Validate PTU documentation update PR #9' },
+          { id: 3, display_title: 'Validate PTU documentation update PR #3' },
+        ] };
+      }
+      assert.equal(path, '/actions/runs/3');
+      polls++;
+      return { id: 3, status: polls === 1 ? 'in_progress' : 'completed', conclusion: 'success' };
+    },
+  };
+  const run = await waitForValidation(github, 3, new Set([1]), async () => {});
+  assert.equal(run.id, 3);
+  assert.equal(polls, 2);
+});
+
+test('an invisible validation dispatch becomes an explicit failure instead of a false completion', async () => {
+  await assert.rejects(waitForValidation({
+    repo: async () => ({ workflow_runs: [] }),
+  }, 3, new Set(), async () => {}), /did not produce a visible run/);
 });
 
 test('completion and failure reports mention the owner and deduplicate by run event', async () => {
