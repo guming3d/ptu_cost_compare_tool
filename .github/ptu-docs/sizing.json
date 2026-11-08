@@ -1,0 +1,585 @@
+{
+  "schemaVersion": 1,
+  "id": "sizing",
+  "source": "https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/provisioned-throughput-sizing",
+  "documentSha256": "05e64558a34002d6e7281c5f71944b4b622cc22d2f7a59ef905d9d79df0a6d75",
+  "modelCount": 28,
+  "sections": [
+    {
+      "heading": "Determine PTU sizing for a workload - Microsoft Foundry | Microsoft Learn",
+      "sha256": "dcf499c88fe35d6856345329aed007d595e5d6b854848e590b5f671255337d36",
+      "tables": [],
+      "formulas": []
+    },
+    {
+      "heading": "Determine PTU sizing for a workload - Microsoft Foundry | Microsoft Learn > Prerequisites",
+      "sha256": "274967198b63003cdd3259fe274d683ad3ac5a7f8d2758f5907a22aa3e783355",
+      "tables": [],
+      "formulas": []
+    },
+    {
+      "heading": "Determine PTU sizing for a workload - Microsoft Foundry | Microsoft Learn > Estimate PTUs for text-only model",
+      "sha256": "4dc2f755b413e263abf9827aa6e86e53f17c3ec0cda8f46347deb08a2d42032e",
+      "tables": [],
+      "formulas": []
+    },
+    {
+      "heading": "Determine PTU sizing for a workload - Microsoft Foundry | Microsoft Learn > Estimate PTUs for text-only model > Estimate manually",
+      "sha256": "4bd7cf1d62fe20175996eedda47fadb6fee83b4a9005543d6d2123dcd555f54a",
+      "tables": [],
+      "formulas": []
+    },
+    {
+      "heading": "Determine PTU sizing for a workload - Microsoft Foundry | Microsoft Learn > Estimate PTUs for text-only model > Estimate manually > Normalized TPM",
+      "sha256": "aa9c13036723ef29cff1cc067487a48d878bfc4bd5bd1c97dd6f437075f923ed",
+      "tables": [],
+      "formulas": [
+        "- Input TPM = Peak RPM × average prompt size",
+        "- Output TPM = Peak RPM × average response size",
+        "- Normalized TPM = (input TPM × (1 − cache rate)) + (output-to-input ratio × output TPM)",
+        "- PTUs required = normalized TPM ÷ Input TPM per PTU",
+        "- Input TPM = 1,000 × 200 = 200,000",
+        "- Output TPM = 1,000 × 20 = 20,000",
+        "- PTUs required = 360,000 ÷ 3,400 = 105.88 (**110 PTUs** rounded up to the nearest 5 PTUs, matching the Data Zone Provisioned scale increment for gpt-5.2.)",
+        "- Effective input TPM = 200,000 × (1 − 0.50) = 100,000",
+        "- Normalized TPM = 100,000 + (8 × 20,000) = 260,000",
+        "- PTUs required = 260,000 ÷ 3,400 = 76.47 (**80 PTUs** rounded up to the nearest 5 PTUs, matching the Data Zone Provisioned scale increment for gpt-5.2.)"
+      ]
+    },
+    {
+      "heading": "Determine PTU sizing for a workload - Microsoft Foundry | Microsoft Learn > Estimate PTUs for text-only model > Use the capacity calculator",
+      "sha256": "7f18655b3a564509c82b2163bf0ad8bfe6cb5ab9c0c98753c3eea79e2d7d2b21",
+      "tables": [],
+      "formulas": []
+    },
+    {
+      "heading": "Determine PTU sizing for a workload - Microsoft Foundry | Microsoft Learn > How input and output tokens affect throughput",
+      "sha256": "f7f7af222fb42ccbee8d580756aebd794c7c4c84ba2e8a60d15a6d750965fe36",
+      "tables": [],
+      "formulas": []
+    },
+    {
+      "heading": "Determine PTU sizing for a workload - Microsoft Foundry | Microsoft Learn > How input and output tokens affect throughput > Models with a non-standard output-to-input ratio",
+      "sha256": "26a1e860e9b6a71435a86a961074c11b49ccb65dab889e61d8c7e75fe1e67d4c",
+      "tables": [],
+      "formulas": []
+    },
+    {
+      "heading": "Determine PTU sizing for a workload - Microsoft Foundry | Microsoft Learn > Deployment parameters and throughput values by model",
+      "sha256": "16bd93756231638122ad2f3169f142444d48d738e6fcb8e7c061406e3ae29a46",
+      "tables": [],
+      "formulas": []
+    },
+    {
+      "heading": "Determine PTU sizing for a workload - Microsoft Foundry | Microsoft Learn > Deployment parameters and throughput values by model > Latest Azure OpenAI models",
+      "sha256": "0df9232913ddfe068ef2dd3302b2827054d9203e947157125da7b5f7dcd00a85",
+      "tables": [
+        {
+          "headers": [
+            "Topic",
+            "**gpt-6.1-sol**,**2026-09-29**",
+            "**gpt-6-sol**,**2026-09-22**",
+            "**gpt-6-astra**,**2026-09-03**",
+            "**gpt-5.6-luna**,**2026-07-09**",
+            "**gpt-5.6-terra**,**2026-07-09**",
+            "**gpt-5.6-sol**,**2026-07-09**",
+            "**gpt-5.5**,**2026-04-24**",
+            "**gpt-image-2.5-flare**,**2026-09-08**",
+            "**gpt-image-2**,**2026-04-21**",
+            "**gpt-5.4**,**2026-03-05**",
+            "**gpt-5.4-mini**,**2026-03-17**",
+            "**gpt-5.3-codex**,**2026-02-24**",
+            "**gpt-5.2**,**2025-12-11**",
+            "**gpt-5.2-codex**,**2026-01-14**",
+            "**gpt-5.1**,**2025-11-13**",
+            "**gpt-5.1-codex**,**2025-11-13**",
+            "**gpt-5**,**2025-08-07**",
+            "**gpt-5-mini**,**2025-08-07**",
+            "**gpt-4.1**,**2025-04-14**",
+            "**gpt-4.1-mini**,**2025-04-14**",
+            "**gpt-4.1-nano**,**2025-04-14**",
+            "**o3**,**2025-04-16**",
+            "**o4-mini**,**2025-04-16**"
+          ],
+          "rows": [
+            [
+              "Global & data zone provisioned minimum deployment",
+              "15",
+              "15",
+              "15",
+              "15",
+              "15",
+              "15",
+              "15",
+              "100",
+              "100",
+              "15",
+              "15",
+              "15",
+              "15",
+              "15",
+              "15",
+              "15",
+              "15",
+              "15",
+              "15",
+              "15",
+              "15",
+              "15",
+              "15"
+            ],
+            [
+              "Global & data zone provisioned scale increment",
+              "5",
+              "5",
+              "5",
+              "5",
+              "5",
+              "5",
+              "5",
+              "100",
+              "100",
+              "5",
+              "5",
+              "5",
+              "5",
+              "5",
+              "5",
+              "5",
+              "5",
+              "5",
+              "5",
+              "5",
+              "5",
+              "5",
+              "5"
+            ],
+            [
+              "Regional provisioned minimum deployment",
+              "50",
+              "50",
+              "50",
+              "50",
+              "50",
+              "50",
+              "50",
+              "100",
+              "100",
+              "50",
+              "25",
+              "50",
+              "50",
+              "50",
+              "50",
+              "50",
+              "50",
+              "25",
+              "50",
+              "25",
+              "25",
+              "50",
+              "25"
+            ],
+            [
+              "Regional provisioned scale increment",
+              "50",
+              "50",
+              "50",
+              "50",
+              "50",
+              "50",
+              "50",
+              "100",
+              "100",
+              "50",
+              "25",
+              "50",
+              "50",
+              "50",
+              "50",
+              "50",
+              "50",
+              "25",
+              "50",
+              "25",
+              "25",
+              "50",
+              "25"
+            ],
+            [
+              "Input TPM per PTU",
+              "3,000",
+              "3,000",
+              "600",
+              "30,000",
+              "3,000",
+              "1,200",
+              "1,200",
+              "1,200",
+              "1,200",
+              "2,400",
+              "7,900",
+              "3,400",
+              "3,400",
+              "3,400",
+              "4,750",
+              "4,750",
+              "4,750",
+              "23,750",
+              "3,000",
+              "14,900",
+              "59,400",
+              "3,000",
+              "5,400"
+            ],
+            [
+              "Output-to-input ratio",
+              "See GPT-6 sizing guidance",
+              "See GPT-6 sizing guidance",
+              "See GPT-6 sizing guidance",
+              "6",
+              "6",
+              "6",
+              "6",
+              "See GPT-image-2.5-flare sizing guidance",
+              "See GPT-image-2 sizing guidance",
+              "6",
+              "6",
+              "8",
+              "8",
+              "8",
+              "8",
+              "8",
+              "8",
+              "8",
+              "4",
+              "4",
+              "4",
+              "4",
+              "4"
+            ],
+            [
+              "Latency target value^1^",
+              "99% &gt; 50 TPS",
+              "99% &gt; 80 TPS",
+              "99% &gt; 40 TPS",
+              "99% &gt; 100 TPS",
+              "99% &gt; 70 TPS",
+              "99% &gt; 80 TPS",
+              "99% &gt; 50 TPS",
+              "N/A^2^",
+              "N/A^2^",
+              "99% &gt; 50 TPS",
+              "99% &gt; 100 TPS",
+              "99% &gt; 50 TPS",
+              "99% &gt; 50 TPS",
+              "99% &gt; 50 TPS",
+              "99% &gt; 50 TPS",
+              "99% &gt; 50 TPS",
+              "99% &gt; 50 TPS",
+              "99% &gt; 80 TPS",
+              "99% &gt; 80 TPS",
+              "99% &gt; 90 TPS",
+              "99% &gt; 100 TPS",
+              "99% &gt; 80 TPS",
+              "99% &gt; 90 TPS"
+            ]
+          ]
+        }
+      ],
+      "formulas": []
+    },
+    {
+      "heading": "Determine PTU sizing for a workload - Microsoft Foundry | Microsoft Learn > Deployment parameters and throughput values by model > Latest Azure OpenAI models > Normalized token pricing for GPT-6 Astra and newer models",
+      "sha256": "f244ca8ffc4119a42c602e89dfe92d760bd1a84df974cd75f00ff0340fda9081",
+      "tables": [],
+      "formulas": []
+    },
+    {
+      "heading": "Determine PTU sizing for a workload - Microsoft Foundry | Microsoft Learn > Deployment parameters and throughput values by model > Latest Azure OpenAI models > Normalized token pricing for GPT-6 Astra and newer models > Pay-as-you-go prices and token weights",
+      "sha256": "4a8715b5a0393d45d6bdbc2b84193a93e40a8c3f1f0f1f85d5f5af0c888d8539",
+      "tables": [
+        {
+          "headers": [
+            "Token type",
+            "GPT-6 Astra Global Standard price",
+            "GPT-6 Sol Global Standard price",
+            "GPT-6.1 Sol Global Standard price",
+            "GPT-6 Astra / GPT-6 Sol normalized token cost",
+            "GPT-6.1 Sol normalized token cost"
+          ],
+          "rows": [
+            [
+              "Short-context input",
+              "$10.00",
+              "$2.00",
+              "$2.00",
+              "1.0",
+              "1.0"
+            ],
+            [
+              "Short-context cached input",
+              "$1.00",
+              "$0.20",
+              "$0.10",
+              "0.1",
+              "0.05"
+            ],
+            [
+              "Short-context cache write",
+              "$12.50",
+              "$2.50",
+              "$2.50",
+              "1.25",
+              "1.25"
+            ],
+            [
+              "Short-context output",
+              "$50.00",
+              "$10.00",
+              "$10.00",
+              "5.0",
+              "5.0"
+            ],
+            [
+              "Long-context input",
+              "$20.00",
+              "$4.00",
+              "$4.00",
+              "2.0",
+              "2.0"
+            ],
+            [
+              "Long-context cached input",
+              "$2.00",
+              "$0.40",
+              "$0.20",
+              "0.2",
+              "0.1"
+            ],
+            [
+              "Long-context cache write",
+              "$25.00",
+              "$5.00",
+              "$5.00",
+              "2.5",
+              "2.5"
+            ],
+            [
+              "Long-context output",
+              "$75.00",
+              "$15.00",
+              "$15.00",
+              "7.5",
+              "7.5"
+            ]
+          ]
+        }
+      ],
+      "formulas": [
+        "`Normalized token cost = token-type price ÷ the model's short-context input price`"
+      ]
+    },
+    {
+      "heading": "Determine PTU sizing for a workload - Microsoft Foundry | Microsoft Learn > Deployment parameters and throughput values by model > Latest Azure OpenAI models > Normalized token pricing for GPT-6 Astra and newer models > Convert normalized tokens to PTUs",
+      "sha256": "a8f0b23a83c52de4e49c4e40bf81d2b6687c011cb63eb4f1dfe0cef2507890ec",
+      "tables": [
+        {
+          "headers": [
+            "Model",
+            "Version",
+            "Short-context input TPM per PTU",
+            "Normalized TPM per PTU"
+          ],
+          "rows": [
+            [
+              "gpt-6-astra",
+              "2026-09-03",
+              "600",
+              "600"
+            ],
+            [
+              "gpt-6-sol",
+              "2026-09-22",
+              "3,000",
+              "3,000"
+            ],
+            [
+              "gpt-6.1-sol",
+              "2026-09-29",
+              "3,000",
+              "3,000"
+            ]
+          ]
+        }
+      ],
+      "formulas": [
+        "- Normalized TPM = Sum of (tokens per minute in each token category × that category's normalized token cost).",
+        "- Raw PTUs required = Normalized TPM ÷ the model's normalized TPM per PTU."
+      ]
+    },
+    {
+      "heading": "Determine PTU sizing for a workload - Microsoft Foundry | Microsoft Learn > Deployment parameters and throughput values by model > Latest Azure OpenAI models > Normalized token pricing for GPT-6 Astra and newer models > PTU and pay-as-you-go comparison",
+      "sha256": "068af4b6e0ec6d34e7cb81be95af3137bbb34d8e22f29ac65a7e728976ed70ab",
+      "tables": [],
+      "formulas": []
+    },
+    {
+      "heading": "Determine PTU sizing for a workload - Microsoft Foundry | Microsoft Learn > Deployment parameters and throughput values by model > Previous Azure OpenAI models",
+      "sha256": "1461ccd5941e006581cd23f9dd8c2b698bd78a7d42f1dfd0dba2dbf8ef07e399",
+      "tables": [
+        {
+          "headers": [
+            "Topic",
+            "**gpt-4o**",
+            "**gpt-4o-mini**",
+            "**o3-mini**",
+            "**o1**"
+          ],
+          "rows": [
+            [
+              "Global and data zone provisioned minimum deployment",
+              "15",
+              "15",
+              "15",
+              "15"
+            ],
+            [
+              "Global and data zone provisioned scale increment",
+              "5",
+              "5",
+              "5",
+              "5"
+            ],
+            [
+              "Regional provisioned minimum deployment",
+              "50",
+              "25",
+              "25",
+              "25"
+            ],
+            [
+              "Regional provisioned scale increment",
+              "50",
+              "25",
+              "25",
+              "50"
+            ],
+            [
+              "Input TPM per PTU",
+              "2,500",
+              "37,000",
+              "2,500",
+              "230"
+            ],
+            [
+              "Output-to-input ratio",
+              "4",
+              "4",
+              "4",
+              "4"
+            ],
+            [
+              "Latency target value^1^",
+              "99% &gt; 25 TPS",
+              "99% &gt; 33 TPS",
+              "99% &gt; 66 TPS",
+              "99% &gt; 25 TPS"
+            ]
+          ]
+        }
+      ],
+      "formulas": []
+    },
+    {
+      "heading": "Determine PTU sizing for a workload - Microsoft Foundry | Microsoft Learn > Deployment parameters and throughput values by model > Foundry Models sold by Azure",
+      "sha256": "5f641fec5c5e60fda65a1098449593e6956260703687fe904b35b336a3d04011",
+      "tables": [
+        {
+          "headers": [
+            "Topic",
+            "**Llama-3.3-70B-Instruct**"
+          ],
+          "rows": [
+            [
+              "Global and data zone provisioned minimum deployment",
+              "100"
+            ],
+            [
+              "Global and data zone provisioned scale increment",
+              "100"
+            ],
+            [
+              "Regional provisioned minimum deployment",
+              "NA"
+            ],
+            [
+              "Regional provisioned scale increment",
+              "NA"
+            ],
+            [
+              "Input TPM per PTU",
+              "8,450"
+            ],
+            [
+              "Output-to-input ratio",
+              "4^1^"
+            ],
+            [
+              "Latency target value^2^",
+              "99% &gt; 50 TPS"
+            ]
+          ]
+        }
+      ],
+      "formulas": []
+    },
+    {
+      "heading": "Determine PTU sizing for a workload - Microsoft Foundry | Microsoft Learn > Deployment parameters and throughput values by model > Fireworks on Microsoft Foundry models",
+      "sha256": "ebaad69082768d03c2be2fdbcef807c16a5029efc3455aafdf9d727e693af604",
+      "tables": [],
+      "formulas": []
+    },
+    {
+      "heading": "Determine PTU sizing for a workload - Microsoft Foundry | Microsoft Learn > Understand deployment parameters",
+      "sha256": "69df9ad6efa1f9e7896f3e2b56f7b1b5de741176c163e137725a4d9ba620f0dc",
+      "tables": [],
+      "formulas": []
+    },
+    {
+      "heading": "Determine PTU sizing for a workload - Microsoft Foundry | Microsoft Learn > Estimate PTUs for image model",
+      "sha256": "cd6dc37d299f9afbb2057b55d26dad2805c511ebcfdf426d9f1d43b8d45527f3",
+      "tables": [],
+      "formulas": []
+    },
+    {
+      "heading": "Determine PTU sizing for a workload - Microsoft Foundry | Microsoft Learn > Estimate PTUs for image model > Estimate PTUs manually",
+      "sha256": "a5150752a65861250f925f67e982f1d746265099e87d889e16bbecca0f1a1e87",
+      "tables": [],
+      "formulas": []
+    },
+    {
+      "heading": "Determine PTU sizing for a workload - Microsoft Foundry | Microsoft Learn > Estimate PTUs for image model > Estimate PTUs manually > Traffic information",
+      "sha256": "a6803b8475a89546a7c5c8480dc5a3a0eba9b9380b9d074f150fe857ec691113",
+      "tables": [],
+      "formulas": []
+    },
+    {
+      "heading": "Determine PTU sizing for a workload - Microsoft Foundry | Microsoft Learn > Estimate PTUs for image model > Estimate PTUs manually > Throughput values for image model",
+      "sha256": "516de0fe4a8c04b47194b128e27fb72c2fdcaa6329a659e8f6de36434cf06c69",
+      "tables": [],
+      "formulas": []
+    },
+    {
+      "heading": "Determine PTU sizing for a workload - Microsoft Foundry | Microsoft Learn > Estimate PTUs for image model > Estimate PTUs manually > Normalized TPM",
+      "sha256": "f6c1afe466cb1da90a628fb5ae8c410c6c73090018c61a7f2a95b81b82f4abe8",
+      "tables": [],
+      "formulas": [
+        "- Normalized TPM = Normalized tokens per request × Peak RPM",
+        "- PTUs required = Normalized TPM ÷ 1,200",
+        "- Normalized TPM = 46,110.4 × 10 = 461,104",
+        "- PTUs required = 461,104 ÷ 1,200 = 384.25 (**400 PTUs** rounded up to the nearest 100 PTUs, matching the scale increment for both models.)"
+      ]
+    }
+  ]
+}
