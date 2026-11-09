@@ -128,8 +128,6 @@ jobs:
       DEPLOY_SHA: ${{ needs.resolve.outputs.sha }}
       PR_NUMBER: ${{ needs.resolve.outputs.pr_number }}
       DRY_RUN: ${{ needs.resolve.outputs.dry_run }}
-      RELEASE_DIR: ${{ runner.temp }}/ptu-release
-      DEPLOY_REPORT: ${{ runner.temp }}/ptu-deployment/report.json
       AZURE_SUBSCRIPTION_ID: ${{ secrets.PTU_DEPLOY_AZURE_SUBSCRIPTION_ID }}
       AZURE_TENANT_ID: ${{ secrets.PTU_DEPLOY_AZURE_TENANT_ID }}
       AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
@@ -138,6 +136,10 @@ jobs:
       AZURE_CONTAINER_REGISTRY: ${{ vars.AZURE_CONTAINER_REGISTRY }}
       AZURE_IMAGE_REPOSITORY: ${{ vars.AZURE_IMAGE_REPOSITORY }}
     steps:
+      - name: Configure runner-local release paths
+        run: |
+          echo "RELEASE_DIR=$RUNNER_TEMP/ptu-release" >> "$GITHUB_ENV"
+          echo "DEPLOY_REPORT=$RUNNER_TEMP/ptu-deployment/report.json" >> "$GITHUB_ENV"
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
