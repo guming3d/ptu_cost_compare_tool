@@ -124,15 +124,25 @@ describe("model-specific workload controls", () => {
   });
 
   it.each(["en", "zh-CN"] satisfies Language[])("uses measured image token controls in %s", (language) => {
-    const html = renderForm("gpt-image-2 (", language);
     const text = getUiText(language).calculator;
-    expect(html).toContain(text.imageInputTokens);
-    expect(html).toContain(text.imageOutputTokens);
-    expect(html).toContain(text.textCacheHitRate);
-    expect(html).toContain('value="1229"');
-    expect(html).not.toContain(text.addImage);
-    expect(html).not.toContain(text.contextMode);
-    expect(html).not.toContain(text.cacheWriteTokens);
+    for (const name of ["gpt-image-2 (", "gpt-image-2.5-flare"]) {
+      const html = renderForm(name, language);
+      expect(html).toContain(text.textInputTokens);
+      expect(html).toContain(text.imageInputTokens);
+      expect(html).toContain(text.imageOutputTokens);
+      expect(html).toContain(text.textCacheHitRate);
+      expect(html).toContain('value="1229"');
+      expect(html).toContain('value="7024"');
+      expect(html).not.toContain(renderToStaticMarkup(
+        <span className="field-label">{text.inputTokens}</span>,
+      ));
+      expect(html).not.toContain(renderToStaticMarkup(
+        <span className="field-label">{text.outputTokens}</span>,
+      ));
+      expect(html).not.toContain(text.addImage);
+      expect(html).not.toContain(text.contextMode);
+      expect(html).not.toContain(text.cacheWriteTokens);
+    }
   });
 
   it("does not expose new controls for existing models", () => {
@@ -142,6 +152,8 @@ describe("model-specific workload controls", () => {
       expect(html).not.toContain(text.contextMode);
       expect(html).not.toContain(text.cacheWriteTokens);
       expect(html).not.toContain(text.imageInputTokens);
+      expect(html).not.toContain(text.textInputTokens);
+      expect(html).toContain(text.inputTokens);
       expect(html).toContain(text.outputTokens);
     }
   });

@@ -40,6 +40,28 @@ Open `http://localhost:8501`.
 
 Pricing and throughput metadata remains in `model_config.json`. The in-app catalog editor validates updates and stores them in the browser's local storage. Restoring the bundled catalog clears that local override.
 
+### GPT-image-2.5 PTU sizing
+
+Select `azure openai gpt-image-2.5-flare (2026-09-08)`, the model identity in the
+[official image-model sizing guide](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/provisioned-throughput-sizing#estimate-ptus-for-image-model),
+rechecked on 2026-11-09. It shares the existing `gpt-image-2` calculation.
+Enter separate average text input, image input, and image output tokens per request.
+With no text cache hits:
+
+```text
+Normalized TPM = RPM x (text input + 1.6 x image input + 3.75 x 1.6 x image output)
+Raw PTUs = Normalized TPM / 1,200
+Deployable PTUs = max(100, ceil(Raw PTUs / 100) x 100)
+```
+
+The 100-PTU minimum and increment apply to Global, Data Zone, and Regional deployments.
+The official example (10 RPM, 2,000 text input, 1,229 image input, and 7,024 image
+output tokens) produces 461,104 normalized TPM, about 384.25 raw PTUs, and 400
+deployable PTUs. Only cached text is deducted; image-input caching is not modeled.
+Flare PayGO prices remain unverified, so PayGO and savings are N/A; PTU commitment
+rates remain planning assumptions. If the model is missing from an older saved
+catalog, restore the bundled catalog in the catalog editor.
+
 ### Weekly GitHub-hosted documentation updates
 
 **Weekly PTU documentation update** runs on GitHub-hosted Ubuntu every Monday at
