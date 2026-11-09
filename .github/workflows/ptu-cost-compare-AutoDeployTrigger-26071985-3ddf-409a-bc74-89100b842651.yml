@@ -98,7 +98,7 @@ jobs:
           trap 'docker stop "$name" >/dev/null 2>&1 || true' EXIT
           docker run --detach --rm --name "$name" --publish 127.0.0.1:8080:80 \
             "ptu-cost-planner:$SOURCE_SHA"
-          curl --fail --retry 8 --retry-connrefused --retry-delay 2 http://127.0.0.1:8080/health
+          curl --fail --retry 8 --retry-all-errors --retry-delay 2 --max-time 20 http://127.0.0.1:8080/health
           SITE_DIR="$release/site" PROBE_URL=http://127.0.0.1:8080/ \
             node .github/scripts/deploy-containerapp.mjs verify-site
           docker save --output "$release/image.tar" "ptu-cost-planner:$SOURCE_SHA"
