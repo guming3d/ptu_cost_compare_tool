@@ -286,8 +286,8 @@ async function deploy(github) {
   const path = join(directory, 'request.json');
   try {
     await writeFile(path, JSON.stringify(patch), { mode: 0o600 });
-    azure(['rest', '--method', 'PATCH', '--url', `https://management.azure.com${target.id}?api-version=${API_VERSION}`,
-      '--body', `@${path}`]);
+    command('az', ['rest', '--method', 'PATCH', '--url', `https://management.azure.com${target.id}?api-version=${API_VERSION}`,
+      '--body', `@${path}`, '--only-show-errors', '--output', 'none']);
   } finally {
     await unlink(path).catch(() => {});
     await rmdir(directory);
