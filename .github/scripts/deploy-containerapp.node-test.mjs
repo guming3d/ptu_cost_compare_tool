@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import {
   approvedMerge, resolveSource, assertTarget, configurationHash, imagePatch, permits, waitForRevision, verifySite,
 } from './deploy-containerapp.mjs';
+import { GitHub } from './ptu-docs.mjs';
 
 const repository = 'guming3d/ptu_cost_compare_tool';
 const sha = 'a'.repeat(40);
@@ -84,6 +85,24 @@ test('manual dry runs can check master, but real retries require a verified merg
     'guming3d', 'refs/heads/master');
   assert.deepEqual(source, { sha, number: 3, dryRun: false });
   assert.equal(calls.at(-1), '/pulls/3');
+});
+
+test('the deployment API version retains the immutable merge SHA for automatic and manual releases', async () => {
+  const fetcher = async (url, options) => {
+    if (url.endsWith('/git/ref/heads/master')) return Response.json({ object: { sha } });
+    const value = structuredClone(pr);
+    if (options.headers['X-GitHub-Api-Version'] !== '2022-11-28') delete value.merge_commit_sha;
+    return Response.json(value);
+  };
+  const event = { action: 'closed', pull_request: { number: 3, merged: true } };
+  const resolve = (github) =>
+    resolveSource(github, 'pull_request_target', event, {}, 'guming3d', 'refs/heads/master');
+  await assert.rejects(resolve(new GitHub('test-token', repository, fetcher)), /manually merged/);
+
+  const github = new GitHub('test-token', repository, fetcher, '2022-11-28');
+  assert.deepEqual(await resolve(github), { sha, number: 3, dryRun: false });
+  assert.deepEqual(await resolveSource(github, 'workflow_dispatch', {},
+    { number: 3, dryRun: false }, 'guming3d', 'refs/heads/master'), { sha, number: 3, dryRun: false });
 });
 
 test('deployment fails closed when the target, ingress, traffic, identity or image repository drifts', () => {

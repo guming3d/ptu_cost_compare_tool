@@ -210,12 +210,13 @@ export async function fetchDocument(source, fetcher = fetch) {
 }
 
 export class GitHub {
-  constructor(token, repository, fetcher = fetch) {
+  constructor(token, repository, fetcher = fetch, apiVersion = '2026-03-10') {
     if (!token) throw new Error('Required GitHub credential is missing.');
     if (!/^[\w.-]+\/[\w.-]+$/.test(repository ?? '')) throw new Error('Invalid repository.');
     this.token = token;
     this.repository = repository;
     this.fetcher = fetcher;
+    this.apiVersion = apiVersion;
   }
 
   async request(path, method = 'GET', body) {
@@ -225,7 +226,7 @@ export class GitHub {
         headers: {
           Authorization: `Bearer ${this.token}`,
           Accept: 'application/vnd.github+json',
-          'X-GitHub-Api-Version': '2026-03-10',
+          'X-GitHub-Api-Version': this.apiVersion,
           'Content-Type': 'application/json',
         },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),

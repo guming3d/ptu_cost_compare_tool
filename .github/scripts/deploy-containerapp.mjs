@@ -328,7 +328,8 @@ async function notify(github, event) {
 async function main() {
   const mode = process.argv[2];
   if (mode === 'verify-site') return verifySite(process.env.SITE_DIR, process.env.PROBE_URL);
-  const github = new GitHub(process.env.GITHUB_TOKEN, process.env.GITHUB_REPOSITORY);
+  // 2026-03-10 omits merge_commit_sha, which the current-tip approval guard requires.
+  const github = new GitHub(process.env.GITHUB_TOKEN, process.env.GITHUB_REPOSITORY, fetch, '2022-11-28');
   const event = JSON.parse(await readFile(process.env.GITHUB_EVENT_PATH, 'utf8'));
   if (mode === 'resolve') {
     const source = await resolveSource(github, process.env.GITHUB_EVENT_NAME, event, {
