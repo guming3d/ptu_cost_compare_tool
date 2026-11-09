@@ -1,0 +1,603 @@
+{
+  "schemaVersion": 1,
+  "id": "fireworks",
+  "source": "https://learn.microsoft.com/en-us/azure/foundry/how-to/fireworks/fireworks-model-catalog",
+  "documentSha256": "0dbea092a1b565e0b389bece39368c2cb0940d2cc485c331c04642958d2a1111",
+  "modelCount": 39,
+  "sections": [
+    {
+      "heading": "Fireworks model catalog, deployment types, and regions in Microsoft Foundry - Microsoft Foundry | Microsoft Learn",
+      "sha256": "f539301552db3af0e3cdf8961757258da9d70fd7ccbf954918cad79975c70db9",
+      "tables": [],
+      "formulas": []
+    },
+    {
+      "heading": "Fireworks model catalog, deployment types, and regions in Microsoft Foundry - Microsoft Foundry | Microsoft Learn > Region availability",
+      "sha256": "8c7132db5ec5fb77e90b0ef2b1e0959ba19edbb87f720182c5ed5dbb790a90ba",
+      "tables": [],
+      "formulas": []
+    },
+    {
+      "heading": "Fireworks model catalog, deployment types, and regions in Microsoft Foundry - Microsoft Foundry | Microsoft Learn > Pay-per-token",
+      "sha256": "3b333f98ee8cdf1de2401f58a5d818deb9cf42036a71268bfbbd830b6f9fe94f",
+      "tables": [
+        {
+          "headers": [
+            "Model name",
+            "Life cycle",
+            "Global Standard",
+            "Data Zone Standard",
+            "Retirement date",
+            "Replacement"
+          ],
+          "rows": [
+            [
+              "`FW-DeepSeek-V4.1-Flash`",
+              "GA",
+              "✅",
+              "✅",
+              "—",
+              "—"
+            ],
+            [
+              "`FW-GLM-5.2-Fast`",
+              "GA",
+              "",
+              "✅",
+              "2026-10-29",
+              "—"
+            ],
+            [
+              "`FW-GLM-5.3`",
+              "GA",
+              "✅",
+              "✅",
+              "—",
+              "—"
+            ],
+            [
+              "`FW-GLM-5.3-Flash`",
+              "GA",
+              "✅",
+              "",
+              "—",
+              "—"
+            ],
+            [
+              "`FW-Kimi-K3`",
+              "GA",
+              "✅",
+              "✅",
+              "—",
+              "—"
+            ],
+            [
+              "`FW-MiniMax-M3`",
+              "GA",
+              "",
+              "✅",
+              "—",
+              "—"
+            ],
+            [
+              "`FW-Nemotron-3-Ultra-NVFP4`",
+              "GA",
+              "",
+              "✅",
+              "—",
+              "—"
+            ],
+            [
+              "`FW-Nemotron-Lightning-3.5-30B-A3B`",
+              "GA",
+              "",
+              "✅",
+              "—",
+              "—"
+            ],
+            [
+              "`FW-DeepSeek-V3.2`",
+              "Retired",
+              "",
+              "",
+              "2026-06-01",
+              "`FW-DeepSeek-V4.1-Flash`"
+            ],
+            [
+              "`FW-DeepSeek-V4-Flash-0731`",
+              "Retired",
+              "",
+              "",
+              "2026-10-08",
+              "`FW-DeepSeek-V4.1-Flash`"
+            ],
+            [
+              "`FW-DeepSeek-V4-Pro`",
+              "Retired",
+              "",
+              "",
+              "2026-10-08",
+              "`FW-DeepSeek-V4.1-Flash`"
+            ],
+            [
+              "`FW-GLM-5`",
+              "Retired",
+              "",
+              "",
+              "2026-06-02",
+              "—"
+            ],
+            [
+              "`FW-GLM-5.1`",
+              "Retired",
+              "",
+              "",
+              "2026-08-07",
+              "—"
+            ],
+            [
+              "`FW-GLM-5.2`",
+              "Retired",
+              "",
+              "",
+              "2026-10-08",
+              "`FW-GLM-5.3`"
+            ],
+            [
+              "`FW-GPT-OSS-120B`",
+              "Retired",
+              "",
+              "",
+              "2026-06-01",
+              "—"
+            ],
+            [
+              "`FW-Inkling`",
+              "Retired",
+              "",
+              "",
+              "2026-09-25",
+              "—"
+            ],
+            [
+              "`FW-Kimi-K2.5`",
+              "Retired",
+              "",
+              "",
+              "2026-06-02",
+              "—"
+            ],
+            [
+              "`FW-Kimi-K2.6`",
+              "Retired",
+              "",
+              "",
+              "2026-09-25",
+              "—"
+            ],
+            [
+              "`FW-Kimi-K2.7-Code`",
+              "Retired",
+              "",
+              "",
+              "2026-09-25",
+              "`FW-Kimi-K3`"
+            ]
+          ]
+        }
+      ],
+      "formulas": []
+    },
+    {
+      "heading": "Fireworks model catalog, deployment types, and regions in Microsoft Foundry - Microsoft Foundry | Microsoft Learn > Provisioned throughput units (PTU)",
+      "sha256": "0017d02f17134c24b5c34a055ffa39c98eac9ca5464227f3cb28ddd0e4e8f19d",
+      "tables": [
+        {
+          "headers": [
+            "Model provider",
+            "Model name",
+            "Global Provisioned",
+            "Data Zone Provisioned",
+            "Minimum deployment",
+            "Scale increment",
+            "Input TPM per PTU",
+            "Latency target value^1^"
+          ],
+          "rows": [
+            [
+              "DeepSeek",
+              "`FW-DeepSeek-V3.1`",
+              "✅",
+              "✅",
+              "400",
+              "200",
+              "1,050",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "DeepSeek",
+              "`FW-DeepSeek-V3.2`",
+              "✅",
+              "✅",
+              "1,080",
+              "540",
+              "833",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "DeepSeek",
+              "`FW-DeepSeek-V4-Flash`",
+              "✅",
+              "✅",
+              "200",
+              "100",
+              "1,400",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "DeepSeek",
+              "`FW-DeepSeek-V4-Pro`",
+              "✅",
+              "✅",
+              "800",
+              "400",
+              "100",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "DeepSeek",
+              "`FW-DeepSeek-V4.1-Flash`",
+              "✅",
+              "",
+              "5",
+              "1",
+              "11,000",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "Google",
+              "`FW-Gemma-4-26B-A4B-IT`",
+              "✅",
+              "✅",
+              "200",
+              "100",
+              "5,400",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "Google",
+              "`FW-Gemma-4-31B-IT`",
+              "✅",
+              "✅",
+              "200",
+              "100",
+              "2,200",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "Meta",
+              "`FW-Llama-v3.1-8B-Instruct`",
+              "✅",
+              "✅",
+              "50",
+              "25",
+              "46,240",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "Meta",
+              "`FW-Muse-Glimmer-30B`",
+              "✅",
+              "✅",
+              "90",
+              "45",
+              "4,500",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "MiniMax",
+              "`FW-MiniMax-M3`",
+              "✅",
+              "✅",
+              "800",
+              "400",
+              "2,650",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "Mistral AI",
+              "`FW-Ministral-3-3B-Instruct-2512`",
+              "✅",
+              "✅",
+              "90",
+              "45",
+              "11,289",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "Moonshot AI",
+              "`FW-Kimi-K2-Instruct-0905`",
+              "✅",
+              "✅",
+              "400",
+              "200",
+              "1,250",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "Moonshot AI",
+              "`FW-Kimi-K2-Thinking`",
+              "✅",
+              "✅",
+              "720",
+              "360",
+              "389",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "Moonshot AI",
+              "`FW-Kimi-K2.5`",
+              "✅",
+              "✅",
+              "720",
+              "360",
+              "294",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "Moonshot AI",
+              "`FW-Kimi-K2.6`",
+              "✅",
+              "✅",
+              "400",
+              "200",
+              "2,000",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "Moonshot AI",
+              "`FW-Kimi-K2.7-Code`",
+              "✅",
+              "✅",
+              "400",
+              "200",
+              "1,000",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "Moonshot AI",
+              "`FW-Kimi-K3`",
+              "✅",
+              "",
+              "5",
+              "1",
+              "985",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "NVIDIA",
+              "`FW-Nemotron-3-Super-120B-A12B-BF16`",
+              "✅",
+              "✅",
+              "180",
+              "90",
+              "2,694",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "NVIDIA",
+              "`FW-Nemotron-3-Ultra-NVFP4`",
+              "✅",
+              "✅",
+              "400",
+              "200",
+              "550",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "NVIDIA",
+              "`FW-Nemotron-Lightning-3.5-30B-A3B`",
+              "✅",
+              "✅",
+              "90",
+              "45",
+              "33,528",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "OpenAI",
+              "`FW-GPT-OSS-20B`",
+              "✅",
+              "✅",
+              "50",
+              "25",
+              "40,000",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "OpenAI",
+              "`FW-GPT-OSS-120B`",
+              "✅",
+              "✅",
+              "50",
+              "25",
+              "10,800",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "PaddlePaddle",
+              "`FW-PaddleOCR-VL-1.6`",
+              "✅",
+              "✅",
+              "180",
+              "90",
+              "75,889",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "Qwen",
+              "`FW-Qwen3-32B`",
+              "✅",
+              "✅",
+              "50",
+              "25",
+              "8,000",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "Qwen",
+              "`FW-Qwen3.5-4B`",
+              "✅",
+              "✅",
+              "50",
+              "25",
+              "56,800",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "Qwen",
+              "`FW-Qwen3.5-9B`",
+              "✅",
+              "✅",
+              "50",
+              "25",
+              "8,560",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "Qwen",
+              "`FW-Qwen3.5-27B`",
+              "✅",
+              "✅",
+              "180",
+              "90",
+              "8,342",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "Qwen",
+              "`FW-Qwen3.5-35B-A3B`",
+              "✅",
+              "✅",
+              "50",
+              "25",
+              "14,240",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "Qwen",
+              "`FW-Qwen3.5-122B-A10B`",
+              "✅",
+              "✅",
+              "200",
+              "100",
+              "2,800",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "Qwen",
+              "`FW-Qwen3.5-397B-A17B`",
+              "✅",
+              "✅",
+              "200",
+              "100",
+              "2,125",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "Qwen",
+              "`FW-Qwen3.6-27B`",
+              "✅",
+              "✅",
+              "50",
+              "25",
+              "6,160",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "Qwen",
+              "`FW-Qwen3.6-35B-A3B`",
+              "✅",
+              "✅",
+              "90",
+              "45",
+              "13,778",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "Qwen",
+              "`FW-Qwen3.8-27B`",
+              "✅",
+              "✅",
+              "50",
+              "25",
+              "6,300",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "Thinking Machines Lab",
+              "`FW-Inkling`",
+              "✅",
+              "✅",
+              "720",
+              "360",
+              "2,139",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "Z.ai",
+              "`FW-GLM-4.7`",
+              "✅",
+              "✅",
+              "720",
+              "360",
+              "1,667",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "Z.ai",
+              "`FW-GLM-5`",
+              "✅",
+              "✅",
+              "1,080",
+              "540",
+              "167",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "Z.ai",
+              "`FW-GLM-5.1`",
+              "✅",
+              "✅",
+              "720",
+              "360",
+              "500",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "Z.ai",
+              "`FW-GLM-5.2`",
+              "✅",
+              "✅",
+              "800",
+              "400",
+              "325",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "Z.ai",
+              "`FW-GLM-5.3`^2^",
+              "✅",
+              "✅",
+              "Global: 5Data Zone Provisioned: 320",
+              "Global: 1Data Zone Provisioned: 160",
+              "Global: 1,645Data Zone Provisioned: 1,050",
+              "99% &gt; 50 TPS"
+            ]
+          ]
+        }
+      ],
+      "formulas": []
+    }
+  ]
+}
