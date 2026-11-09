@@ -4,7 +4,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
-  approvedMerge, resolveSource, assertTarget, configurationHash, imagePatch, permits, verifySite,
+  approvedMerge, resolveSource, assertTarget, configurationHash, imagePatch, permits, waitForRevision, verifySite,
 } from './deploy-containerapp.mjs';
 
 const repository = 'guming3d/ptu_cost_compare_tool';
@@ -127,6 +127,23 @@ test('permission preflight honors exclusions instead of accepting an unrelated b
     'Microsoft.App/containerApps/write'), false);
   assert.equal(permits({ value: [{ actions: ['*/read'], notActions: [] }] },
     'Microsoft.ContainerRegistry/registries/push/write'), false);
+});
+
+test('a ready revision waits for completed provisioning and rejects configuration drift', async () => {
+  const ready = app();
+  ready.properties.latestReadyRevisionName = 'test--gh-123-1';
+  const report = { image: ready.properties.template.containers[0].image, configurationHash: configurationHash(ready) };
+  let polls = 0;
+  await waitForRevision(async () => {
+    polls++;
+    const current = structuredClone(ready);
+    if (polls === 1) current.properties.provisioningState = 'InProgress';
+    return current;
+  }, 'test--gh-123-1', target, report, async () => {});
+  assert.equal(polls, 2);
+  ready.properties.template.scale.maxReplicas = 3;
+  await assert.rejects(waitForRevision(async () => ready, 'test--gh-123-1',
+    target, report, async () => {}), /changed application settings/);
 });
 
 test('health verification rejects old HTML or modified assets even when HTTP returns success', async (t) => {

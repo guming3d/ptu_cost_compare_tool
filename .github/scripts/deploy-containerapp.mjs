@@ -129,6 +129,22 @@ export function permits(permissions, action) {
     permission.actions?.some(matches) && !permission.notActions?.some(matches)) === true;
 }
 
+export async function waitForRevision(readApp, revision, target, report, delay = pause) {
+  for (let attempt = 0; attempt < 60; attempt++) {
+    const current = await readApp();
+    if (current.properties.provisioningState === 'Failed') throw new Error('The new revision failed provisioning.');
+    if (current.properties.latestReadyRevisionName === revision &&
+        current.properties.provisioningState === 'Succeeded') {
+      if (assertTarget(current, target) !== report.image || configurationHash(current) !== report.configurationHash) {
+        throw new Error('The deployment changed application settings or did not retain the expected image.');
+      }
+      return;
+    }
+    await delay(10000);
+  }
+  throw new Error('The new revision did not become ready within ten minutes; inspect Azure before retrying.');
+}
+
 export async function verifySite(directory, baseUrl, fetcher = fetch) {
   const base = new URL(baseUrl);
   const get = async (path) => {
@@ -257,7 +273,13 @@ async function deploy(github) {
   command('docker', ['push', tag]);
   const pushed = JSON.parse(command('docker', ['image', 'inspect', tag]))[0];
   report.image = pushed.RepoDigests?.find((digest) => digest.startsWith(`${target.image}@sha256:`));
-  const patch = imagePatch(before, report.image ?? '', suffix, target);
+  await assertCurrent(github, report);
+  const latest = resource(target.id);
+  if (assertTarget(latest, target) !== report.previousImage ||
+      configurationHash(latest) !== report.configurationHash) {
+    throw new Error('The app changed while uploading the image; refusing to overwrite concurrent changes.');
+  }
+  const patch = imagePatch(latest, report.image ?? '', suffix, target);
   await save(report);
   // A full copied template preserves env/resources/probes; no configuration or identity is patched.
   const directory = await mkdtemp(join(tmpdir(), 'ptu-image-update-'));
@@ -270,20 +292,7 @@ async function deploy(github) {
     await unlink(path).catch(() => {});
     await rmdir(directory);
   }
-  let ready = false;
-  for (let attempt = 0; attempt < 60; attempt++) {
-    const current = resource(target.id);
-    if (current.properties.provisioningState === 'Failed') throw new Error('The new revision failed provisioning.');
-    if (current.properties.latestReadyRevisionName === `${target.app}--${suffix}`) {
-      if (assertTarget(current, target) !== report.image || configurationHash(current) !== report.configurationHash) {
-        throw new Error('The deployment changed application settings or did not retain the expected image.');
-      }
-      ready = true;
-      break;
-    }
-    await pause(10000);
-  }
-  if (!ready) throw new Error('The new revision did not become ready within ten minutes; inspect Azure before retrying.');
+  await waitForRevision(() => resource(target.id), `${target.app}--${suffix}`, target, report);
   for (let attempt = 0; ; attempt++) {
     try { await verifySite(join(process.env.RELEASE_DIR, 'site'), report.url); break; }
     catch (error) { if (attempt === 11) throw error; await pause(10000); }
