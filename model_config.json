@@ -160,7 +160,9 @@
             "PTU monthly discount": 0,
             "PTU yearly discount": 0,
             "configuration notes": [
-                "PTU sizing verified 2026-10-28 against the Microsoft Learn sizing guide: same capacity and weights as gpt-image-2.",
+                "PTU sizing reverified 2026-11-09: https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/provisioned-throughput-sizing#estimate-ptus-for-image-model. gpt-image-2.5-flare (2026-09-08) uses the same sizing as gpt-image-2.",
+                "Image-to-text factor = 1200 / 750 = 1.6; image output weight = 3.75 x 1.6 = 6. Raw PTUs = RPM x (text input + 1.6 x image input + 6 x image output) / 1200, before any text-cache deduction.",
+                "Global, Data Zone, and Regional deployments require at least 100 PTUs and round up in 100-PTU increments.",
                 "Flare token prices could not be verified. No prices are copied from gpt-image-2; PayGO and savings are unavailable.",
                 "Use measured image tokens. PTU commitment prices remain planning assumptions, not a model-specific quote."
             ],

@@ -158,7 +158,7 @@ export function CalculatorForm({
 
       <div className="field-grid">
         <NumberField
-          label={text.inputTokens}
+          label={isImageModel ? text.textInputTokens : text.inputTokens}
           value={inputTextTokens}
           onChange={onInputTextTokensChange}
         />
