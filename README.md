@@ -63,8 +63,9 @@ accepted baseline only after the PR is merged.
 
 Copilot completion triggers independent GitHub-hosted automation tests, application
 tests and a TypeScript/production build against the exact PR head. Passing validation
-marks the PR ready for human review. The workflows never merge or deploy it and do
-not use Azure credentials.
+marks the PR ready for human review. The monitor and validator never merge or
+deploy it and do not use Azure credentials. After the owner merges, the separate
+deployment workflow below can update the existing Container App.
 
 For unattended completion, enable Copilot-triggered Actions in repository
 **Settings > Copilot > Cloud agent > Policies** by turning off **Require approval
@@ -94,6 +95,55 @@ Use `dry_run` to check without a PR/agent, or `test_failure` to verify failure a
 GitHub schedules are best-effort, and public-repository schedules can be disabled
 after 60 days without activity; inspect the Actions tab if a weekly result is missing.
 No workflow can email about its own run being omitted or disabled by GitHub.
+
+### Automatic deployment after an owner-reviewed merge
+
+**Deploy PTU cost planner** runs entirely on GitHub when `guming3d` merges a PR
+into `master`, including weekly documentation PRs. The merge is the production
+approval: merely approving, opening or closing an unmerged PR does not deploy.
+Direct pushes and merges by other actors do not deploy.
+
+The workflow resolves the exact merged commit and refuses stale commits after
+`master` moves. It runs the automation tests, all application tests, TypeScript
+and production build, then builds and smoke-tests the Docker image without Azure
+credentials. A separate Azure job downloads that tested image, publishes a unique
+tag, and updates the existing app using its immutable digest. Only the image and
+revision suffix change; ingress, networking, scaling, environment variables,
+secrets, registry configuration and managed identity are preserved and checked.
+The new revision must become ready and serve the tested HTML/JavaScript/CSS, and
+`/health` must pass. Deployments are serialized rather than cancelling an update
+partway through.
+
+Passwordless Azure login uses the `container-app-production` GitHub environment,
+restricted to `master`, with these environment-scoped settings:
+
+| Kind | Names |
+| --- | --- |
+| Secrets | `PTU_DEPLOY_AZURE_CLIENT_ID`, `PTU_DEPLOY_AZURE_TENANT_ID`, `PTU_DEPLOY_AZURE_SUBSCRIPTION_ID` |
+| Variables | `AZURE_RESOURCE_GROUP`, `AZURE_CONTAINER_APP`, `AZURE_CONTAINER_NAME`, `AZURE_CONTAINER_REGISTRY`, `AZURE_IMAGE_REPOSITORY` |
+
+The dedicated identity trusts only
+`repo:guming3d/ptu_cost_compare_tool:environment:container-app-production`.
+It has `Contributor` on the existing app only and `AcrPush` plus `Reader` on its
+registry only, not subscription/resource-group-wide deployment permissions.
+The app's own managed identity retains its existing `AcrPull` assignment.
+No Azure password, registry admin key, or laptop process is required.
+
+Deployment outcomes use the same owner-mentioned email/status issue as weekly
+checks; native Actions failure email remains the fallback. The run summary and
+deployment report retain the previous image digest for manual rollback. A failed
+health check is an alert, not an automatic rollback; inspect the revision before
+retrying or restoring the previous image. Do not edit app settings concurrently
+with a release.
+
+For commissioning, open **Actions > Deploy PTU cost planner > Run workflow** on
+`master`, keep `dry_run` enabled, and leave `pr_number` empty. This checks the
+build, image, Azure federation, resource configuration, registry read access and
+deployment permissions without pushing an image or modifying the app. A real
+manual retry requires `dry_run` disabled and the number of an already
+owner-merged PR whose merge commit is still the current `master` tip. If newer
+commits exist, review and merge the newest PR instead. No unmerged PR can be
+deployed using the manual trigger.
 
 ### Official-document refresh (October 28, 2026)
 

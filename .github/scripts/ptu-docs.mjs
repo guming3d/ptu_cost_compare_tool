@@ -503,7 +503,7 @@ export async function publishReport(github, report, runUrl, eventKey) {
     botComment(comment) && comment.body?.includes(reportMarker))) return issue;
   const lines = [
     reportMarker,
-    `@${AUTHOR.name} **PTU documentation update: ${report.status}**`,
+    `@${AUTHOR.name} **${report.kind === 'deployment' ? 'Container App deployment' : 'PTU documentation update'}: ${report.status}**`,
     '',
     report.message,
     '',
@@ -558,7 +558,7 @@ async function followUp(github, event) {
   }
   if (event.pull_request) {
     report.message = pr.merged
-      ? 'Update PR merged. Its documentation snapshots are now the accepted baseline. No deployment was triggered.'
+      ? 'Update PR merged. Its documentation snapshots are now the accepted baseline. Owner merges queue the separate Container App deployment workflow; check its deployment result before assuming Azure has updated.'
       : 'Update PR closed without merging. The accepted baseline is unchanged.';
     return report;
   }

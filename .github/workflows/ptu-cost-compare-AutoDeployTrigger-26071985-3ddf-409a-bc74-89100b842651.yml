@@ -1,43 +1,210 @@
 name: Deploy PTU cost planner
 
 on:
-  push:
-    branches:
-      - typescript
-    paths:
-      - "**"
-      - ".github/workflows/ptu-cost-compare-AutoDeployTrigger-26071985-3ddf-409a-bc74-89100b842651.yml"
+  pull_request_target:
+    branches: [master]
+    types: [closed]
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Validate build, Azure login and target without pushing an image or deploying'
+        type: boolean
+        default: true
+      pr_number:
+        description: 'Previously owner-merged PR number; required only for a real deployment retry'
+        type: string
+        default: ''
 
 concurrency:
-  group: ptu-cost-compare-${{ github.ref }}
-  cancel-in-progress: true
+  group: container-app-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
 
 jobs:
-  build-and-deploy:
+  resolve:
+    name: Resolve owner-merged source
+    if: >-
+      github.repository == 'guming3d/ptu_cost_compare_tool' &&
+      github.actor == 'guming3d' &&
+      ((github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master') ||
+       (github.event_name == 'pull_request_target' && github.event.pull_request.merged == true &&
+        github.event.pull_request.merged_by.login == 'guming3d'))
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: read
-      id-token: write
+      pull-requests: read
+    outputs:
+      sha: ${{ steps.source.outputs.sha }}
+      pr_number: ${{ steps.source.outputs.pr_number }}
+      dry_run: ${{ steps.source.outputs.dry_run }}
+    steps:
+      - name: Check out trusted workflow helpers
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+      - name: Resolve and verify the source
+        id: source
+        run: node .github/scripts/deploy-containerapp.mjs resolve
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          DRY_RUN: ${{ inputs.dry_run || false }}
+          PR_NUMBER: ${{ inputs.pr_number }}
 
+  build:
+    name: Test and build the immutable release
+    needs: resolve
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out the exact reviewed source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Test automation guards
+        run: node --test .github/scripts/*.node-test.mjs
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Test the application
+        run: npm test
+      - name: Build and type-check
+        run: npm run build
+      - name: Check whitespace
+        run: git diff --check
+      - name: Build and smoke-test the container
+        env:
+          SOURCE_SHA: ${{ needs.resolve.outputs.sha }}
+        run: |
+          set -euo pipefail
+          release="$RUNNER_TEMP/ptu-release"
+          mkdir -p "$release"
+          cp -R dist "$release/site"
+          docker build --label "org.opencontainers.image.revision=$SOURCE_SHA" \
+            --tag "ptu-cost-planner:$SOURCE_SHA" .
+          name="ptu-smoke-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          trap 'docker stop "$name" >/dev/null 2>&1 || true' EXIT
+          docker run --detach --rm --name "$name" --publish 127.0.0.1:8080:80 \
+            "ptu-cost-planner:$SOURCE_SHA"
+          curl --fail --retry 8 --retry-connrefused --retry-delay 2 http://127.0.0.1:8080/health
+          SITE_DIR="$release/site" PROBE_URL=http://127.0.0.1:8080/ \
+            node .github/scripts/deploy-containerapp.mjs verify-site
+          docker save --output "$release/image.tar" "ptu-cost-planner:$SOURCE_SHA"
+      - name: Preserve the tested image and expected site
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: containerapp-release
+          path: ${{ runner.temp }}/ptu-release
+          compression-level: 0
+          overwrite: true
+          retention-days: 7
+
+  deploy:
+    name: ${{ needs.resolve.outputs.dry_run == 'true' && 'Check Azure without deploying' || 'Deploy the owner-merged release' }}
+    needs: [resolve, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment:
+      name: container-app-production
+      url: ${{ steps.preflight.outputs.url }}
+    permissions:
+      contents: read
+      pull-requests: read
+      id-token: write
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      DEPLOY_SHA: ${{ needs.resolve.outputs.sha }}
+      PR_NUMBER: ${{ needs.resolve.outputs.pr_number }}
+      DRY_RUN: ${{ needs.resolve.outputs.dry_run }}
+      RELEASE_DIR: ${{ runner.temp }}/ptu-release
+      DEPLOY_REPORT: ${{ runner.temp }}/ptu-deployment/report.json
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.PTU_DEPLOY_AZURE_SUBSCRIPTION_ID }}
+      AZURE_TENANT_ID: ${{ secrets.PTU_DEPLOY_AZURE_TENANT_ID }}
+      AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+      AZURE_CONTAINER_APP: ${{ vars.AZURE_CONTAINER_APP }}
+      AZURE_CONTAINER_NAME: ${{ vars.AZURE_CONTAINER_NAME }}
+      AZURE_CONTAINER_REGISTRY: ${{ vars.AZURE_CONTAINER_REGISTRY }}
+      AZURE_IMAGE_REPOSITORY: ${{ vars.AZURE_IMAGE_REPOSITORY }}
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
-
-      - name: Sign in to Azure
-        uses: azure/login@v2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          client-id: ${{ secrets.PTUCOSTCOMPARE_AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.PTUCOSTCOMPARE_AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.PTUCOSTCOMPARE_AZURE_SUBSCRIPTION_ID }}
-
-      - name: Build and deploy Container App
-        uses: azure/container-apps-deploy-action@v2
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+      - name: Download the tested release
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          appSourcePath: ${{ github.workspace }}
-          acrName: ptucostcompare
-          imageToBuild: ptucostcompare.azurecr.io/ptu-cost-compare:${{ github.sha }}
-          containerAppName: ptu-cost-compare
-          resourceGroup: minggu-VM
-          targetPort: 8501
-          ingress: internal
+          name: containerapp-release
+          path: ${{ runner.temp }}/ptu-release
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+      - name: Sign in to Azure using passwordless federation
+        uses: azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2.3.1
+        with:
+          client-id: ${{ secrets.PTU_DEPLOY_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.PTU_DEPLOY_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.PTU_DEPLOY_AZURE_SUBSCRIPTION_ID }}
+      - name: Verify the image, existing target and scoped permissions
+        id: preflight
+        run: node .github/scripts/deploy-containerapp.mjs preflight
+      - name: Deploy only the immutable image and verify the live site
+        if: needs.resolve.outputs.dry_run == 'false'
+        run: node .github/scripts/deploy-containerapp.mjs deploy
+      - name: Preserve the deployment result and rollback image
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: containerapp-deployment-report
+          path: ${{ runner.temp }}/ptu-deployment/report.json
+          if-no-files-found: warn
+          overwrite: true
+          retention-days: 30
+
+  notify:
+    name: Email the deployment result through GitHub
+    if: always() && needs.resolve.result != 'skipped'
+    needs: [resolve, build, deploy]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Check out trusted reporter
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+      - name: Download the deployment report if available
+        if: needs.deploy.result != 'skipped'
+        continue-on-error: true
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: containerapp-deployment-report
+          path: ${{ runner.temp }}/ptu-deployment
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+      - name: Publish the owner-mentioned outcome and summary
+        run: node .github/scripts/deploy-containerapp.mjs notify
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          JOB_RESULTS: ${{ toJSON(needs) }}
+          DEPLOY_REPORT: ${{ runner.temp }}/ptu-deployment/report.json
+          DRY_RUN: ${{ inputs.dry_run || false }}
+          PR_NUMBER: ${{ needs.resolve.outputs.pr_number || inputs.pr_number }}
