@@ -419,6 +419,14 @@ function App() {
         <span>
           {text.footer.author}:{" "}
           <a href="mailto:minggu@microsoft.com">minggu@microsoft.com</a>
+          {" | "}
+          <a
+            href="https://github.com/guming3d/ptu_cost_compare_tool"
+            target="_blank"
+            rel="noreferrer"
+          >
+            GitHub
+          </a>
         </span>
       </footer>
     </div>
