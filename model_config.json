@@ -144,10 +144,10 @@
         {
             "model name": "azure openai gpt-image-2.5-flare (2026-09-08)",
             "provider": "Azure OpenAI",
-            "input token price per 1k": null,
-            "input token price per 1k with cache hit": null,
-            "image input token price per 1k": null,
-            "output token price per 1k": null,
+            "input token price per 1k": 0.005,
+            "input token price per 1k with cache hit": 0.00125,
+            "image input token price per 1k": 0.008,
+            "output token price per 1k": 0.03,
             "PTU minumum deployment unit": 100,
             "PTU scale increment": 100,
             "regional PTU minimum deployment unit": 100,
@@ -160,18 +160,22 @@
             "PTU monthly discount": 0,
             "PTU yearly discount": 0,
             "configuration notes": [
-                "PTU sizing reverified 2026-11-09: https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/provisioned-throughput-sizing#estimate-ptus-for-image-model. gpt-image-2.5-flare (2026-09-08) uses the same sizing as gpt-image-2.",
-                "Image-to-text factor = 1200 / 750 = 1.6; image output weight = 3.75 x 1.6 = 6. Raw PTUs = RPM x (text input + 1.6 x image input + 6 x image output) / 1200, before any text-cache deduction.",
+                "PTU sizing reverified 2026-11-11: https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/provisioned-throughput-sizing#estimate-ptus-for-image-model. gpt-image-2.5-flare (2026-09-08) uses the same sizing as gpt-image-2.",
+                "Image-to-text factor = 1200 / 750 = 1.6; image output weight = 3.75 x 1.6 = 6. Raw PTUs = RPM x (text input + 1.6 x image input + 6 x image output) / 1200. Image workloads receive no cache deductions.",
                 "Global, Data Zone, and Regional deployments require at least 100 PTUs and round up in 100-PTU increments.",
-                "Flare token prices could not be verified. No prices are copied from gpt-image-2; PayGO and savings are unavailable.",
-                "Use measured image tokens. PTU commitment prices remain planning assumptions, not a model-specific quote."
+                "Flare-specific Global Standard USD token prices independently verified on 2026-11-11 via https://prices.azure.com/api/retail/prices using East US 2 Image-2.5-flare meters (effective 2026-09-01).",
+                "Per million tokens: text input USD 5, cached text input USD 1.25, image input USD 8, image output USD 30. Catalog prices are per 1,000 tokens; these are not inferred from another model.",
+                "Global Standard PayGO is a benchmark independent of PTU deployment; it is not a Data Zone or Regional quote. PTU commitment prices remain planning assumptions.",
+                "Use measured totals per request. All image-model input is treated as uncached. Cached rates are reference meters only; Responses tool caching and orchestration costs are not modeled."
             ],
             "catalog model id": "gpt-image-2.5-flare",
-            "PayGO status": "unverified"
+            "PayGO pricing scope": "Global Standard",
+            "PayGO status": "available"
         },
         {
             "model name": "azure openai gpt-image-2 (2026-04-21)",
             "provider": "Azure OpenAI",
+            "PayGO pricing scope": "Global Standard",
             "input token price per 1k": 0.005,
             "input token price per 1k with cache hit": 0.00125,
             "image input token price per 1k": 0.008,
@@ -189,8 +193,9 @@
             "PTU yearly discount": 0,
             "configuration notes": [
                 "PTU sizing: supplied Microsoft Learn sizing guide updated 2026-09-11. Image-to-text factor = 1200 / 750 = 1.6; image output weight = 3.75 x 1.6 = 6.",
-                "Global Standard token prices verified via the Azure Retail Prices API on 2026-09-14: text input USD 5/M, cached text USD 1.25/M, image input USD 8/M, image output USD 30/M.",
-                "Enter measured image input/output token counts; image input caching is not modeled. No latency SLA is defined.",
+                "Global Standard token prices reverified via https://prices.azure.com/api/retail/prices on 2026-11-11 using East US 2 Image 2 meters: text input USD 5/M, cached text USD 1.25/M, image input USD 8/M, image output USD 30/M.",
+                "Global Standard PayGO is a benchmark independent of PTU deployment; it is not a Data Zone or Regional quote.",
+                "Enter measured totals per request. All image-model input is treated as uncached. Cached rates are reference meters only; Responses tool caching and orchestration costs are not modeled. No latency SLA is defined.",
                 "PTU reservation prices follow the existing catalog assumptions."
             ]
         },

@@ -356,7 +356,7 @@ export function calculatePaygoCost(
   imageCount = 0,
   cacheWriteTokens = 0,
 ): CostBreakdown | null {
-  if (cacheHitRate < 0 || cacheHitRate > 100) {
+  if (!Number.isFinite(cacheHitRate) || cacheHitRate < 0 || cacheHitRate > 100) {
     throw new Error("Cache hit rate must be between 0 and 100.");
   }
   requireNonNegative(imageInputTokens, "Image input tokens");
@@ -364,7 +364,11 @@ export function calculatePaygoCost(
 
   const monthlyRequests = rpm * MINUTES_PER_MONTH;
   const { cachedTokens: cachedInputTokens, uncachedTokens: nonCachedInputTokens } =
-    getInputTokenSplit(inputTokens, cacheHitRate, cacheWriteTokens);
+    getInputTokenSplit(
+      inputTokens,
+      usesImageTokenSizing(model) ? 0 : cacheHitRate,
+      cacheWriteTokens,
+    );
   const imagePrice = usesImageTokenSizing(model)
     ? model["image input token price per 1k"]
     : model["input token price per 1k"];
@@ -923,6 +927,7 @@ function buildExplanation(args: {
 }
 
 interface ScenarioCalculation {
+  cacheHitRate: number;
   minimumPtus: number;
   scaleIncrement: number;
   deploymentLabel: string;
@@ -946,7 +951,7 @@ function calculateScenarioValues(input: ScenarioInput): ScenarioCalculation {
   requireNonNegative(input.inputTextTokens, "Input tokens");
   requireNonNegative(input.outputTokens, "Output tokens");
   requireNonNegative(input.rpm, "RPM");
-  if (input.cacheHitRate < 0 || input.cacheHitRate > 100) {
+  if (!Number.isFinite(input.cacheHitRate) || input.cacheHitRate < 0 || input.cacheHitRate > 100) {
     throw new Error("Cache hit rate must be between 0 and 100.");
   }
   input.images.forEach((image, index) => {
@@ -954,6 +959,7 @@ function calculateScenarioValues(input: ScenarioInput): ScenarioCalculation {
     requirePositive(image.height, `Image ${index + 1} height`);
   });
   const model = getScenarioModel(input);
+  const cacheHitRate = usesImageTokenSizing(model) ? 0 : input.cacheHitRate;
   const promptLimit = model["PTU maximum prompt tokens"];
   if (promptLimit !== undefined && input.inputTextTokens + calculateImageInputTokens(input) > promptLimit) {
     throw new Error(`Provisioned prompts above ${promptLimit.toLocaleString("en-US")} tokens are not supported for this model.`);
@@ -979,7 +985,7 @@ function calculateScenarioValues(input: ScenarioInput): ScenarioCalculation {
       scaleIncrement,
       requirePositive(getDeploymentCapacity(input).inputTpmPerPtu, "Input TPM per PTU"),
       getOutputRatio(model),
-      input.cacheHitRate,
+      cacheHitRate,
       {
         inputWeights: model["PTU input token weights"],
         cacheWriteTokens: input.cacheWriteTokens,
@@ -1019,7 +1025,7 @@ function calculateScenarioValues(input: ScenarioInput): ScenarioCalculation {
     input.outputTokens,
     input.rpm,
     model,
-    input.cacheHitRate,
+    cacheHitRate,
     inputImageTokens,
     input.images.length,
     input.cacheWriteTokens,
@@ -1048,6 +1054,7 @@ function calculateScenarioValues(input: ScenarioInput): ScenarioCalculation {
         : ((paygo.totalCost - ptuPricing.discountedCost) / paygo.totalCost) * 100;
 
   return {
+    cacheHitRate,
     minimumPtus,
     scaleIncrement,
     deploymentLabel,
@@ -1066,6 +1073,7 @@ function calculateScenarioValues(input: ScenarioInput): ScenarioCalculation {
 
 export function calculateScenario(input: ScenarioInput): ComparisonResult {
   const {
+    cacheHitRate,
     minimumPtus,
     scaleIncrement,
     deploymentLabel,
@@ -1081,7 +1089,7 @@ export function calculateScenario(input: ScenarioInput): ComparisonResult {
     costSavingPercentage,
   } = calculateScenarioValues(input);
   const explanation = buildExplanation({
-    input,
+    input: { ...input, cacheHitRate },
     inputImageTokens,
     requiredPtus,
     deployedPtus: ptuPricing.deployedPtus,
@@ -1105,7 +1113,7 @@ export function calculateScenario(input: ScenarioInput): ComparisonResult {
     provider: input.model.provider,
     inputTextTokens: input.inputTextTokens,
     inputImageTokens,
-    cacheHitRate: input.cacheHitRate,
+    cacheHitRate,
     outputTokens: input.outputTokens,
     rpm: input.rpm,
     commitmentType: input.commitmentType,

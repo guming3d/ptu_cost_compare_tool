@@ -40,13 +40,13 @@ Open `http://localhost:8501`.
 
 Pricing and throughput metadata remains in `model_config.json`. The in-app catalog editor validates updates and stores them in the browser's local storage. Restoring the bundled catalog clears that local override.
 
-### GPT-image-2.5 PTU sizing
+### GPT-image-2 and GPT-image-2.5 PTU sizing
 
 Select `azure openai gpt-image-2.5-flare (2026-09-08)`, the model identity in the
 [official image-model sizing guide](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/provisioned-throughput-sizing#estimate-ptus-for-image-model),
-rechecked on 2026-11-09. It shares the existing `gpt-image-2` calculation.
+rechecked on 2026-11-11. It shares the existing `gpt-image-2` calculation.
 Enter separate average text input, image input, and image output tokens per request.
-With no text cache hits:
+All image-model inputs are treated as uncached:
 
 ```text
 Normalized TPM = RPM x (text input + 1.6 x image input + 3.75 x 1.6 x image output)
@@ -57,10 +57,46 @@ Deployable PTUs = max(100, ceil(Raw PTUs / 100) x 100)
 The 100-PTU minimum and increment apply to Global, Data Zone, and Regional deployments.
 The official example (10 RPM, 2,000 text input, 1,229 image input, and 7,024 image
 output tokens) produces 461,104 normalized TPM, about 384.25 raw PTUs, and 400
-deployable PTUs. Only cached text is deducted; image-input caching is not modeled.
-Flare PayGO prices remain unverified, so PayGO and savings are N/A; PTU commitment
-rates remain planning assumptions. If the model is missing from an older saved
-catalog, restore the bundled catalog in the catalog editor.
+deployable PTUs. The cache slider is unavailable for image models, and inherited
+cache settings do not reduce capacity or PayGO estimates. [OpenAI's cached-input
+pricing](https://developers.openai.com/api/docs/guides/image-generation#cached-input-pricing)
+does not apply to direct Images API calls. This calculator does not model
+Responses image-tool caching or the additional orchestrating model's token cost;
+OpenAI pricing eligibility does not establish Azure image-PTU cache behavior.
+
+Both models' **Global Standard USD** prices were independently verified on
+2026-11-11 using the [Azure Retail Prices API](https://prices.azure.com/api/retail/prices),
+East US 2, and their separate `Image 2` / `Image-2.5-flare` token meters: **$5/M text input,
+$1.25/M cached text, $8/M image input, and $30/M image output**.
+The catalog converts those prices to USD per 1,000 tokens; no prices are inferred
+from another model. Cached rates are retained as reference meters, not applied
+to these estimates. A workload of 3,500 text input and 300 image output tokens,
+60 RPM, no image input, and no text cache hits costs **$69,649.63/month PayGO**
+using the calculator's existing 30.42-day month. PTU commitment rates remain
+planning assumptions, and the PayGO comparison uses the stated Global Standard scope.
+That benchmark is independent of the selected PTU deployment: it is not a matching
+Data Zone or Regional quote. For example, verified GPT-image-2 Data Zone Standard
+rates are 10% higher than its Global Standard rates.
+
+Use model-specific API usage: text input comes from
+`usage.input_tokens_details.text_tokens`, image input from
+`usage.input_tokens_details.image_tokens`, and image output from the image output
+usage (`usage.output_tokens` for image-only responses). Do not enter aggregate
+`usage.input_tokens` as text and add image tokens again. Counts must total the
+entire request, including every generated image and charged partial preview.
+The common output default is not an image size/quality estimate. Equal PTU weights
+and token rates do not imply equal tokens or cost per image across models.
+OpenAI's [vision calculator](https://developers.openai.com/api/docs/guides/images-vision#gpt-image-model-inputs)
+excludes GPT Image generation/editing; use actual usage instead of legacy vision
+tile rules or another image model's token table.
+
+PTU sizing uses peak RPM, but PayGO assumes that RPM continuously for 30.42 days.
+The comparison therefore assumes peak and sustained traffic are equal; bursty
+workloads require a separate monthly-volume assessment.
+
+Browser-saved custom catalogs are preserved. If an older saved catalog is missing
+Flare or still contains its previous unverified prices, update that model's entry
+or restore the bundled catalog in the catalog editor.
 
 ### Weekly GitHub-hosted documentation updates
 
@@ -177,7 +213,7 @@ Updated the ten changed Fireworks minimums, increments, and TPM capacities. GLM 
 
 PTU support is independent of PayGO retirement. Retired PayGO or unverified applicable token prices display **N/A** for PayGO, savings, and break-even in calculations, charts, comparisons, and exports; historical rates never become current savings. `null` catalog prices mean unverified, not zero. Each new verified price records its deployment scope. Global versus Data Zone GLM 5.3 prices are applied separately and charted separately when automatic sizing is configured with a user-supplied output weight.
 
-East US 2 USD retail meters were verified through the [Azure Retail Prices API](https://prices.azure.com/api/retail/prices) for DeepSeek V4.1 Flash, GLM 5.3, Kimi K3, Nemotron 3 Ultra, Nemotron Lightning 3.5, and Azure Llama. Llama's published **4:1 PTU output weight** is independent of its 1:1 Global PayGO price ratio; cached-input prices were not verified, so comparisons using cache hits are N/A. Flare reuses image-2 **sizing**, not its prices: 1,200 text TPM/PTU, 750 image TPM/PTU, image-input weight 1.6, output weight 6, and 100-PTU minimum/increment. Flare PayGO prices remain unverified. Existing Azure OpenAI rates are retained, not newly repriced.
+East US 2 USD retail meters were verified through the [Azure Retail Prices API](https://prices.azure.com/api/retail/prices) for DeepSeek V4.1 Flash, GLM 5.3, Kimi K3, Nemotron 3 Ultra, Nemotron Lightning 3.5, and Azure Llama. Llama's published **4:1 PTU output weight** is independent of its 1:1 Global PayGO price ratio; cached-input prices were not verified, so comparisons using cache hits are N/A. Flare reuses image-2 **sizing**, not its prices: 1,200 text TPM/PTU, 750 image TPM/PTU, image-input weight 1.6, output weight 6, and 100-PTU minimum/increment. Flare-specific Global Standard PayGO meters were subsequently verified on 2026-11-09 as detailed above. Other existing Azure OpenAI rates are retained, not newly repriced.
 
 Provisioned prompts above **128,000 tokens** are rejected for GPT-5.4 and GPT-4.1/mini/nano, before deducting cached tokens; supported image-input tokens count toward this limit. Spillover routing is outside this calculator. PTU commitment prices remain **planning assumptions** ($260/month or $221/month annual equivalent), not current model-specific quotes.
 

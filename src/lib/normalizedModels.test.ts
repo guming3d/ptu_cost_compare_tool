@@ -4,6 +4,7 @@ import type { ContextMode, DeploymentType, ModelConfig, ScenarioInput } from "..
 import {
   calculateAutomaticCacheWriteTokens,
   calculateCostOptimization,
+  calculatePaygoCost,
   calculateScenario,
   MINUTES_PER_MONTH,
 } from "./calculations";
@@ -187,7 +188,10 @@ describe("GPT-6 Astra normalized token accounting", () => {
   });
 });
 
-describe("GPT-image-2 normalized token accounting", () => {
+describe.each([
+  ["GPT-image-2", image],
+  ["GPT-image-2.5-Flare", model("gpt-image-2.5-flare")],
+] as const)("%s normalized token accounting", (_name, image) => {
   const documentedWorkload = scenario(image, {
     inputTextTokens: 2000,
     imageInputTokens: 1229,
@@ -204,6 +208,7 @@ describe("GPT-image-2 normalized token accounting", () => {
       expect(result.requiredPtus).toBeCloseTo(384.2533333333);
       expect(result.deployedPtus).toBe(400);
       expect(result.ptuCost).toBe(104000);
+      expect(result.paygoPricingScope).toBe("Global Standard");
       expect(result.explanation.inputs).toMatchObject({
         imageInputWeight: 1.6,
         imageOutputWeight: 6,
@@ -240,14 +245,41 @@ describe("GPT-image-2 normalized token accounting", () => {
     },
   );
 
-  it("only deducts cached text, not image tokens", () => {
-    const result = calculateScenario({ ...documentedWorkload, cacheHitRate: 100 });
-    expect(result.normalizedTpm).toBeCloseTo(441104);
-    expect(result.paygoBreakdown?.cachedInputCost).toBeCloseTo(
-      (2000 * 0.00125 / 1000) * 10 * MINUTES_PER_MONTH,
+  it.each([50, 100])("ignores an inherited %s%% cache rate throughout image calculations", (cacheHitRate) => {
+    const input = { ...documentedWorkload, cacheHitRate };
+    const result = calculateScenario(input);
+    expect(result.normalizedTpm).toBeCloseTo(461104);
+    expect(result.requiredPtus).toBeCloseTo(384.2533333333);
+    expect(result.deployedPtus).toBe(400);
+    expect(result.cacheHitRate).toBe(0);
+    expect(result.explanation.inputs.cacheHitRate).toBe(0);
+    expect(result.paygoBreakdown?.cachedInputCost).toBe(0);
+    expect(result.paygoBreakdown?.nonCachedInputCost).toBeCloseTo(
+      (2000 * 0.005 / 1000) * 10 * MINUTES_PER_MONTH,
     );
-    expect(result.paygoBreakdown?.nonCachedInputCost).toBe(0);
-    expect(result.inputImageTokens).toBe(1229);
+    expect(result.paygoCost).toBeCloseTo(100992.842496);
+    expect(input.cacheHitRate).toBe(cacheHitRate);
+
+    for (const configuration of calculateCostOptimization(input).configurations) {
+      expect(configuration.current.requiredPtus).toBeCloseTo(result.requiredPtus);
+      expect(configuration.current.deployedPtus).toBe(400);
+      expect(configuration.current.paygoCost).toBeCloseTo(result.paygoCost!);
+    }
+
+    const paygo = calculatePaygoCost(
+      2000, 7024, 10,
+      { ...image, "input token price per 1k with cache hit": null },
+      cacheHitRate, 1229,
+    );
+    expect(paygo?.cachedInputCost).toBe(0);
+    expect(paygo?.totalCost).toBeCloseTo(result.paygoCost!);
+  });
+
+  it.each([Number.NaN, Number.POSITIVE_INFINITY])("rejects a non-finite cache rate before ignoring it (%s)", (cacheHitRate) => {
+    expect(() => calculateScenario({ ...documentedWorkload, cacheHitRate }))
+      .toThrow(/Cache hit rate/);
+    expect(() => calculatePaygoCost(2000, 7024, 10, image, cacheHitRate, 1229))
+      .toThrow(/Cache hit rate/);
   });
 
   it.each([-1, Number.NaN, Number.POSITIVE_INFINITY])("rejects image input token count %s", (imageInputTokens) => {

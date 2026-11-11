@@ -662,7 +662,7 @@ describe("October official catalog refresh", () => {
     expect(optimization.configurations.find((curve) => curve.deploymentType === "Global")?.current.requiredPtus).toBeCloseTo(21000 / 1645);
   });
 
-  it("sizes Flare with measured image tokens without copying image-2 prices", () => {
+  it("prices Flare's measured image tokens while preserving documented PTU sizing", () => {
     const result = calculateScenario(workload("azure openai gpt-image-2.5-flare (2026-09-08)", {
       imageInputTokens: 1229,
       outputTokens: 7024,
@@ -670,9 +670,53 @@ describe("October official catalog refresh", () => {
     expect(result.normalizedTpm).toBeCloseTo(461104);
     expect(result.requiredPtus).toBeCloseTo(384.253333);
     expect(result.deployedPtus).toBe(400);
-    expect(result.paygoCost).toBeNull();
-    expect(result.costSavingPercentage).toBeNull();
-    expect(result.explanation.inputs.imageInputPricePer1k).toBe("N/A");
+    expect(result.paygoCost).toBeCloseTo(100992.842496);
+    expect(result.costSavingPercentage).toBeCloseTo(
+      (100992.842496 - 104000) / 100992.842496 * 100,
+    );
+    expect(result.explanation.inputs.imageInputPricePer1k).toBe(0.008);
+  });
+
+  it.each([
+    [0, 0, 69649.632, 300],
+    [50, 1000, 90675.936, 400],
+  ] as const)("estimates uncached Flare PayGO despite a %s%% cache setting with %s image input tokens", (cacheHitRate, imageInputTokens, paygoCost, deployedPtus) => {
+    const input = workload("azure openai gpt-image-2.5-flare (2026-09-08)", {
+      inputTextTokens: 3500,
+      outputTokens: 300,
+      rpm: 60,
+      cacheHitRate,
+      imageInputTokens,
+    });
+    const result = calculateScenario(input);
+
+    expect(result.paygoCost).toBeCloseTo(paygoCost);
+    expect(result.paygoPricingScope).toBe("Global Standard");
+    expect(result.deployedPtus).toBe(deployedPtus);
+    expect(result.ptuCost).toBe(deployedPtus * 260);
+    expect(result.costSavingPercentage).toBeCloseTo(
+      (paygoCost - result.ptuCost) / paygoCost * 100,
+    );
+    for (const curve of calculateCostOptimization(input).configurations) {
+      expect(curve.current.paygoCost).toBeCloseTo(paygoCost);
+      expect(curve.current.savingsPercentage).not.toBeNull();
+      expect(curve.points.every((point) => point.paygoCost !== null)).toBe(true);
+    }
+  });
+
+  it("keeps unverified or incomplete custom Flare pricing unavailable", () => {
+    const selectedModel = model("azure openai gpt-image-2.5-flare (2026-09-08)");
+    for (const changes of [
+      { "PayGO status": "unverified" as const },
+      { "image input token price per 1k": null },
+    ]) {
+      const result = calculateScenario(workload(selectedModel["model name"], {
+        model: { ...selectedModel, ...changes },
+        imageInputTokens: 1000,
+      }));
+      expect(result.paygoCost).toBeNull();
+      expect(result.costSavingPercentage).toBeNull();
+    }
   });
 
   it("uses Azure Llama's documented 4:1 output weight, not its 1:1 PayGO price ratio", () => {

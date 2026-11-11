@@ -151,6 +151,12 @@ export function CalculatorForm({
         ) : selectedModel["PayGO status"] === "unverified" ? (
           <span className="field-hint">{text.paygoUnavailable}</span>
         ) : null}
+        {isImageModel ? (
+          <span className="field-hint">
+            {text.imagePaygoScopeHint}{" "}
+            {selectedModel["PayGO pricing scope"] ?? text.unverifiedPaygoScope}
+          </span>
+        ) : null}
         {selectedModel["PTU maximum prompt tokens"] ? (
           <span className="field-hint">{text.promptLimit} {selectedModel["PTU maximum prompt tokens"].toLocaleString(locale)}</span>
         ) : null}
@@ -212,26 +218,31 @@ export function CalculatorForm({
         label={text.rpm}
         value={rpm}
         onChange={onRpmChange}
+        hint={text.rpmHint}
       />
 
-      <label className="field">
-        <span className="field-label">
-          {isImageModel ? text.textCacheHitRate : text.cacheHitRate} <strong>{cacheHitRate}%</strong>
-        </span>
-        <input
-          className="range-input"
-          type="range"
-          min="0"
-          max="100"
-          step="1"
-          value={cacheHitRate}
-          onChange={(event) => onCacheHitRateChange(Number(event.target.value))}
-        />
-        <span className="range-scale">
-          <span>0%</span>
-          <span>100%</span>
-        </span>
-      </label>
+      {isImageModel ? (
+        <span className="field-hint">{text.imageCacheHint}</span>
+      ) : (
+        <label className="field">
+          <span className="field-label">
+            {text.cacheHitRate} <strong>{cacheHitRate}%</strong>
+          </span>
+          <input
+            className="range-input"
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            value={cacheHitRate}
+            onChange={(event) => onCacheHitRateChange(Number(event.target.value))}
+          />
+          <span className="range-scale">
+            <span>0%</span>
+            <span>100%</span>
+          </span>
+        </label>
+      )}
 
       {deployments.length > 1 || deployments[0] !== "Global" ? (
         <label className="field">
