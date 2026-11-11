@@ -130,7 +130,12 @@ describe("model-specific workload controls", () => {
       expect(html).toContain(text.textInputTokens);
       expect(html).toContain(text.imageInputTokens);
       expect(html).toContain(text.imageOutputTokens);
-      expect(html).toContain(text.textCacheHitRate);
+      expect(html).not.toContain('type="range"');
+      expect(html).toContain("Global Standard");
+      expect(html).toContain(text.imageCacheHint);
+      expect(html).toContain(text.imagePaygoScopeHint);
+      expect(html).toContain(text.imageTokenHint);
+      expect(html).toContain(text.rpmHint);
       expect(html).toContain('value="1229"');
       expect(html).toContain('value="7024"');
       expect(html).not.toContain(renderToStaticMarkup(
@@ -155,6 +160,7 @@ describe("model-specific workload controls", () => {
       expect(html).not.toContain(text.textInputTokens);
       expect(html).toContain(text.inputTokens);
       expect(html).toContain(text.outputTokens);
+      expect(html).toContain('type="range"');
     }
   });
 
@@ -210,7 +216,7 @@ describe("model-specific workload controls", () => {
     expect(renderForm("azure Llama-3.3", language)).not.toContain('value="Regional"');
     const flare = renderForm("gpt-image-2.5-flare", language);
     expect(flare).toContain(text.imageInputTokens);
-    expect(flare).toContain(text.paygoUnavailable);
+    expect(flare).not.toContain(text.paygoUnavailable);
     expect(renderForm("DeepSeek v3.2", language)).toContain(text.paygoRetired);
     expect(renderForm("gpt-4.1 (", language)).toContain(text.promptLimit);
   });
