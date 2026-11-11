@@ -66,6 +66,13 @@ function renderForm(
 }
 
 describe("model-specific workload controls", () => {
+  it("links the GitHub repository beside the footer contact address", () => {
+    const footer = renderToStaticMarkup(<App />).match(/<footer>.*?<\/footer>/s)?.[0];
+    expect(footer).toContain(
+      '<a href="mailto:minggu@microsoft.com">minggu@microsoft.com</a> | <a href="https://github.com/guming3d/ptu_cost_compare_tool" target="_blank" rel="noreferrer">GitHub</a>',
+    );
+  });
+
   it("defaults the app to automatically calculated cache writes", () => {
     const text = getUiText("en").calculator;
     const html = renderToStaticMarkup(<App />);
