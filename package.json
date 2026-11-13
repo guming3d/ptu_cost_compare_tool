@@ -11,10 +11,12 @@
     "typecheck": "tsc -b --pretty false"
   },
   "dependencies": {
+    "katex": "^0.19.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },
   "devDependencies": {
+    "@types/katex": "^0.16.8",
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",
     "@vitejs/plugin-react": "^5.0.2",

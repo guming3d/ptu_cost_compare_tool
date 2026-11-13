@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type {
   CommitmentType,
   ContextMode,
@@ -50,6 +51,7 @@ interface CalculatorFormProps {
   onAdd: () => void;
   onClear: () => void;
   hasResults: boolean;
+  mode?: "estimation" | "comparison";
   language: Language;
 }
 
@@ -98,9 +100,36 @@ export function CalculatorForm({
   onAdd,
   onClear,
   hasResults,
+  mode = "comparison",
   language,
 }: CalculatorFormProps) {
   const text = getUiText(language).calculator;
+  const guideText = getUiText(language).guide;
+  const [guideOpen, setGuideOpen] = useState(() => {
+    try {
+      return typeof window === "undefined" || window.localStorage.getItem("ptu-guide-dismissed") !== "true";
+    } catch {
+      return true;
+    }
+  });
+  const [guideStep, setGuideStep] = useState(0);
+  const guideTargets = ["model-select", "input-tokens", "requests-per-minute", "target-ptu-result"];
+  const guideSteps = [
+    { title: guideText.modelTitle, description: guideText.modelDescription },
+    { title: guideText.tokensTitle, description: guideText.tokensDescription },
+    { title: guideText.trafficTitle, description: guideText.trafficDescription },
+    { title: guideText.resultTitle, description: guideText.resultDescription },
+  ];
+  const toggleGuide = (open: boolean) => {
+    setGuideOpen(open);
+    if (open) setGuideStep(0);
+    try {
+      if (open) window.localStorage.removeItem("ptu-guide-dismissed");
+      else window.localStorage.setItem("ptu-guide-dismissed", "true");
+    } catch {
+      // The guide still works when browser storage is unavailable.
+    }
+  };
   const locale = getLocale(language);
   const deployments = getAvailableDeployments(selectedModel);
   const capacity = selectedModel["PTU deployments"]?.[deploymentType]?.inputTpmPerPtu ?? selectedModel["input TPM per PTU"];
@@ -131,11 +160,52 @@ export function CalculatorForm({
     <aside className="calculator-card" aria-label={text.ariaLabel}>
       <div className="section-heading">
         <h2>{text.heading}</h2>
+        {mode === "estimation" && !guideOpen ? (
+          <button className="guide-reopen" type="button" onClick={() => toggleGuide(true)}>
+            {guideText.reopen}
+          </button>
+        ) : null}
       </div>
+
+      {mode === "estimation" && guideOpen ? (
+        <div className="usage-guide" aria-label={guideText.title}>
+          <div className="usage-guide-heading">
+            <strong>{guideText.title}</strong>
+            <button type="button" onClick={() => toggleGuide(false)}>{guideText.dismiss}</button>
+          </div>
+          <p className="usage-guide-progress">
+            {guideText.step} {guideStep + 1} {guideText.of} {guideSteps.length}
+          </p>
+          <div aria-live="polite">
+            <h3>{guideSteps[guideStep].title}</h3>
+            <p>{guideSteps[guideStep].description}</p>
+          </div>
+          <div className="usage-guide-actions">
+            <button
+              className="button button-secondary button-small"
+              type="button"
+              onClick={() => document.getElementById(guideTargets[guideStep])?.focus()}
+            >
+              {guideText.goToStep}
+            </button>
+            {guideStep > 0 ? (
+              <button type="button" onClick={() => setGuideStep(guideStep - 1)}>{guideText.back}</button>
+            ) : null}
+            <button type="button" onClick={() =>
+              guideStep === guideSteps.length - 1
+                ? toggleGuide(false)
+                : setGuideStep(guideStep + 1)
+            }>
+              {guideStep === guideSteps.length - 1 ? guideText.finish : guideText.next}
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <label className="field">
         <span className="field-label">{text.model}</span>
         <select
+          id="model-select"
           value={selectedModelName}
           onChange={(event) => onModelChange(event.target.value)}
         >
@@ -164,6 +234,7 @@ export function CalculatorForm({
 
       <div className="field-grid">
         <NumberField
+          id="input-tokens"
           label={isImageModel ? text.textInputTokens : text.inputTokens}
           value={inputTextTokens}
           onChange={onInputTextTokensChange}
@@ -215,6 +286,7 @@ export function CalculatorForm({
       ) : null}
 
       <NumberField
+        id="requests-per-minute"
         label={text.rpm}
         value={rpm}
         onChange={onRpmChange}
@@ -392,46 +464,50 @@ export function CalculatorForm({
         </div>
       )}
 
-      <div className="estimate-panel" aria-live="polite">
-        <div>
-          <span>{text.requiredCapacity}</span>
-          <strong>
-            {preview ? preview.requiredPtus.toFixed(2) : "--"}{" "}
-            <small>PTUs</small>
-          </strong>
+      {mode === "comparison" ? (
+        <div className="estimate-panel" aria-live="polite">
+          <div>
+            <span>{text.requiredCapacity}</span>
+            <strong>
+              {preview ? preview.requiredPtus.toFixed(2) : "--"}{" "}
+              <small>PTUs</small>
+            </strong>
+          </div>
+          <div>
+            <span>{text.deployableCapacity}</span>
+            <strong>
+              {preview ? preview.deployedPtus.toFixed(0) : "--"}{" "}
+              <small>PTUs</small>
+            </strong>
+          </div>
+          {preview?.normalizedTpm !== undefined ? (
+            <p>
+              {preview.normalizedTpm.toLocaleString(locale, {
+                maximumFractionDigits: 0,
+              })}{" "}
+              {text.normalizedTpm}
+            </p>
+          ) : null}
         </div>
-        <div>
-          <span>{text.deployableCapacity}</span>
-          <strong>
-            {preview ? preview.deployedPtus.toFixed(0) : "--"}{" "}
-            <small>PTUs</small>
-          </strong>
-        </div>
-        {preview?.normalizedTpm !== undefined ? (
-          <p>
-            {preview.normalizedTpm.toLocaleString(locale, {
-              maximumFractionDigits: 0,
-            })}{" "}
-            {text.normalizedTpm}
-          </p>
-        ) : null}
-      </div>
+      ) : null}
 
       {error ? <p className="form-error">{localizeExplanationText(error, language)}</p> : null}
 
-      <div className="button-row">
-        <button className="button button-primary" type="button" onClick={onAdd}>
-          {text.addComparison}
-        </button>
-        <button
-          className="button button-secondary"
-          type="button"
-          onClick={onClear}
-          disabled={!hasResults}
-        >
-          {text.clear}
-        </button>
-      </div>
+      {mode === "comparison" ? (
+        <div className="button-row">
+          <button className="button button-primary" type="button" onClick={onAdd}>
+            {text.addComparison}
+          </button>
+          <button
+            className="button button-secondary"
+            type="button"
+            onClick={onClear}
+            disabled={!hasResults}
+          >
+            {text.clear}
+          </button>
+        </div>
+      ) : null}
     </aside>
   );
 }

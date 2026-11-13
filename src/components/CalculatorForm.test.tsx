@@ -9,6 +9,7 @@ import { NumberField } from "./NumberField";
 import { CostOptimizer } from "./CostOptimizer";
 import { ResultsTable } from "./ResultsTable";
 import { CatalogEditor } from "./CatalogEditor";
+import { PtuEstimationPanel } from "./PtuEstimationPanel";
 import { calculateCostOptimization, calculateScenario } from "../lib/calculations";
 import { exportResultsToExcel } from "../lib/exportExcel";
 
@@ -241,6 +242,8 @@ describe("model-specific workload controls", () => {
     );
     const table = renderToStaticMarkup(<ResultsTable results={[result]} onRemove={() => {}} language={language} />);
     expect(optimizer).toContain(getUiText(language).optimizer.paygoUnavailable);
+    expect(optimizer).toContain(getUiText(language).optimizer.rankingTitle);
+    expect(optimizer).not.toContain(getUiText(language).optimizer.paygoReference);
     expect(optimizer).not.toContain('class="paygo-line"');
     expect(optimizer).not.toContain("NaN");
     expect(optimizer).not.toContain("Infinity");
@@ -295,4 +298,126 @@ describe("model-specific workload controls", () => {
       vi.unstubAllGlobals();
     }
   });
+
+  it("opens on live PTU estimation without form submit buttons or PayGO comparison clutter", () => {
+    const ui = getUiText("en");
+    const html = renderToStaticMarkup(<App />);
+    expect(html).toContain(ui.workspace.estimationTab);
+    expect(html).toContain(ui.workspace.comparisonTab);
+    expect(html).toContain('id="workspace-tab-estimation" class="workspace-tab active"');
+    expect(html).toContain(ui.estimation.targetPtus);
+    expect(html).toContain(ui.estimation.backendCalculationTitle);
+    expect(html).toContain(ui.guide.title);
+    expect(html).toContain(ui.guide.modelTitle);
+    expect(html).toContain('id="model-select"');
+    expect(html.indexOf(ui.estimation.backendCalculationTitle))
+      .toBeLessThan(html.indexOf(ui.normalization.title));
+    expect(html).not.toContain(ui.optimizer.title);
+    expect(html).not.toContain(ui.results.emptyTitle);
+    const aside = html.match(/<aside.*?<\/aside>/s)?.[0] ?? "";
+    expect(aside).not.toContain(ui.calculator.addComparison);
+  });
+
+  it.each(["en", "zh-CN"] satisfies Language[])(
+    "renders live backend PTU sizing steps for standard models while excluding PayGO-only steps in %s",
+    (language) => {
+      const ui = getUiText(language);
+      const selectedModel = bundledCatalog.models.find((entry) =>
+        entry["model name"].includes("GPT-4o-mini"),
+      )!;
+      const result = calculateScenario({
+        model: selectedModel,
+        inputTextTokens: 3500,
+        outputTokens: 300,
+        rpm: 60,
+        cacheHitRate: 25,
+        images: [],
+        commitmentType: "Monthly",
+        deploymentType: "Global / Data Zone",
+      });
+      const html = renderToStaticMarkup(
+        <PtuEstimationPanel
+          model={selectedModel}
+          result={result}
+          error={null}
+          cacheWriteOverride={false}
+          sourceUrl={bundledCatalog.metadata["ptu sizing source"]}
+          comparisonCount={2}
+          justAdded={true}
+          onAddComparison={() => {}}
+          onOpenComparison={() => {}}
+          language={language}
+        />,
+      );
+      expect(html).toContain(ui.estimation.targetPtus);
+      expect(html).toContain(ui.estimation.backendCalculationTitle);
+      expect(html).toContain(ui.estimation.savedFeedback);
+      expect(html).toContain('<span class="count-badge">2</span>');
+      const calculationCard =
+        html.match(/<section class="content-card live-calculation-card">.*?<\/section>/s)?.[0] ?? "";
+      expect(calculationCard).toContain("target-ptu-step");
+      expect(calculationCard).toContain(ui.estimation.flowWorkload);
+      expect(calculationCard).toContain(ui.estimation.flowDemand);
+      expect(calculationCard).toContain(ui.estimation.flowDeployment);
+      expect(calculationCard).toContain(
+        `${result.deployedPtus.toLocaleString(language === "en" ? "en-US" : "zh-CN")} PTUs`,
+      );
+      expect(calculationCard).toContain(`<summary>${ui.estimation.showCalculationSteps}</summary>`);
+      expect(calculationCard).toContain(ui.estimation.stepRequiredPtus);
+      expect(calculationCard).toContain('class="formula-block"');
+      expect(calculationCard).toContain('<code>');
+      expect(calculationCard).not.toContain("PayGO");
+      expect(calculationCard).not.toContain("inputPricePer1k");
+    },
+  );
+
+  it("ranks current PTU costs while keeping the traffic chart available on demand", () => {
+    const model = bundledCatalog.models.find((entry) =>
+      entry["model name"].includes("GPT-4o-mini"),
+    )!;
+    const input = {
+      model, inputTextTokens: 3500, outputTokens: 300, rpm: 60,
+      cacheHitRate: 25, images: [], commitmentType: "Monthly" as const,
+      deploymentType: "Global / Data Zone" as const,
+    };
+    const optimization = calculateCostOptimization(input);
+    const html = renderToStaticMarkup(
+      <CostOptimizer optimization={optimization} currentRpm={60} language="en" />,
+    );
+    const ranking = html.match(/<ol>.*?<\/ol>/s)?.[0] ?? "";
+    const costs = [...ranking.matchAll(/<strong>\$([\d,]+)<small> \/ month<\/small><\/strong>/g)]
+      .map((match) => Number(match[1].replaceAll(",", "")));
+    expect(costs).toHaveLength(optimization.configurations.length);
+    expect(costs).toEqual([...costs].sort((a, b) => a - b));
+    expect(ranking).toContain("ranking-best");
+    expect(html).toContain(`<summary>${getUiText("en").optimizer.showTrafficChart}</summary>`);
+    expect(html).toContain(getUiText("en").optimizer.paygoReference);
+  });
+
+  it.each(["en", "zh-CN"] satisfies Language[])(
+    "explains missing manual PTU benchmark inputs in the estimation view in %s",
+    (language) => {
+      const ui = getUiText(language);
+      const glm = bundledCatalog.models.find(
+        (entry) => entry["model name"] === "FW-GLM-5.3",
+      )!;
+      const html = renderToStaticMarkup(
+        <PtuEstimationPanel
+          model={glm}
+          result={null}
+          error="Benchmarked required PTUs must be a positive number."
+          cacheWriteOverride={false}
+          sourceUrl={bundledCatalog.metadata["ptu sizing source"]}
+          comparisonCount={0}
+          justAdded={false}
+          onAddComparison={() => {}}
+          onOpenComparison={() => {}}
+          language={language}
+        />,
+      );
+      expect(html).toContain('role="alert"');
+      expect(html).toContain(ui.estimation.unavailableTitle);
+      expect(html).not.toContain("<ol");
+    },
+  );
 });

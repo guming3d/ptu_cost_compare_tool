@@ -125,6 +125,13 @@ export function CostOptimizer({
     .sort((left, right) => left - right);
   const currentMarkerX = x(Math.min(currentRpm, optimization.maxRpm));
   const savingsAmount = Math.abs(best.current.savings ?? 0);
+  const rankedConfigurations = [...optimization.configurations].sort(
+    (left, right) => left.current.ptuCost - right.current.ptuCost,
+  );
+  const maximumCurrentCost = Math.max(
+    ...rankedConfigurations.map((configuration) => configuration.current.ptuCost),
+    1,
+  );
 
   return (
     <section className="content-card optimizer-card" aria-label={text.ariaLabel}>
@@ -162,6 +169,36 @@ export function CostOptimizer({
         </div>
       </div>
 
+      <div className="configuration-ranking">
+        <h3>{text.rankingTitle}</h3>
+        <p>{text.rankingDescription} {currentRpm.toLocaleString(locale)} RPM.</p>
+        <ol>
+          {rankedConfigurations.map((configuration) => (
+            <li key={configuration.id} className={configuration.id === best.id ? "ranking-best" : undefined}>
+              <div className="ranking-label">
+                <strong>{configurationLabel(configuration, language)}</strong>
+                {configuration.id === best.id ? <span>{text.bestBadge}</span> : null}
+                <small>{configuration.current.deployedPtus.toLocaleString(locale)} PTUs</small>
+              </div>
+              <div className="ranking-measure">
+                <div className="ranking-track" aria-hidden="true">
+                  <span style={{ width: `${(configuration.current.ptuCost / maximumCurrentCost) * 100}%` }} />
+                </div>
+                <strong>{currency.format(configuration.current.ptuCost)}<small> {text.perMonth}</small></strong>
+              </div>
+            </li>
+          ))}
+        </ol>
+        {best.current.paygoCost !== null ? (
+          <p className="ranking-paygo">
+            {text.paygoReference}: <strong>{currency.format(best.current.paygoCost)} {text.perMonth}</strong>
+          </p>
+        ) : null}
+      </div>
+
+      <details className="traffic-chart-details">
+        <summary>{text.showTrafficChart}</summary>
+        <p>{text.trafficChartDescription}</p>
       <div className="cost-chart-scroll">
         <svg
           className="cost-chart"
@@ -277,6 +314,7 @@ export function CostOptimizer({
           </div>
         ))}
       </div>
+      </details>
       <details className="cost-data">
         <summary>{text.dataTable}</summary>
         <div className="table-scroll">
