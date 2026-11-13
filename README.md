@@ -40,6 +40,19 @@ Open `http://localhost:8501`.
 
 Pricing and throughput metadata remains in `model_config.json`. The in-app catalog editor validates updates and stores them in the browser's local storage. Restoring the bundled catalog clears that local override.
 
+### GPT-6 Luna sizing (November 13, 2026)
+
+`azure openai gpt-6-luna (2026-09-22)` uses the [normalized-token sizing method](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/provisioned-throughput-sizing#convert-normalized-tokens-to-ptus):
+**59,400 normalized TPM per PTU**, a **15-PTU minimum**, and **5-PTU increments** for Global, Data Zone, and Regional deployments.
+Short-context weights for ordinary input, cached input, cache writes, and output are **1 / 0.1 / 1.25 / 5**; long-context weights are **2 / 0.2 / 2.5 / 7.5**.
+Split input into disjoint buckets, multiply each by its weight and RPM, divide by 59,400, then round up to a supported deployment size.
+The existing context selector, automatic/manual cache writes, live normalization panel, and optimizer apply to Luna.
+
+Luna-specific **Global Standard USD** prices were verified using the [Azure Retail Prices API](https://prices.azure.com/api/retail/prices), East US 2 `6-luna ShortCo/LongCo Std Gl` meters (effective September 1, 2026).
+Per million tokens, ordinary input / cached input / default cache write / output cost **$0.10 / $0.01 / $0.125 / $0.50** for short context and **$0.20 / $0.02 / $0.25 / $0.75** for long context.
+Extended cache-write retention is not modeled. Global Standard PayGO is an independent benchmark, not a Data Zone or Regional quote; PTU commitment rates retain the existing planning assumptions.
+Other model entries and the catalog-wide verification date are unchanged. Browser-saved custom catalogs are preserved; use **Restore bundled catalog** if Luna is missing.
+
 ### GPT-image-2 and GPT-image-2.5 PTU sizing
 
 Select `azure openai gpt-image-2.5-flare (2026-09-08)`, the model identity in the

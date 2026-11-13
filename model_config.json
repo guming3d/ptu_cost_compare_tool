@@ -102,6 +102,53 @@
             ]
         },
         {
+            "model name": "azure openai gpt-6-luna (2026-09-22)",
+            "provider": "Azure OpenAI",
+            "catalog model id": "gpt-6-luna",
+            "PayGO pricing scope": "Global Standard",
+            "PayGO status": "available",
+            "output token multiple ratio": 5,
+            "input token price per 1k": 0.0001,
+            "input token price per 1k with cache hit": 0.00001,
+            "cache write token price per 1k": 0.000125,
+            "output token price per 1k": 0.0005,
+            "PTU input token weights": {
+                "uncached": 1,
+                "cached": 0.1,
+                "cacheWrite": 1.25
+            },
+            "long context": {
+                "output token multiple ratio": 7.5,
+                "input token price per 1k": 0.0002,
+                "input token price per 1k with cache hit": 0.00002,
+                "cache write token price per 1k": 0.00025,
+                "output token price per 1k": 0.00075,
+                "PTU input token weights": {
+                    "uncached": 2,
+                    "cached": 0.2,
+                    "cacheWrite": 2.5
+                }
+            },
+            "PTU minumum deployment unit": 15,
+            "PTU scale increment": 5,
+            "regional PTU minimum deployment unit": 15,
+            "regional PTU scale increment": 5,
+            "input TPM per PTU": 59400,
+            "PTU price of monthly commitment": 260,
+            "PTU price of yearly commitment": 221,
+            "PTU monthly discount": 0,
+            "PTU yearly discount": 0,
+            "configuration notes": [
+                "PTU sizing and normalized token weights verified on 2026-11-13: https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/provisioned-throughput-sizing#convert-normalized-tokens-to-ptus",
+                "Each PTU supplies 59,400 normalized tokens per minute. Global, Data Zone, and Regional deployments require at least 15 PTUs and round up in 5-PTU increments.",
+                "Assign each input token once to ordinary input, cache read, or cache write. All weights use the short-context input price as the baseline. Select the applicable context tier explicitly.",
+                "Global Standard USD token prices independently verified on 2026-11-13 via https://prices.azure.com/api/retail/prices using East US 2 Azure OpenAI GPT6 6-luna ShortCo/LongCo Std Gl meters (effective 2026-09-01).",
+                "Per million tokens, short context: input USD 0.10, cached input USD 0.01, default cache write USD 0.125, output USD 0.50. Long context: input USD 0.20, cached input USD 0.02, default cache write USD 0.25, output USD 0.75. Extended cache-write retention is not modeled.",
+                "Global Standard PayGO is a benchmark independent of PTU deployment; it is not a Data Zone or Regional quote. PTU commitment prices remain planning assumptions.",
+                "Published latency target: 99% > 100 TPS. Other model entries and the catalog-wide verification date are unchanged."
+            ]
+        },
+        {
             "model name": "azure openai gpt-6-astra (2026-09-03)",
             "provider": "Azure OpenAI",
             "output token multiple ratio": 5,

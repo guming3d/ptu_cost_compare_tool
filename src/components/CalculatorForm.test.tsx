@@ -92,7 +92,7 @@ describe("model-specific workload controls", () => {
     "offers automatic cache writes only after a manual override in %s",
     (language) => {
       const text = getUiText(language).calculator;
-      for (const name of ["gpt-6-astra", "gpt-6-sol", "gpt-6.1-sol"]) {
+      for (const name of ["gpt-6-astra", "gpt-6-sol", "gpt-6.1-sol", "gpt-6-luna"]) {
         expect(renderForm(name, language)).toContain(renderToStaticMarkup(
           <span className="field-hint">{text.cacheWriteHint}</span>,
         ));
@@ -116,9 +116,9 @@ describe("model-specific workload controls", () => {
     expect(html).not.toContain(text.imageInputTokens);
   });
 
-  it.each(["en", "zh-CN"] satisfies Language[])("shows Sol context controls with the shared price baseline in %s", (language) => {
+  it.each(["en", "zh-CN"] satisfies Language[])("shows Sol and Luna context controls with the shared price baseline in %s", (language) => {
     const text = getUiText(language).calculator;
-    for (const name of ["gpt-6-sol", "gpt-6.1-sol"]) {
+    for (const name of ["gpt-6-sol", "gpt-6.1-sol", "gpt-6-luna"]) {
       const html = renderForm(name, language);
       expect(html).toContain(text.contextMode);
       expect(html).toContain(text.cacheWriteTokens);
