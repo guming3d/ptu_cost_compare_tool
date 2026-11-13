@@ -73,6 +73,8 @@ describe("live token normalization panel", () => {
     ["gpt-6-astra", "long", 0.2, 2.5, 7.5],
     ["gpt-6-sol", "short", 0.1, 1.25, 5],
     ["gpt-6-sol", "long", 0.2, 2.5, 7.5],
+    ["gpt-6-luna", "short", 0.1, 1.25, 5],
+    ["gpt-6-luna", "long", 0.2, 2.5, 7.5],
     ["gpt-6.1-sol", "short", 0.05, 1.25, 5],
     ["gpt-6.1-sol", "long", 0.1, 2.5, 7.5],
   ] satisfies [string, ContextMode, number, number, number][])(

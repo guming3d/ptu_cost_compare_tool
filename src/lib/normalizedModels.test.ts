@@ -21,6 +21,7 @@ const astra = model("gpt-6-astra");
 const image = model("gpt-image-2 (");
 const sol = model("gpt-6-sol");
 const sol61 = model("gpt-6.1-sol");
+const luna = model("gpt-6-luna");
 
 function scenario(selectedModel: ModelConfig, changes: Partial<ScenarioInput> = {}): ScenarioInput {
   return {
@@ -48,7 +49,7 @@ describe("automatic cache-write estimates", () => {
     expect(calculateAutomaticCacheWriteTokens(inputTokens, cacheHitRate)).toBe(expected);
   });
 
-  it.each(["gpt-6-astra", "gpt-6-sol", "gpt-6.1-sol"])(
+  it.each(["gpt-6-astra", "gpt-6-sol", "gpt-6.1-sol", "gpt-6-luna"])(
     "uses disjoint cache buckets for automatic writes on %s at every cache-hit rate",
     (name) => {
       const selectedModel = model(name);
@@ -423,6 +424,88 @@ describe.each([
   });
 });
 
+describe("GPT-6 Luna normalized sizing", () => {
+  it.each([
+    ["short", 1000, 0, 0, 0, 1000],
+    ["short", 1000, 100, 0, 0, 100],
+    ["short", 1000, 0, 1000, 0, 1250],
+    ["short", 0, 0, 0, 1000, 5000],
+    ["long", 1000, 0, 0, 0, 2000],
+    ["long", 1000, 100, 0, 0, 200],
+    ["long", 1000, 0, 1000, 0, 2500],
+    ["long", 0, 0, 0, 1000, 7500],
+  ] satisfies [ContextMode, number, number, number, number, number][])(
+    "normalizes %s context with input %s, cache rate %s, writes %s, output %s",
+    (contextMode, inputTextTokens, cacheHitRate, cacheWriteTokens, outputTokens, normalizedTpm) => {
+      const result = calculateScenario(scenario(luna, {
+        contextMode, inputTextTokens, cacheHitRate, cacheWriteTokens, outputTokens, rpm: 1,
+      }));
+      expect(result.normalizedTpm).toBe(normalizedTpm);
+      expect(result.requiredPtus).toBeCloseTo(normalizedTpm / 59400);
+      expect(result.deployedPtus).toBe(15);
+    },
+  );
+
+  it.each(["short", "long"] satisfies ContextMode[])(
+    "sizes and prices disjoint %s-context buckets through the optimizer",
+    (contextMode) => {
+      expect(isCatalogDocument({ ...bundledCatalog, models: [luna] })).toBe(true);
+      const input = scenario(luna, { contextMode, cacheWriteTokens: 200, rpm: 1000 });
+      const result = calculateScenario(input);
+      const isLong = contextMode === "long";
+      const normalizedTpm = isLong ? 1950000 : 1100000;
+      const costPerRequest = isLong ? 0.000195 : 0.00011;
+      expect(result.normalizedTpm).toBe(normalizedTpm);
+      expect(result.requiredPtus).toBeCloseTo(normalizedTpm / 59400);
+      expect(result.deployedPtus).toBe(isLong ? 35 : 20);
+      expect(result.ptuCost).toBe((isLong ? 35 : 20) * 260);
+      expect(result.paygoCost).toBeCloseTo(costPerRequest * 1000 * MINUTES_PER_MONTH);
+      expect(result.paygoPricingScope).toBe("Global Standard");
+      expect(result.paygoBreakdown?.cacheWriteCost).toBeCloseTo(
+        200 * (isLong ? 0.00025 : 0.000125) * MINUTES_PER_MONTH,
+      );
+      expect(result.explanation.inputs).toMatchObject({
+        contextMode,
+        cachedInputWeight: isLong ? 0.2 : 0.1,
+        cacheWriteTokens: 200,
+        outputWeight: isLong ? 7.5 : 5,
+      });
+      expect(result.explanation.steps.find((step) => step.output === "Normalized TPM")?.result)
+        .toBe(normalizedTpm);
+      const optimization = calculateCostOptimization(input);
+      expect(optimization.configurations).toHaveLength(4);
+      for (const configuration of optimization.configurations) {
+        expect(configuration.current.requiredPtus).toBeCloseTo(result.requiredPtus);
+        expect(configuration.current.deployedPtus).toBe(result.deployedPtus);
+        expect(configuration.current.paygoCost).toBeCloseTo(result.paygoCost!);
+        expect(configuration.current.ptuCost).toBe(
+          result.deployedPtus * (configuration.commitmentType === "Monthly" ? 260 : 221),
+        );
+      }
+    },
+  );
+
+  it.each(["Global / Data Zone", "Regional"] satisfies DeploymentType[])(
+    "rounds %s deployment sizes above the minimum and a scale boundary",
+    (deploymentType) => {
+      for (const [inputTextTokens, deployedPtus] of [
+        [0, 15], [59400 * 15, 15], [59400 * 15 + 1, 20], [59400 * 20 + 1, 25],
+      ]) {
+        const result = calculateScenario(scenario(luna, {
+          deploymentType, inputTextTokens, outputTokens: 0, cacheHitRate: 0, rpm: 1,
+        }));
+        expect(result.requiredPtus).toBeCloseTo(inputTextTokens / 59400);
+        expect(result.deployedPtus).toBe(deployedPtus);
+      }
+    },
+  );
+
+  it("rejects overlapping cache reads and writes", () => {
+    expect(() => calculateScenario(scenario(luna, { cacheWriteTokens: 501 })))
+      .toThrow("Cache reads and writes cannot exceed total input tokens.");
+  });
+});
+
 describe("normalized model catalog configuration", () => {
   it("loads both new dated entries with the current catalog verification", () => {
     expect(isCatalogDocument(bundledCatalog)).toBe(true);
@@ -461,7 +544,7 @@ describe("normalized model catalog configuration", () => {
   });
 
   it("does not enable normalized cache accounting for existing models", () => {
-    for (const entry of bundledCatalog.models.filter((item) => ![astra, image, sol, sol61].includes(item) && !item["model name"].includes("gpt-image-2.5-flare"))) {
+    for (const entry of bundledCatalog.models.filter((item) => ![astra, image, sol, sol61, luna].includes(item) && !item["model name"].includes("gpt-image-2.5-flare"))) {
       expect(entry["PTU input token weights"]).toBeUndefined();
       expect(entry["long context"]).toBeUndefined();
       expect(entry["image input TPM per PTU"]).toBeUndefined();
@@ -478,7 +561,7 @@ describe("normalized model catalog configuration", () => {
   });
 
   describe("shared normalization breakdown", () => {
-    it.each(["gpt-6-astra", "gpt-6-sol", "gpt-6.1-sol"])(
+    it.each(["gpt-6-astra", "gpt-6-sol", "gpt-6.1-sol", "gpt-6-luna"])(
       "matches the guide's short-context price baseline for every %s category",
       (name) => {
         const selectedModel = model(name);
@@ -526,7 +609,7 @@ describe("normalized model catalog configuration", () => {
       expect(result.explanation.inputs.cachedInputWeight).toBe(0.05);
     });
 
-    it.each(["gpt-6-astra", "gpt-6-sol", "gpt-6.1-sol"])(
+    it.each(["gpt-6-astra", "gpt-6-sol", "gpt-6.1-sol", "gpt-6-luna"])(
       "keeps the %s visualization and PTU calculation consistent with manual writes and zero RPM",
       (name) => {
         for (const contextMode of ["short", "long"] satisfies ContextMode[]) {
