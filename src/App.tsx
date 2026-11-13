@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { KeyboardEvent } from "react";
 import { CalculatorForm } from "./components/CalculatorForm";
 import { CatalogEditor } from "./components/CatalogEditor";
 import { CostOptimizer } from "./components/CostOptimizer";
 import { ExplanationPanel } from "./components/ExplanationPanel";
 import { MetricBars } from "./components/MetricBars";
+import { PtuEstimationPanel } from "./components/PtuEstimationPanel";
 import { ReferenceInfo } from "./components/ReferenceInfo";
 import { ResultsTable } from "./components/ResultsTable";
-import { TokenNormalizationPanel } from "./components/TokenNormalizationPanel";
 import { readStoredCatalog } from "./data/catalog";
 import {
   DEFAULT_LANGUAGE,
@@ -32,10 +33,16 @@ import type {
   WorkloadImage,
 } from "./types";
 
+type WorkspaceMode = "estimation" | "comparison";
 type ActiveTab = "comparison" | "explanations";
 
 function App() {
   const [language, setLanguage] = useState<Language>(DEFAULT_LANGUAGE);
+  const [workspaceMode, setWorkspaceMode] =
+    useState<WorkspaceMode>("estimation");
+  const [justAddedComparison, setJustAddedComparison] = useState(false);
+  const estimationTabRef = useRef<HTMLButtonElement>(null);
+  const comparisonTabRef = useRef<HTMLButtonElement>(null);
   const [catalog, setCatalog] = useState<CatalogDocument>(readStoredCatalog);
   const [selectedModelName, setSelectedModelName] = useState(
     () => catalog.models[0]["model name"],
@@ -168,16 +175,49 @@ function App() {
     }
   }, [scenarioInput]);
 
-  const addComparison = () => {
+  useEffect(() => {
+    setJustAddedComparison(false);
+  }, [scenarioInput, workspaceMode]);
+
+  const addComparison = (stayInEstimation = false) => {
     try {
       const result = calculateScenario(scenarioInput);
       setResults((current) => [...current, result]);
       setSubmissionError(null);
       setActiveTab("comparison");
+      if (stayInEstimation) {
+        setJustAddedComparison(true);
+      }
     } catch (error) {
       setSubmissionError(
         error instanceof Error ? error.message : text.errors.calculate,
       );
+    }
+  };
+
+  const handleWorkspaceKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (
+      event.key !== "ArrowLeft" &&
+      event.key !== "ArrowRight" &&
+      event.key !== "Home" &&
+      event.key !== "End"
+    ) {
+      return;
+    }
+    event.preventDefault();
+    const nextMode: WorkspaceMode =
+      event.key === "Home"
+        ? "estimation"
+        : event.key === "End"
+          ? "comparison"
+          : workspaceMode === "estimation"
+            ? "comparison"
+            : "estimation";
+    setWorkspaceMode(nextMode);
+    if (nextMode === "estimation") {
+      estimationTabRef.current?.focus();
+    } else {
+      comparisonTabRef.current?.focus();
     }
   };
 
@@ -227,176 +267,244 @@ function App() {
       </header>
 
       <main id="top">
-        <section className="calculator-layout" id="calculator">
-          <CalculatorForm
-            models={catalog.models}
-            selectedModelName={selectedModel["model name"]}
-            onModelChange={setSelectedModelName}
-            selectedModel={selectedModel}
-            inputTextTokens={inputTextTokens}
-            onInputTextTokensChange={setInputTextTokens}
-            cacheHitRate={cacheHitRate}
-            onCacheHitRateChange={setCacheHitRate}
-            contextMode={contextMode}
-            onContextModeChange={setContextMode}
-            cacheWriteTokens={cacheWriteTokens}
-            onCacheWriteTokensChange={setCacheWriteTokensOverride}
-            cacheWriteOverride={cacheWriteTokensOverride !== null}
-            onUseAutomaticCacheWriteTokens={() => setCacheWriteTokensOverride(null)}
-            imageInputTokens={imageInputTokens}
-            onImageInputTokensChange={setImageInputTokens}
-            outputTokens={outputTokens}
-            onOutputTokensChange={setOutputTokens}
-            rpm={rpm}
-            onRpmChange={setRpm}
-            images={images}
-            onImagesChange={setImages}
-            deploymentType={deploymentType}
-            onDeploymentTypeChange={setDeploymentType}
-            commitmentType={commitmentType}
-            onCommitmentTypeChange={setCommitmentType}
-            manualRequiredPtus={manualRequiredPtus}
-            onManualRequiredPtusChange={setManualRequiredPtus}
-            ptuOverride={ptuOverride}
-            onPtuOverrideChange={updatePtuOverride}
-            preview={preview}
-            error={previewState.error ?? submissionError}
-            onAdd={addComparison}
-            onClear={() => setResults([])}
-            hasResults={results.length > 0}
-            language={language}
-          />
-
-          <div className="results-column">
-            <section
-              className="summary-grid"
-              aria-label={text.summary.ariaLabel}
+        <section id="calculator">
+          <div
+            className="workspace-switcher"
+            role="tablist"
+            aria-label={text.workspace.ariaLabel}
+            onKeyDown={handleWorkspaceKeyDown}
+          >
+            <button
+              ref={estimationTabRef}
+              id="workspace-tab-estimation"
+              className={`workspace-tab${workspaceMode === "estimation" ? " active" : ""}`}
+              type="button"
+              role="tab"
+              aria-selected={workspaceMode === "estimation"}
+              aria-controls="workspace-panel"
+              tabIndex={workspaceMode === "estimation" ? 0 : -1}
+              onClick={() => setWorkspaceMode("estimation")}
             >
-              <article>
-                <span>{text.summary.paygoEstimate}</span>
-                <strong>
-                  {preview ? preview.paygoCost === null ? "N/A" : currencyFormatter.format(preview.paygoCost) : "--"}
-                </strong>
-                <small>{preview?.paygoCost === null ? text.summary.paygoUnavailable : text.summary.perMonth}</small>
-                {preview?.paygoPricingScope ? <small>{preview.paygoPricingScope}</small> : null}
-              </article>
-              <article>
-                <span>{text.summary.ptuEstimate}</span>
-                <strong>
-                  {preview ? currencyFormatter.format(preview.ptuCost) : "--"}
-                </strong>
-                <small>{text.summary.perMonth}</small>
-              </article>
-              <article>
-                <span>{text.summary.estimatedSavings}</span>
-                <strong
-                  className={
-                    preview?.costSavingPercentage == null
-                      ? ""
-                      : preview.costSavingPercentage >= 0 ? "positive-text" : "negative-text"
-                  }
-                >
-                  {preview ? preview.costSavingPercentage === null ? "N/A" : `${preview.costSavingPercentage.toFixed(2)}%` : "--"}
-                </strong>
-                <small>{text.summary.ptuVersusPaygo}</small>
-              </article>
-            </section>
+              <strong>{text.workspace.estimationTab}</strong>
+            </button>
+            <button
+              ref={comparisonTabRef}
+              id="workspace-tab-comparison"
+              className={`workspace-tab${workspaceMode === "comparison" ? " active" : ""}`}
+              type="button"
+              role="tab"
+              aria-selected={workspaceMode === "comparison"}
+              aria-controls="workspace-panel"
+              tabIndex={workspaceMode === "comparison" ? 0 : -1}
+              onClick={() => setWorkspaceMode("comparison")}
+            >
+              <span className="workspace-tab-title">
+                <strong>{text.workspace.comparisonTab}</strong>
+                {results.length > 0 ? (
+                  <span className="count-badge">{results.length}</span>
+                ) : null}
+              </span>
+            </button>
+          </div>
 
-            {selectedModel["PTU input token weights"] ? (
-              <TokenNormalizationPanel
+          <div
+            id="workspace-panel"
+            className="calculator-layout"
+            role="tabpanel"
+            aria-labelledby={
+              workspaceMode === "estimation"
+                ? "workspace-tab-estimation"
+                : "workspace-tab-comparison"
+            }
+          >
+            <CalculatorForm
+              models={catalog.models}
+              selectedModelName={selectedModel["model name"]}
+              onModelChange={setSelectedModelName}
+              selectedModel={selectedModel}
+              inputTextTokens={inputTextTokens}
+              onInputTextTokensChange={setInputTextTokens}
+              cacheHitRate={cacheHitRate}
+              onCacheHitRateChange={setCacheHitRate}
+              contextMode={contextMode}
+              onContextModeChange={setContextMode}
+              cacheWriteTokens={cacheWriteTokens}
+              onCacheWriteTokensChange={setCacheWriteTokensOverride}
+              cacheWriteOverride={cacheWriteTokensOverride !== null}
+              onUseAutomaticCacheWriteTokens={() => setCacheWriteTokensOverride(null)}
+              imageInputTokens={imageInputTokens}
+              onImageInputTokensChange={setImageInputTokens}
+              outputTokens={outputTokens}
+              onOutputTokensChange={setOutputTokens}
+              rpm={rpm}
+              onRpmChange={setRpm}
+              images={images}
+              onImagesChange={setImages}
+              deploymentType={deploymentType}
+              onDeploymentTypeChange={setDeploymentType}
+              commitmentType={commitmentType}
+              onCommitmentTypeChange={setCommitmentType}
+              manualRequiredPtus={manualRequiredPtus}
+              onManualRequiredPtusChange={setManualRequiredPtus}
+              ptuOverride={ptuOverride}
+              onPtuOverrideChange={updatePtuOverride}
+              preview={preview}
+              error={previewState.error ?? submissionError}
+              onAdd={() => addComparison(false)}
+              onClear={() => setResults([])}
+              hasResults={results.length > 0}
+              mode={workspaceMode}
+              language={language}
+            />
+
+            {workspaceMode === "estimation" ? (
+              <PtuEstimationPanel
                 model={selectedModel}
                 result={preview}
+                error={previewState.error ?? submissionError}
                 cacheWriteOverride={cacheWriteTokensOverride !== null}
                 sourceUrl={catalog.metadata["ptu sizing source"]}
+                comparisonCount={results.length}
+                justAdded={justAddedComparison}
+                onAddComparison={() => addComparison(true)}
+                onOpenComparison={() => setWorkspaceMode("comparison")}
                 language={language}
               />
-            ) : null}
-
-            {optimization ? (
-              <CostOptimizer
-                optimization={optimization}
-                currentRpm={rpm}
-                language={language}
-              />
-            ) : null}
-
-            <section className="content-card results-card">
-              <div className="results-toolbar">
-                <div
-                  className="tab-list"
-                  role="tablist"
-                  aria-label={text.results.ariaLabel}
+            ) : (
+              <div className="results-column">
+                <section
+                  className="summary-grid"
+                  aria-label={text.summary.ariaLabel}
                 >
-                  <button
-                    className={activeTab === "comparison" ? "active" : ""}
-                    type="button"
-                    role="tab"
-                    aria-selected={activeTab === "comparison"}
-                    onClick={() => setActiveTab("comparison")}
-                  >
-                    {text.results.comparison}
-                    {results.length > 0 ? <span>{results.length}</span> : null}
-                  </button>
-                  <button
-                    className={activeTab === "explanations" ? "active" : ""}
-                    type="button"
-                    role="tab"
-                    aria-selected={activeTab === "explanations"}
-                    onClick={() => setActiveTab("explanations")}
-                  >
-                    {text.results.calculationDetails}
-                  </button>
-                </div>
-                <button
-                  className="button button-secondary button-small"
-                  type="button"
-                  disabled={results.length === 0}
-                  onClick={() => exportResultsToExcel(results, language)}
-                >
-                  {text.results.exportExcel}
-                </button>
-              </div>
+                  <article>
+                    <span>{text.summary.paygoEstimate}</span>
+                    <strong>
+                      {preview ? preview.paygoCost === null ? "N/A" : currencyFormatter.format(preview.paygoCost) : "--"}
+                    </strong>
+                    <small>{preview?.paygoCost === null ? text.summary.paygoUnavailable : text.summary.perMonth}</small>
+                    {preview?.paygoPricingScope ? <small>{preview.paygoPricingScope}</small> : null}
+                  </article>
+                  <article>
+                    <span>{text.summary.ptuEstimate}</span>
+                    <strong>
+                      {preview ? currencyFormatter.format(preview.ptuCost) : "--"}
+                    </strong>
+                    <small>
+                      {preview
+                        ? `${preview.deployedPtus.toLocaleString(locale)} PTUs · ${text.summary.perMonth}`
+                        : text.summary.perMonth}
+                    </small>
+                  </article>
+                  <article>
+                    <span>{text.summary.estimatedSavings}</span>
+                    <strong
+                      className={
+                        preview?.costSavingPercentage == null
+                          ? ""
+                          : preview.costSavingPercentage >= 0 ? "positive-text" : "negative-text"
+                      }
+                    >
+                      {preview ? preview.costSavingPercentage === null ? "N/A" : `${preview.costSavingPercentage.toFixed(2)}%` : "--"}
+                    </strong>
+                    <small>{text.summary.ptuVersusPaygo}</small>
+                  </article>
+                </section>
 
-              {results.length === 0 ? (
-                <div className="empty-state">
-                  <span aria-hidden="true">+</span>
-                  <h2>{text.results.emptyTitle}</h2>
-                  <p>{text.results.emptyDescription}</p>
-                </div>
-              ) : activeTab === "comparison" ? (
-                <>
-                  <ResultsTable
-                    results={results}
-                    onRemove={(id) =>
-                      setResults((current) =>
-                        current.filter((result) => result.id !== id),
-                      )
-                    }
+                {optimization ? (
+                  <CostOptimizer
+                    optimization={optimization}
+                    currentRpm={rpm}
                     language={language}
                   />
-                  <div className="chart-grid">
-                    <MetricBars
-                      title={text.results.monthlyPtuCost}
-                      description={text.results.monthlyPtuCostDescription}
-                      results={results}
-                      value={(result) => result.ptuCost}
-                      format={(value) => currencyFormatter.format(value)}
-                    />
-                    <MetricBars
-                      title={text.results.throughputEfficiency}
-                      description={
-                        text.results.throughputEfficiencyDescription
-                      }
-                      results={results}
-                      value={(result) => result.tpmPerDollar}
-                      format={(value) => value.toFixed(2)}
-                    />
+                ) : null}
+
+                <section className="content-card results-card">
+                  <div className="results-toolbar">
+                    <div
+                      className="tab-list"
+                      role="tablist"
+                      aria-label={text.results.ariaLabel}
+                    >
+                      <button
+                        className={activeTab === "comparison" ? "active" : ""}
+                        type="button"
+                        role="tab"
+                        aria-selected={activeTab === "comparison"}
+                        onClick={() => setActiveTab("comparison")}
+                      >
+                        {text.results.comparison}
+                        {results.length > 0 ? <span>{results.length}</span> : null}
+                      </button>
+                      <button
+                        className={activeTab === "explanations" ? "active" : ""}
+                        type="button"
+                        role="tab"
+                        aria-selected={activeTab === "explanations"}
+                        onClick={() => setActiveTab("explanations")}
+                      >
+                        {text.results.calculationDetails}
+                      </button>
+                    </div>
+                    <button
+                      className="button button-secondary button-small"
+                      type="button"
+                      disabled={results.length === 0}
+                      onClick={() => exportResultsToExcel(results, language)}
+                    >
+                      {text.results.exportExcel}
+                    </button>
                   </div>
-                </>
-              ) : (
-                <ExplanationPanel results={results} language={language} />
-              )}
-            </section>
+
+                  {results.length === 0 ? (
+                    <div className="empty-state">
+                      <span aria-hidden="true">+</span>
+                      <h2>{text.results.emptyTitle}</h2>
+                      <p>{text.results.emptyDescription}</p>
+                      <button
+                        className="button button-primary empty-state-action"
+                        type="button"
+                        disabled={!preview}
+                        onClick={() => addComparison(false)}
+                      >
+                        + {text.results.addCurrentScenario}
+                      </button>
+                    </div>
+                  ) : activeTab === "comparison" ? (
+                    <>
+                      <ResultsTable
+                        results={results}
+                        onRemove={(id) =>
+                          setResults((current) =>
+                            current.filter((result) => result.id !== id),
+                          )
+                        }
+                        language={language}
+                      />
+                      <div className="chart-grid">
+                        <MetricBars
+                          title={text.results.monthlyPtuCost}
+                          description={text.results.monthlyPtuCostDescription}
+                          results={results}
+                          value={(result) => result.ptuCost}
+                          format={(value) => currencyFormatter.format(value)}
+                        />
+                        <MetricBars
+                          title={text.results.throughputEfficiency}
+                          description={
+                            text.results.throughputEfficiencyDescription
+                          }
+                          results={results}
+                          value={(result) => result.tpmPerDollar}
+                          format={(value) => value.toFixed(2)}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <ExplanationPanel results={results} language={language} />
+                  )}
+                </section>
+              </div>
+            )}
           </div>
         </section>
 

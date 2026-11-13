@@ -1,12 +1,15 @@
 # Azure Foundry PTU Cost Planner
 
-A React and TypeScript calculator for comparing monthly PayGO and provisioned throughput costs. The interface is a responsive Vite single-page application with no Streamlit or Python runtime. A live configuration optimizer recommends the lowest-cost commitment and deployment option for the selected model and charts PayGO against each PTU cost curve as traffic changes.
+A React and TypeScript planner for sizing Azure Foundry Provisioned Throughput Units (PTUs) and comparing monthly PTU and PayGO costs. The interface is a responsive Vite single-page application with no Streamlit or Python runtime, organized into two workspaces:
+
+- **PTU Estimation (default)**: Calculates target deployable PTUs, raw required capacity, utilization, workload throughput, and monthly PTU cost live as inputs change, alongside the step-by-step backend sizing formulas and active model rules—without needing to submit or add a comparison first.
+- **PTU vs PayGO Comparison**: Recommends the lowest-cost commitment and deployment option with a live RPM break-even chart, and lets users snapshot multiple models or commitments side-by-side with Excel export and full calculation traces.
 
 The bundled catalog includes Azure OpenAI, Azure-sold Llama, and Fireworks on Microsoft Foundry models. Documented token weights drive automatic PTU sizing. Existing Fireworks automatic weights remain labeled assumptions; newly listed Fireworks models require benchmarked capacity because Microsoft does not publish their output weights. Each saved comparison includes a calculation trace. The interface supports English and Simplified Chinese, with English displayed by default.
 
 ## UI preview
 
-The main page opens directly on the workload calculator and live cost estimates, without an introductory banner or catalog-summary card.
+The main page opens directly on the **PTU Estimation** workspace with live target PTU metrics and step-by-step sizing calculations, with one-click switching to **PTU vs PayGO Comparison**.
 
 ![English Azure Foundry PTU Cost Planner interface](docs/images/ptu-cost-planner-english.png)
 

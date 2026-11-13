@@ -1,4 +1,5 @@
 interface NumberFieldProps {
+  id?: string;
   label: string;
   value: number;
   onChange: (value: number) => void;
@@ -9,6 +10,7 @@ interface NumberFieldProps {
 }
 
 export function NumberField({
+  id,
   label,
   value,
   onChange,
@@ -21,6 +23,7 @@ export function NumberField({
     <label className="field">
       <span className="field-label">{label}</span>
       <input
+        id={id}
         type="number"
         min={min}
         max={max}
