@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "id": "fireworks",
   "source": "https://learn.microsoft.com/en-us/azure/foundry/how-to/fireworks/fireworks-model-catalog",
-  "documentSha256": "0dbea092a1b565e0b389bece39368c2cb0940d2cc485c331c04642958d2a1111",
-  "modelCount": 39,
+  "documentSha256": "22c5acb6276c8eef027b60f38d7ec235a7c7ecd118e7d1f10b9a4c6c5d13331f",
+  "modelCount": 43,
   "sections": [
     {
       "heading": "Fireworks model catalog, deployment types, and regions in Microsoft Foundry - Microsoft Foundry | Microsoft Learn",
@@ -19,7 +19,7 @@
     },
     {
       "heading": "Fireworks model catalog, deployment types, and regions in Microsoft Foundry - Microsoft Foundry | Microsoft Learn > Pay-per-token",
-      "sha256": "3b333f98ee8cdf1de2401f58a5d818deb9cf42036a71268bfbbd830b6f9fe94f",
+      "sha256": "68a09785945efe6c230376267c52c9df59387e8055268da92b0c82bf17b73a6a",
       "tables": [
         {
           "headers": [
@@ -40,11 +40,11 @@
               "—"
             ],
             [
-              "`FW-GLM-5.2-Fast`",
+              "`FW-DeepSeek-V4.1-Flash-1017`",
               "GA",
-              "",
               "✅",
-              "2026-10-29",
+              "",
+              "—",
               "—"
             ],
             [
@@ -72,12 +72,20 @@
               "—"
             ],
             [
+              "`FW-Kimi-K3.1-Pro`",
+              "GA",
+              "✅",
+              "",
+              "—",
+              "—"
+            ],
+            [
               "`FW-MiniMax-M3`",
               "GA",
               "",
               "✅",
-              "—",
-              "—"
+              "2026-11-25",
+              "`FW-DeepSeek-V4.1-Flash`"
             ],
             [
               "`FW-Nemotron-3-Ultra-NVFP4`",
@@ -144,6 +152,14 @@
               "`FW-GLM-5.3`"
             ],
             [
+              "`FW-GLM-5.2-Fast`",
+              "Retired",
+              "",
+              "",
+              "2026-10-29",
+              "—"
+            ],
+            [
               "`FW-GPT-OSS-120B`",
               "Retired",
               "",
@@ -190,7 +206,7 @@
     },
     {
       "heading": "Fireworks model catalog, deployment types, and regions in Microsoft Foundry - Microsoft Foundry | Microsoft Learn > Provisioned throughput units (PTU)",
-      "sha256": "0017d02f17134c24b5c34a055ffa39c98eac9ca5464227f3cb28ddd0e4e8f19d",
+      "sha256": "53a9e822b884bd2a51940b43a366b86294b833430df5eb18b2609613cf596401",
       "tables": [
         {
           "headers": [
@@ -375,6 +391,16 @@
               "99% &gt; 50 TPS"
             ],
             [
+              "Moonshot AI",
+              "`FW-Kimi-K3.1-Pro`",
+              "✅",
+              "✅",
+              "1,200",
+              "600",
+              "1,950",
+              "99% &gt; 50 TPS"
+            ],
+            [
               "NVIDIA",
               "`FW-Nemotron-3-Super-120B-A12B-BF16`",
               "✅",
@@ -392,6 +418,26 @@
               "400",
               "200",
               "550",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "NVIDIA",
+              "`FW-NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16`",
+              "✅",
+              "✅",
+              "720",
+              "360",
+              "1,200",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "NVIDIA",
+              "`FW-NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-NVFP4`",
+              "✅",
+              "✅",
+              "360",
+              "180",
+              "14,950",
               "99% &gt; 50 TPS"
             ],
             [
@@ -592,6 +638,16 @@
               "Global: 5Data Zone Provisioned: 320",
               "Global: 1Data Zone Provisioned: 160",
               "Global: 1,645Data Zone Provisioned: 1,050",
+              "99% &gt; 50 TPS"
+            ],
+            [
+              "Z.ai",
+              "`FW-GLM-5.3-Flash`",
+              "✅",
+              "",
+              "5",
+              "1",
+              "20,050",
               "99% &gt; 50 TPS"
             ]
           ]

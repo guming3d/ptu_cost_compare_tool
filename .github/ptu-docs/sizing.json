@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "id": "sizing",
   "source": "https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/provisioned-throughput-sizing",
-  "documentSha256": "05e64558a34002d6e7281c5f71944b4b622cc22d2f7a59ef905d9d79df0a6d75",
-  "modelCount": 28,
+  "documentSha256": "3310f5ac9cbb66f5dbdfaa0732b101b13cd324045073f505f0852516ed92b18e",
+  "modelCount": 31,
   "sections": [
     {
       "heading": "Determine PTU sizing for a workload - Microsoft Foundry | Microsoft Learn",
@@ -25,7 +25,7 @@
     },
     {
       "heading": "Determine PTU sizing for a workload - Microsoft Foundry | Microsoft Learn > Estimate PTUs for text-only model > Estimate manually",
-      "sha256": "4bd7cf1d62fe20175996eedda47fadb6fee83b4a9005543d6d2123dcd555f54a",
+      "sha256": "f4e4ee9d57598d6056af05fdfccfe811b021090d5cdf85ae192a07c61e4c515f",
       "tables": [],
       "formulas": []
     },
@@ -54,7 +54,7 @@
     },
     {
       "heading": "Determine PTU sizing for a workload - Microsoft Foundry | Microsoft Learn > How input and output tokens affect throughput",
-      "sha256": "f7f7af222fb42ccbee8d580756aebd794c7c4c84ba2e8a60d15a6d750965fe36",
+      "sha256": "5a094ef5a03f0a6e1ba4580ef9e7e4e3c7e29615cc852ffacd1b60889f4804fb",
       "tables": [],
       "formulas": []
     },
@@ -72,13 +72,16 @@
     },
     {
       "heading": "Determine PTU sizing for a workload - Microsoft Foundry | Microsoft Learn > Deployment parameters and throughput values by model > Latest Azure OpenAI models",
-      "sha256": "0df9232913ddfe068ef2dd3302b2827054d9203e947157125da7b5f7dcd00a85",
+      "sha256": "ff6c95af612f9164164c4b89797ab6a7f54d1d50143893a4d71778c9cae213ff",
       "tables": [
         {
           "headers": [
             "Topic",
+            "**gpt-6.2-sol**,**2026-11-17**",
+            "**gpt-6.2-astra**,**2026-11-17**",
             "**gpt-6.1-sol**,**2026-09-29**",
             "**gpt-6-sol**,**2026-09-22**",
+            "**gpt-6-luna**,**2026-09-22**",
             "**gpt-6-astra**,**2026-09-03**",
             "**gpt-5.6-luna**,**2026-07-09**",
             "**gpt-5.6-terra**,**2026-07-09**",
@@ -104,6 +107,9 @@
           "rows": [
             [
               "Global & data zone provisioned minimum deployment",
+              "15",
+              "15",
+              "15",
               "15",
               "15",
               "15",
@@ -137,6 +143,9 @@
               "5",
               "5",
               "5",
+              "5",
+              "5",
+              "5",
               "100",
               "100",
               "5",
@@ -156,12 +165,15 @@
             ],
             [
               "Regional provisioned minimum deployment",
-              "50",
-              "50",
-              "50",
-              "50",
-              "50",
-              "50",
+              "25",
+              "25",
+              "25",
+              "15",
+              "15",
+              "25",
+              "15",
+              "15",
+              "15",
               "50",
               "100",
               "100",
@@ -182,12 +194,15 @@
             ],
             [
               "Regional provisioned scale increment",
-              "50",
-              "50",
-              "50",
-              "50",
-              "50",
-              "50",
+              "25",
+              "25",
+              "25",
+              "5",
+              "5",
+              "25",
+              "5",
+              "5",
+              "5",
               "50",
               "100",
               "100",
@@ -208,8 +223,11 @@
             ],
             [
               "Input TPM per PTU",
+              "2,950",
+              "750",
               "3,000",
               "3,000",
+              "59,400",
               "600",
               "30,000",
               "3,000",
@@ -234,9 +252,12 @@
             ],
             [
               "Output-to-input ratio",
-              "See GPT-6 sizing guidance",
-              "See GPT-6 sizing guidance",
-              "See GPT-6 sizing guidance",
+              "See newer model sizing",
+              "See newer model sizing",
+              "See newer model sizing",
+              "See newer model sizing",
+              "See newer model sizing",
+              "See newer model sizing",
               "6",
               "6",
               "6",
@@ -261,7 +282,10 @@
             [
               "Latency target value^1^",
               "99% &gt; 50 TPS",
+              "99% &gt; 40 TPS",
+              "99% &gt; 50 TPS",
               "99% &gt; 80 TPS",
+              "99% &gt; 100 TPS",
               "99% &gt; 40 TPS",
               "99% &gt; 100 TPS",
               "99% &gt; 70 TPS",
@@ -291,85 +315,68 @@
     },
     {
       "heading": "Determine PTU sizing for a workload - Microsoft Foundry | Microsoft Learn > Deployment parameters and throughput values by model > Latest Azure OpenAI models > Normalized token pricing for GPT-6 Astra and newer models",
-      "sha256": "f244ca8ffc4119a42c602e89dfe92d760bd1a84df974cd75f00ff0340fda9081",
+      "sha256": "b4c847da56973fc3b47a38ccfab751258ef682751d3d0a2efb4edbcd92789f5d",
       "tables": [],
       "formulas": []
     },
     {
-      "heading": "Determine PTU sizing for a workload - Microsoft Foundry | Microsoft Learn > Deployment parameters and throughput values by model > Latest Azure OpenAI models > Normalized token pricing for GPT-6 Astra and newer models > Pay-as-you-go prices and token weights",
-      "sha256": "4a8715b5a0393d45d6bdbc2b84193a93e40a8c3f1f0f1f85d5f5af0c888d8539",
+      "heading": "Determine PTU sizing for a workload - Microsoft Foundry | Microsoft Learn > Deployment parameters and throughput values by model > Latest Azure OpenAI models > Normalized token pricing for GPT-6 Astra and newer models > Normalized token weights",
+      "sha256": "10198994795217d878aba520899d0a029631fed5d8653ca7c1c686cfd7c60576",
       "tables": [
         {
           "headers": [
             "Token type",
-            "GPT-6 Astra Global Standard price",
-            "GPT-6 Sol Global Standard price",
-            "GPT-6.1 Sol Global Standard price",
-            "GPT-6 Astra / GPT-6 Sol normalized token cost",
-            "GPT-6.1 Sol normalized token cost"
+            "GPT-6 Astra / GPT-6 Sol / GPT-6 Luna normalized token cost",
+            "GPT-6.1 Sol / GPT-6.2 Sol / GPT-6.2 Astra normalized token cost"
           ],
           "rows": [
             [
               "Short-context input",
-              "$10.00",
-              "$2.00",
-              "$2.00",
               "1.0",
               "1.0"
             ],
             [
               "Short-context cached input",
-              "$1.00",
-              "$0.20",
-              "$0.10",
               "0.1",
               "0.05"
             ],
             [
-              "Short-context cache write",
-              "$12.50",
-              "$2.50",
-              "$2.50",
+              "Short-context 30-minute cache write",
               "1.25",
               "1.25"
             ],
             [
+              "Short-context 12-hour cache write",
+              "2.5",
+              "2.5"
+            ],
+            [
               "Short-context output",
-              "$50.00",
-              "$10.00",
-              "$10.00",
               "5.0",
               "5.0"
             ],
             [
               "Long-context input",
-              "$20.00",
-              "$4.00",
-              "$4.00",
               "2.0",
               "2.0"
             ],
             [
               "Long-context cached input",
-              "$2.00",
-              "$0.40",
-              "$0.20",
               "0.2",
               "0.1"
             ],
             [
-              "Long-context cache write",
-              "$25.00",
-              "$5.00",
-              "$5.00",
+              "Long-context 30-minute cache write",
               "2.5",
               "2.5"
             ],
             [
+              "Long-context 12-hour cache write",
+              "5.0",
+              "5.0"
+            ],
+            [
               "Long-context output",
-              "$75.00",
-              "$15.00",
-              "$15.00",
               "7.5",
               "7.5"
             ]
@@ -381,8 +388,63 @@
       ]
     },
     {
+      "heading": "Determine PTU sizing for a workload - Microsoft Foundry | Microsoft Learn > Deployment parameters and throughput values by model > Latest Azure OpenAI models > Normalized token pricing for GPT-6 Astra and newer models > GPT-6 Sol pay-as-you-go pricing example",
+      "sha256": "8ccd5824f678cb402995ecb4f9d24a2adfb61a881f4eeb329f978ffc5a5b0a51",
+      "tables": [
+        {
+          "headers": [
+            "Token type",
+            "GPT-6 Sol Global Standard price"
+          ],
+          "rows": [
+            [
+              "Short-context input",
+              "$2.00"
+            ],
+            [
+              "Short-context cached input",
+              "$0.20"
+            ],
+            [
+              "Short-context 30-minute cache write",
+              "$2.50"
+            ],
+            [
+              "Short-context 12-hour cache write",
+              "$5.00"
+            ],
+            [
+              "Short-context output",
+              "$10.00"
+            ],
+            [
+              "Long-context input",
+              "$4.00"
+            ],
+            [
+              "Long-context cached input",
+              "$0.40"
+            ],
+            [
+              "Long-context 30-minute cache write",
+              "$5.00"
+            ],
+            [
+              "Long-context 12-hour cache write",
+              "$10.00"
+            ],
+            [
+              "Long-context output",
+              "$15.00"
+            ]
+          ]
+        }
+      ],
+      "formulas": []
+    },
+    {
       "heading": "Determine PTU sizing for a workload - Microsoft Foundry | Microsoft Learn > Deployment parameters and throughput values by model > Latest Azure OpenAI models > Normalized token pricing for GPT-6 Astra and newer models > Convert normalized tokens to PTUs",
-      "sha256": "a8f0b23a83c52de4e49c4e40bf81d2b6687c011cb63eb4f1dfe0cef2507890ec",
+      "sha256": "9a05bd0aa4ec3bb8d2e5339961a29fc00c2c66ba0042571144f2f80e459e580d",
       "tables": [
         {
           "headers": [
@@ -405,10 +467,28 @@
               "3,000"
             ],
             [
+              "gpt-6-luna",
+              "2026-09-22",
+              "59,400",
+              "59,400"
+            ],
+            [
               "gpt-6.1-sol",
               "2026-09-29",
               "3,000",
               "3,000"
+            ],
+            [
+              "gpt-6.2-sol",
+              "2026-11-17",
+              "2,950",
+              "2,950"
+            ],
+            [
+              "gpt-6.2-astra",
+              "2026-11-17",
+              "750",
+              "750"
             ]
           ]
         }
@@ -420,7 +500,7 @@
     },
     {
       "heading": "Determine PTU sizing for a workload - Microsoft Foundry | Microsoft Learn > Deployment parameters and throughput values by model > Latest Azure OpenAI models > Normalized token pricing for GPT-6 Astra and newer models > PTU and pay-as-you-go comparison",
-      "sha256": "068af4b6e0ec6d34e7cb81be95af3137bbb34d8e22f29ac65a7e728976ed70ab",
+      "sha256": "fd1fb58dc75fa0d740b6f9a4f84146dc51d9b7df30c0777ff6743579808b6c29",
       "tables": [],
       "formulas": []
     },
